@@ -15,8 +15,7 @@ public class CustomDamageHandler {
 
     public void applyCustomDamage(Entity entity, double damage, String customCause) {
         // Check if the entity is a LivingEntity
-        if (entity instanceof LivingEntity) {
-            LivingEntity livingEntity = (LivingEntity) entity;
+        if (entity instanceof LivingEntity livingEntity) {
 
             // Set metadata for the custom damage cause
             livingEntity.setMetadata("customDamageCause", new FixedMetadataValue(plugin, customCause));

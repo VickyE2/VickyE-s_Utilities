@@ -7,7 +7,6 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
 
 public class CustomDamageHandler {
-
     private final Plugin plugin;
 
     public CustomDamageHandler(Plugin plugin) {

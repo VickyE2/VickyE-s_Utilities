@@ -52,4 +52,5 @@ public class PlaceholderExpansions extends PlaceholderExpansion{
             // Return null if the placeholder is not handled
             return null;
         }
+
 }

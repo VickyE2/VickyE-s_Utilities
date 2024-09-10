@@ -10,6 +10,7 @@ import org.v_utls.utilities.CustomDamageEvent;
 
 public class DamageListener implements Listener {
 
+
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
         Entity entity = event.getEntity();

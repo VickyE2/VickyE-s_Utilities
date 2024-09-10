@@ -21,6 +21,7 @@ public final class vicky_utils extends JavaPlugin {
 
     @Override
     public void onEnable() {
+
         // Plugin startup logic
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null && Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
 

@@ -47,7 +47,7 @@ public final class vicky_utils extends JavaPlugin {
             getServer().getPluginManager().registerEvents(new DeathMessageListener(this), this);
 
             PlaceholderStorer placeholderStorer = new PlaceholderStorer();
-            placeholderStorer.storePlaceholder("vicky_utils", "isBleeding", this.getName());
+            placeholderStorer.storePlaceholder("vicky_utils", "isBleeding", this.getName(), "Returns weather the player is currently being affected by the custom BLEEDING mechanic of mythic mobs.");
 
             MainLogger logger = new MainLogger();
             logger.getHooks();

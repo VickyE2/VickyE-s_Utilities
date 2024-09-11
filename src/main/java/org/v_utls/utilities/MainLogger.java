@@ -16,7 +16,7 @@ public class MainLogger {
 
     public void getPlaceholders() {
         PlaceholderStorer store = new PlaceholderStorer();
-        store.listPlaceholders("all");
+        store.listPlaceholders("all", vicky_utils.getPlugin());
     }
 
     public void getMechanics() {

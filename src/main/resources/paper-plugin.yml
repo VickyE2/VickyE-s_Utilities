@@ -1,9 +1,15 @@
 name: Vicky-s_Utilities
 version: '0.0.1-BETA'
-main: org.v_utils.vicky_utils
+main: org.v_utls.vicky_utils
 api-version: '1.20'
 prefix: V-UTL
-load: STARTUP
 authors: [ VickyE2 ]
 description: A plugin For all My essentials
-depend: [PlaceholderAPI], [MythicMobs]
+dependencies:
+  server:
+    PlaceholderAPI:
+      load: AFTER
+      required: true
+    MythicMobs:
+      load: AFTER
+      required: true

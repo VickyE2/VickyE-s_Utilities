@@ -29,7 +29,7 @@ public class BleedingMechanic implements ITargetedEntitySkill {
 
         // Create an instance of your Bleeding class with the plugin instance
         Bleeding bleedingEffect = new Bleeding(plugin);
-        bleedingEffect.applyBleeding(bukkitTarget, duration, level);
+        bleedingEffect.applyEffect(bukkitTarget, duration, level);
 
         return SkillResult.SUCCESS;
     }

@@ -39,22 +39,22 @@ public class PlaceholderStorer {
         // If type is "all", list all placeholders by plugin
         if (type.equalsIgnoreCase("all")) {
             for (Map.Entry<String, List<PlaceholderInfo>> entry : placeholders.entrySet()) {
-                plugin.getLogger().info(ChatColor.DARK_RED + "Plugin: " + entry.getKey());
+                plugin.getLogger().info(ANSIColor.colorize("Plugin: ", ANSIColor.CYAN_BOLD) + ANSIColor.colorize(entry.getKey(), ANSIColor.RED_BOLD));
                 for (PlaceholderInfo info : entry.getValue()) {
-                    plugin.getLogger().info(ChatColor.BLUE + "  Placeholder: " + info.placeholder());
-                    plugin.getLogger().info(ChatColor.GRAY + "    Description: " + info.description());
+                    plugin.getLogger().info(ANSIColor.colorize("  Placeholder: " + info.placeholder(), ANSIColor.BLUE));
+                    plugin.getLogger().info(ANSIColor.colorize("Description: " + info.description(), ANSIColor.LIGHT_GRAY));
                 }
             }
         } else {
             // If type matches a specific plugin name, list placeholders for that plugin
             if (placeholders.containsKey(type)) {
-                plugin.getLogger().info(ChatColor.DARK_RED + "Plugin: " + type);
+                plugin.getLogger().info(ANSIColor.colorize("Plugin: ", ANSIColor.CYAN_BOLD) + ANSIColor.colorize(type, ANSIColor.RED_BOLD));
                 for (PlaceholderInfo info : placeholders.get(type)) {
-                    plugin.getLogger().info(ChatColor.BLUE + "  Placeholder: " + info.placeholder());
-                    plugin.getLogger().info(ChatColor.GRAY + "    Description: " + info.description());
+                    plugin.getLogger().info(ANSIColor.colorize("  Placeholder: " + info.placeholder(), ANSIColor.BLUE));
+                    plugin.getLogger().info(ANSIColor.colorize("Description: " + info.description(), ANSIColor.LIGHT_GRAY));
                 }
             } else {
-                plugin.getLogger().warning(ChatColor.RED + "No placeholders found for plugin: " + type + "."+ ChatColor.RESET + "Are they stored?");
+                plugin.getLogger().warning(ANSIColor.colorize("No placeholders found for plugin: '" + type + "'. Are they stored?", ANSIColor.RED_BOLD));
             }
         }
     }
@@ -64,7 +64,7 @@ public class PlaceholderStorer {
         // If type is "all", list all placeholders by plugin
         if (type.equalsIgnoreCase("all")) {
             for (Map.Entry<String, List<PlaceholderInfo>> entry : placeholders.entrySet()) {
-                player.sendMessage(ChatColor.DARK_RED + "Plugin: " + entry.getKey());
+                player.sendMessage(ChatColor.AQUA + "Plugin: " + entry.getKey());
                 for (PlaceholderInfo info : entry.getValue()) {
                     player.sendMessage(ChatColor.BLUE + "  Placeholder: " + info.placeholder());
                     player.sendMessage(ChatColor.GRAY + "    Description: " + info.description());
@@ -73,13 +73,13 @@ public class PlaceholderStorer {
         } else {
             // If type matches a specific plugin name, list placeholders for that plugin
             if (placeholders.containsKey(type)) {
-                player.sendMessage(ChatColor.DARK_RED + "Plugin: " + type);
+                player.sendMessage(ChatColor.AQUA + "Plugin: " + type);
                 for (PlaceholderInfo info : placeholders.get(type)) {
                     player.sendMessage(ChatColor.BLUE + "  Placeholder: " + info.placeholder());
                     player.sendMessage(ChatColor.GRAY + "    Description: " + info.description());
                 }
             } else {
-                player.sendMessage(ChatColor.RED + "No placeholders found for plugin: " + type + "."+ ChatColor.RESET + "Are they stored?");
+                player.sendMessage(ChatColor.RED + "No placeholders found for plugin: " + type + ". Are they stored?");
             }
         }
     }

@@ -2,7 +2,6 @@ package org.v_utls.handlers;
 
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
 
 public class DamageHandler {

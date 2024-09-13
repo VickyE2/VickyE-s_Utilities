@@ -22,19 +22,19 @@ public class PlaceholderExpansions extends PlaceholderExpansion{
 
         // Return the identifier that you'll use in the placeholder (e.g., %myeffects_<placeholder>%)
         @Override
-        public String getIdentifier() {
+        public @NotNull String getIdentifier() {
             return "vicky_utils";
         }
 
         // Return the author of the placeholder expansion
         @Override
-        public String getAuthor() {
+        public @NotNull String getAuthor() {
             return plugin.getDescription().getAuthors().toString();
         }
 
         // Return the version of the placeholder expansion
         @Override
-        public String getVersion() {
+        public @NotNull String getVersion() {
             return plugin.getDescription().getVersion();
         }
 
@@ -48,7 +48,6 @@ public class PlaceholderExpansions extends PlaceholderExpansion{
                 boolean isBleeding = metaDataChecker_TF.hasMetaData(player, "isBleeding_v");
                 return Boolean.toString(isBleeding);
             }
-
             // Return null if the placeholder is not handled
             return null;
         }

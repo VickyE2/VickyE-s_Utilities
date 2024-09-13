@@ -3,7 +3,8 @@ package org.v_utls.mythic;
 import io.lumine.mythic.bukkit.events.MythicMechanicLoadEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.plugin.Plugin;
-import org.v_utls.utilities.StringStore;
+
+import static org.v_utls.global.Global.stringStorer;
 
 public class MechanicRegistrar {
 
@@ -22,11 +23,10 @@ public class MechanicRegistrar {
 
         @EventHandler
         public void onMythicMechanicLoad(MythicMechanicLoadEvent event) {
-            StringStore store = new StringStore();
             switch (event.getMechanicName().toUpperCase()) {
                 case "BLEEDING":
                     event.register(new BleedingMechanic(event.getConfig(), plugin));
-                    store.storeString(plugin.getName(), "mm_mechanics", "-- Registered Bleeding mechanic!");
+                    stringStorer.storeString(plugin.getName(), "mm_mechanics", "-- Registered Bleeding mechanic!");
                     break;
                 // Add cases for other mechanics
                 default:

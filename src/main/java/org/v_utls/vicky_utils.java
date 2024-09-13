@@ -1,27 +1,28 @@
 package org.v_utls;
 
-import io.lumine.mythic.bukkit.events.MythicMechanicLoadEvent;
 import org.bukkit.Bukkit;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.v_utls.effects.Bleeding;
+import org.v_utls.effects.CustomEffect;
 import org.v_utls.expansions.PlaceholderExpansions;
+import org.v_utls.global.Global;
 import org.v_utls.handlers.CustomDamageHandler;
 import org.v_utls.listeners.DeathListener;
-import org.v_utls.listeners.DeathMessageListener;
 import org.v_utls.listeners.SpawnListener;
-import org.v_utls.mythic.BleedingMechanic;
 import org.v_utls.mythic.MechanicRegistrar;
-import org.v_utls.utilities.MainLogger;
-import org.v_utls.utilities.PlaceholderStorer;
+import org.v_utls.utilities.*;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.v_utls.global.Global.customDamageHandler;
+import static org.v_utls.global.Global.placeholderStorer;
 
 public final class vicky_utils extends JavaPlugin {
 
     public static vicky_utils plugin;
-    private CustomDamageHandler customDamageHandler;
 
+    boolean exceptionOccurred = false;
     public static vicky_utils getPlugin() {
         return plugin;
     }
@@ -32,32 +33,60 @@ public final class vicky_utils extends JavaPlugin {
         // Plugin startup logic
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null && Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
 
-            customDamageHandler = new CustomDamageHandler(this);
-            Bleeding bleeding = new Bleeding(this);
+            Global.placeholderStorer = new PlaceholderStorer();
+            Global.stringStorer = new StringStore();
+            Global.customDamageHandler = new CustomDamageHandler(this);
+
+            MainLogger logger1 = new MainLogger(this);
 
             getLogger().info("Rendering Vicky's Utilities Accessible");
-            new PlaceholderExpansions(this).register();
+
+            try {
+                Map<String, CustomEffect> effects = new HashMap<>();
+
+                Bleeding bleeding = new Bleeding(this);
+                effects.put("bleeding", bleeding);
+
+                DeathMessages.add("bleeding", "{player} bled to death.");
+                DeathMessages.add("bleeding", "{player} couldn't stop the bleeding.");
+
+                getServer().getPluginManager().registerEvents(new DeathListener(effects), this);
+                getServer().getPluginManager().registerEvents(new SpawnListener(customDamageHandler), this);
+
+                getLogger().info(ANSIColor.colorize("Effects and DeathMessages have been sucessfully Registered.", ANSIColor.PURPLE));
+            }catch(Exception e){
+                exceptionOccurred = true;
+                getLogger().info(ANSIColor.colorize("Unable to register Effects and DeathMessages..... Error:" + e.getMessage(), ANSIColor.RED_BOLD));
+            }finally {
+                if (exceptionOccurred) {
+                    getLogger().info(ANSIColor.colorize("Continuing with Loading Some Errors Might Occur", ANSIColor.LIGHT_RED));
+                }
+            }
 
             MechanicRegistrar registrations = new MechanicRegistrar(this);
             registrations.registerAll();
 
-            getServer().getPluginManager().registerEvents(new DeathListener(bleeding), this);
-            getServer().getPluginManager().registerEvents(new DeathMessageListener(this), this);
-            getServer().getPluginManager().registerEvents(new SpawnListener(customDamageHandler), this);
-            getServer().getPluginManager().registerEvents(new DeathMessageListener(this), this);
+            new PlaceholderExpansions(this).register();
 
-            PlaceholderStorer placeholderStorer = new PlaceholderStorer();
             placeholderStorer.storePlaceholder("vicky_utils", "isBleeding", this.getName(), "Returns weather the player is currently being affected by the custom BLEEDING mechanic of mythic mobs.");
 
-            MainLogger logger = new MainLogger();
+            MainLogger logger = new MainLogger(this);
             logger.getHooks();
 
+            getServer().getScheduler().scheduleSyncDelayedTask(this, () -> {
+                    getLogger().info(ANSIColor.colorize("Placeholders from Plugin and its Addons have been registered: ", ANSIColor.CYAN));
+                    logger1.getPlaceholders();
+                    getLogger().info(ANSIColor.colorize("Getting Registered Mechanics", ANSIColor.CYAN));
+                    logger1.getMechanics();
+            });
 
         } else if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) {
-            getLogger().severe("Could not find PlaceholderAPI! This plugin is required.");
+            exceptionOccurred = true;
+            getLogger().severe(ANSIColor.colorize("Could not find PlaceholderAPI! This plugin is required.", ANSIColor.RED));
             Bukkit.getPluginManager().disablePlugin(this);
         } else {
-            getLogger().severe("Could not find MythicAPI! Ensure MythicMobs is Present.");
+            exceptionOccurred = true;
+            getLogger().severe(ANSIColor.colorize("Could not find MythicAPI! Ensure MythicMobs is Present.", ANSIColor.RED));
             Bukkit.getPluginManager().disablePlugin(this);
         }
 
@@ -65,22 +94,11 @@ public final class vicky_utils extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
-        getLogger().info("Rendering Utilities Inaccessible");
-    }
-
-    @EventHandler
-    public void onServerLoad(ServerLoadEvent event) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                MainLogger logger = new MainLogger();
-                Bukkit.getLogger().info("Placeholders from Plugin and its Addons have been registered: ");
-                logger.getPlaceholders();
-                Bukkit.getLogger().info("Mythic Mechanics have been loaded: ");
-                logger.getMechanics();
-            }
-        }.runTaskLater(this, 20L);
+        if (exceptionOccurred) {
+            getLogger().info(ANSIColor.colorize("Rendering Utilities Inaccessible. Dependant Plugins will not Work", ANSIColor.RED_BOLD));
+        }else{
+            getLogger().info("Rendering Utilities Inaccessible");
+        }
     }
 
     public CustomDamageHandler getCustomDamageHandler() {

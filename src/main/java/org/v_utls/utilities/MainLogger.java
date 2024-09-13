@@ -1,38 +1,49 @@
 package org.v_utls.utilities;
 
 import org.bukkit.Bukkit;
-import org.v_utls.vicky_utils;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
 
+import static org.v_utls.global.Global.placeholderStorer;
+import static org.v_utls.global.Global.stringStorer;
+
 public class MainLogger {
+
+    private final JavaPlugin plugin;
+
+    public MainLogger(JavaPlugin plugin) {
+        this.plugin = plugin;
+    }
     public void getHooks() {
         if (Bukkit.getPluginManager().getPlugin("VickySBA") != null) {
-            Bukkit.getLogger().info("Plugin 'Vicky's SBA' is present. Adding additional Functionality");
+            plugin.getLogger().info("Plugin 'Vicky's SBA' is present. Adding additional Functionality");
         }else{
-            Bukkit.getLogger().info("Plugin 'Vicky's SBA' is missing... You probably don't need bedwars functionality. Loaded either ways");
+            plugin.getLogger().warning("Plugin 'Vicky's SBA' is missing... You probably don't need bedwars functionality. Loaded either ways");
         }
     }
 
     public void getPlaceholders() {
-        PlaceholderStorer store = new PlaceholderStorer();
-        store.listPlaceholders("all", vicky_utils.getPlugin());
+        placeholderStorer.listPlaceholders("all", plugin);
     }
 
     public void getMechanics() {
-        StringStore store = new StringStore();
-        List<String> storedMechanics = store.returnStoredStrings(vicky_utils.getPlugin().getName(), "mm_mechanic");
-        for (String str : storedMechanics) {
-            Bukkit.getLogger().info(str);
+        List<String> storedMechanics = stringStorer.returnStoredStrings(plugin.getName(), "mm_mechanic");
+        if (storedMechanics != null) {
+            for (String str : storedMechanics) {
+                plugin.getLogger().info(str);
+            }
+        } else {
+            plugin.getLogger().severe("No registered Mechanics found");
         }
     }
 
     public void logAll(){
-        Bukkit.getLogger().info("MainLogger Will Proceed to log all...");
+        plugin.getLogger().info("MainLogger Will Proceed to log all...");
         getHooks();
-        Bukkit.getLogger().info("Registered Stored PlaceHolders: ");
+        plugin.getLogger().info("Registered Stored PlaceHolders: ");
         getPlaceholders();
-        Bukkit.getLogger().info("Registered MythicMobs Mechanics: ");
+        plugin.getLogger().info("Registered MythicMobs Mechanics: ");
         getMechanics();
     }
 }

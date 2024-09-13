@@ -1,11 +1,9 @@
 package org.v_utls.utilities;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.entity.Arrow;
-import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
@@ -133,6 +131,32 @@ public class ParticleTask extends BukkitRunnable {
     }
 */
 
+    private Location rotateAroundArrow(Location particleLoc, Location arrowLoc, Vector direction) {
+        Vector relativePos = particleLoc.toVector().subtract(arrowLoc.toVector());
+        direction = direction.normalize();
+        // Adjust relativePos by direction if needed, e.g., influence the rotation
+        relativePos.multiply(direction); // This is an example, adjust as necessary
+
+        double yaw = Math.toRadians(arrowLoc.getYaw());
+        double pitch = Math.toRadians(arrowLoc.getPitch());
+
+        double xRot = relativePos.getX();
+        double yRot = relativePos.getY();
+        double zRot = relativePos.getZ();
+
+        // Rotate around Yaw (Horizontal axis)
+        double xPrime = xRot * Math.cos(-yaw) - zRot * Math.sin(-yaw);
+        double zPrime = xRot * Math.sin(-yaw) + zRot * Math.cos(-yaw);
+
+        // Rotate around Pitch (Vertical axis)
+        double yPrime = yRot * Math.cos(pitch) - zPrime * Math.sin(pitch);
+        zPrime = yRot * Math.sin(pitch) + zPrime * Math.cos(pitch);
+
+        Vector rotatedPos = new Vector(xPrime, yPrime, zPrime);
+        return arrowLoc.clone().add(rotatedPos);
+    }
+
+
 
     @Override
     public void run() {
@@ -232,17 +256,20 @@ public class ParticleTask extends BukkitRunnable {
          * Are always for the dust that's transitioning asides that the first color is always for the redstone*/
         if (this.particleH == Particle.REDSTONE) {
             for (Location pos : rotheadPositions) {
-                redstoneLocation.getWorld().spawnParticle(particleH, pos, 1, spreadXH, spreadYH, spreadZH, speedH, new Particle.DustOptions(headColor, sizeH));
+                Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+                redstoneLocation.getWorld().spawnParticle(particleH, rotatedPos, 1, spreadXH, spreadYH, spreadZH, speedH, new Particle.DustOptions(headColor, sizeH));
             }
         } else if (particleH == Particle.DUST_COLOR_TRANSITION) {
             // Generate dust transition particles for head
             for (Location pos : rotheadPositions) {
-                redstoneLocation.getWorld().spawnParticle(particleH, pos, 1, spreadXH, spreadYH, spreadZH, speedH, new Particle.DustTransition(transitionColorStart, transitionColorEnd, sizeH));
+                Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+                redstoneLocation.getWorld().spawnParticle(particleH, rotatedPos, 1, spreadXH, spreadYH, spreadZH, speedH, new Particle.DustTransition(transitionColorStart, transitionColorEnd, sizeH));
             }
         } else {
             // Default particle type handling for head
             for (Location pos : rotheadPositions) {
-                loc.getWorld().spawnParticle(particleH, pos, 1, spreadXH, spreadYH, spreadZH, speedH, sizeH);
+                Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+                loc.getWorld().spawnParticle(particleH, rotatedPos, 1, spreadXH, spreadYH, spreadZH, speedH, sizeH);
             }
         }
 
@@ -251,20 +278,23 @@ public class ParticleTask extends BukkitRunnable {
             dustLocation = dustLocation.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
             for (Location pos : rotmidPositions) {
                 // Generate dust transition particles for middle
-                dustLocation.getWorld().spawnParticle(particleM, pos, 1, spreadXM, spreadYM, spreadZM, speedM, new Particle.DustTransition(transitionColorStart, transitionColorEnd, sizeM));
+                Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+                dustLocation.getWorld().spawnParticle(particleM, rotatedPos, 1, spreadXM, spreadYM, spreadZM, speedM, new Particle.DustTransition(transitionColorStart, transitionColorEnd, sizeM));
             }
         } else if (particleM == Particle.REDSTONE) {
             //redstone particle handling for middle
             for (Location pos : rotmidPositions) {
                 // Generate dust transition particles for middle
-                dustLocation.getWorld().spawnParticle(particleM, pos, 1, spreadXM, spreadYM, spreadZM, speedM, new Particle.DustOptions(headColor, sizeM));
+                Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+                dustLocation.getWorld().spawnParticle(particleM, rotatedPos, 1, spreadXM, spreadYM, spreadZM, speedM, new Particle.DustOptions(headColor, sizeM));
             }
         } else {
             //default particle handling for middle
             for (Location pos : rotmidPositions) {
                 Location BParticleLocation = loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
                 // Generate dust transition particles for middle
-                BParticleLocation.getWorld().spawnParticle(particleM, pos, 1, spreadXM, spreadYM, spreadZM, speedM, sizeM);
+                Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+                BParticleLocation.getWorld().spawnParticle(particleM, rotatedPos, 1, spreadXM, spreadYM, spreadZM, speedM, sizeM);
             }
         }
 

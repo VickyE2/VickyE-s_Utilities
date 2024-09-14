@@ -13,3 +13,9 @@ dependencies:
     MythicMobs:
       load: AFTER
       required: true
+    ItemsAdder:
+      load: AFTER
+      required: false
+    LoneLibs:
+      load: AFTER
+      required: false

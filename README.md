@@ -47,7 +47,7 @@
 ```
 **Custom Effects**
 - It uses a custom Effects Implementation class to make custom effects to run custom events or things on the specified `Living Entity`. It also works seamlessly works with the custom Death Messages. an example implementation is this:
-```java
+- ```java
   public class Bleeding implements CustomEffect {
 
     private final Plugin plugin;

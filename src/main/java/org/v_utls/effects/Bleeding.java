@@ -76,6 +76,7 @@ public class Bleeding implements CustomEffect {
         return effectType;
     }
 
+
     private void applyCustomBleedingDamage(LivingEntity entity, int level) {
         vicky_utils pluginUtils = (vicky_utils) Bukkit.getPluginManager().getPlugin(plugin.getName());
         double customDamage = calculateBleedingDamage(level);

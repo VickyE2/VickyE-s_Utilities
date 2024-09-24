@@ -21,6 +21,12 @@ public class MainLogger {
         }else{
             plugin.getLogger().warning("Plugin 'Vicky's SBA' is missing... You probably don't need bedwars functionality. Loaded either ways");
         }
+
+        if (Bukkit.getPluginManager().getPlugin("VickyE-EP") != null) {
+            plugin.getLogger().info("Plugin 'Vicky's Economy Plugin' is present. Adding additional Functionality");
+        }else{
+            plugin.getLogger().warning("Plugin 'Vicky's Economy Plugin' is missing... You probably don't need Economyxaa functionality. Loaded either ways");
+        }
     }
 
     public void getPlaceholders() {

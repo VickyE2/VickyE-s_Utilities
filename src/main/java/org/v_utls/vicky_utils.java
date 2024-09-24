@@ -12,11 +12,10 @@ import org.v_utls.listeners.SpawnListener;
 import org.v_utls.mythic.MechanicRegistrar;
 import org.v_utls.utilities.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.File;
+import java.util.*;
 
-import static org.v_utls.global.Global.customDamageHandler;
-import static org.v_utls.global.Global.placeholderStorer;
+import static org.v_utls.global.Global.*;
 
 public final class vicky_utils extends JavaPlugin {
 
@@ -36,10 +35,20 @@ public final class vicky_utils extends JavaPlugin {
             Global.placeholderStorer = new PlaceholderStorer();
             Global.stringStorer = new StringStore();
             Global.customDamageHandler = new CustomDamageHandler(this);
+            Global.mechanicRegistrar = new MechanicRegistrar(this);
 
             MainLogger logger1 = new MainLogger(this);
 
             getLogger().info("Rendering Vicky's Utilities Accessible");
+
+            if (Bukkit.getPluginManager().getPlugin("ItemsAdder") != null){
+                FileManager fileManager = new FileManager(this);
+                getLogger().info("ItemsAdder is present. Extracting Default Files");
+                List<String> files = Arrays.asList("contents/vicky_utls/");
+                fileManager.extractDefaultIAAssets(files);
+            }else{
+                getLogger().warning("ItemsAdder isn't present. Defaulting to basic settings");
+            }
 
             try {
                 Map<String, CustomEffect> effects = new HashMap<>();
@@ -63,8 +72,7 @@ public final class vicky_utils extends JavaPlugin {
                 }
             }
 
-            MechanicRegistrar registrations = new MechanicRegistrar(this);
-            registrations.registerAll();
+            mechanicRegistrar.registerAll();
 
             new PlaceholderExpansions(this).register();
 
@@ -103,5 +111,16 @@ public final class vicky_utils extends JavaPlugin {
 
     public CustomDamageHandler getCustomDamageHandler() {
         return customDamageHandler;
+    }
+
+    public void createFolder(String name) {
+        File folder = new File(getDataFolder(), name);
+        if (!folder.exists()) {
+            try {
+                folder.mkdir();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

@@ -1,0 +1,12 @@
+{
+  "gui_light": "front",
+  "parent":"item/template_skull",
+  "display":
+  {
+    "gui":
+    {
+      "translation":[-9,25,0],
+      "scale":[4,4,4]
+    }
+  }
+}

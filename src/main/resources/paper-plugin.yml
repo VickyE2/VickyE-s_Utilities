@@ -19,3 +19,9 @@ dependencies:
     LoneLibs:
       load: AFTER
       required: false
+    LuckPerms:
+      load: AFTER
+      required: true
+    ProtocolLib:
+      load: AFTER
+      required: true

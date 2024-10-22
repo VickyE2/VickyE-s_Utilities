@@ -8,3 +8,10 @@ items:
       generate: false
       model_path: player_head_gui_size_1
       material: PLAYER_HEAD
+  player_head_large:
+    enabled: true
+    display_name: null_head
+    resource:
+      generate: false
+      model_path: player_head_large
+      material: PLAYER_HEAD

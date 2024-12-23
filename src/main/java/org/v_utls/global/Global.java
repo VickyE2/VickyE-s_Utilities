@@ -1,13 +1,12 @@
 /* Licensed under Apache-2.0 2024. */
 package org.v_utls.global;
 
+import java.util.List;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.v_utls.handlers.CustomDamageHandler;
 import org.v_utls.mythic.MechanicRegistrar;
 import org.v_utls.utilities.PlaceholderStorer;
 import org.v_utls.utilities.StringStore;
-
-import java.util.List;
 
 public class Global {
   public static PlaceholderStorer placeholderStorer;

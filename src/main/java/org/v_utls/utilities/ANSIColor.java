@@ -40,12 +40,12 @@ public class ANSIColor {
   public static final String LIGHT_CYAN = "\033[0;96m"; // LIGHT CYAN
   public static final String LIGHT_GRAY = "\033[0;97m"; // LIGHT GRAY
 
-  //STYLES
+  // STYLES
   public static final String BOLD = "\033[1m";
   public static final String ITALIC = "\033[3m";
   public static final String BOLD_ITALIC = "\033[1m\033[3m";
   public static final String UNDERLINE = "\033[4m";
-  public static final String STRIKETHROUGH = "\033[9m" ;
+  public static final String STRIKETHROUGH = "\033[9m";
 
   private static final Map<String, String> COLOR_MAP = new HashMap<>();
 
@@ -80,9 +80,9 @@ public class ANSIColor {
     COLOR_MAP.put("underline", UNDERLINE);
     COLOR_MAP.put("strikethrough", STRIKETHROUGH);
   }
+
   // Regex pattern to match color markers like red[...] or purple[...]
   private static final Pattern COLOR_PATTERN = Pattern.compile("([a-zA-Z_]+)\\[([^\\]]+)\\]");
-
 
   /**
    * This is the list of default colors available:
@@ -127,7 +127,7 @@ public class ANSIColor {
       }
 
       String color = matcher.group(1).toLowerCase(); // Extract color/style name
-      String text = matcher.group(2);               // Extract text within the brackets
+      String text = matcher.group(2); // Extract text within the brackets
 
       // Recursively process the inner text
       String processedText = colorize(text);
@@ -160,5 +160,4 @@ public class ANSIColor {
   public void addCustomColor(String colorName, String ansiCode) {
     COLOR_MAP.put(colorName.toLowerCase(), ansiCode);
   }
-
 }

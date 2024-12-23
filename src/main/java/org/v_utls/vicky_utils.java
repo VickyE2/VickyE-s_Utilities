@@ -7,6 +7,7 @@ import java.io.File;
 import java.util.*;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.v_utls.effects.Bleeding;
 import org.v_utls.effects.CustomEffect;
 import org.v_utls.expansions.PlaceholderExpansions;
@@ -46,7 +47,7 @@ public final class vicky_utils extends JavaPlugin {
       if (Bukkit.getPluginManager().getPlugin("ItemsAdder") != null) {
         FileManager fileManager = new FileManager(this);
         getLogger().info("ItemsAdder is present. Extracting Default Files");
-        List<String> files = Arrays.asList("contents/vicky_utls/");
+        List<String> files = List.of("contents/vicky_utls/");
         fileManager.extractDefaultIAAssets(files);
       } else {
         getLogger().warning("ItemsAdder isn't present. Defaulting to basic settings");
@@ -147,6 +148,28 @@ public final class vicky_utils extends JavaPlugin {
 
   public CustomDamageHandler getCustomDamageHandler() {
     return customDamageHandler;
+  }
+
+
+  public static void hookDependantPlugin(@NotNull JavaPlugin plugin){
+    getPlugin().getLogger().info(ANSIColor.colorize("New plugin hooked successfully: green[" + plugin.getName() + "]" ));
+    hookedPlugins.add(plugin);
+  }
+  public static void unhookDependantPlugin(@NotNull JavaPlugin plugin){
+    boolean removed = hookedPlugins.remove(plugin);
+    if (removed) {
+      getPlugin().getLogger().info(ANSIColor.colorize("Plugin purple[" + plugin.getName() + "] has been unhooked" ));
+    }else {
+      getPlugin().getLogger().warning(ANSIColor.colorize("Plugin bold[" + plugin.getName() + "] wasn't found among hooked plugins. Please contact the plugin developers if this isn't a development environment."));
+    }
+  }
+  public static String getHookedDependantPlugins(){
+    StringBuilder plugins = new StringBuilder();
+    plugins.append(ANSIColor.colorize("cyan[Hooked Plugins: ] \n"));
+    for (JavaPlugin plugin : hookedPlugins) {
+      plugins.append(ANSIColor.colorize("   - purple[" + plugin.getName() + "]"));
+    }
+    return  plugins.toString();
   }
 
   public void createFolder(String name) {

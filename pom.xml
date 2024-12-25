@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.example.vicky_utils</groupId>
+    <groupId>org.vicky.vicky_utils</groupId>
     <artifactId>v-utls</artifactId>
     <version>0.0.1-BETA</version>
     <packaging>jar</packaging>
@@ -107,7 +107,7 @@
                             <relocations>
                                 <relocation>
                                     <pattern>net.wesjd.anvilgui</pattern>
-                                    <shadedPattern>org.example.vicky_utils.anvilgui</shadedPattern> <!-- Replace [YOUR_PLUGIN_PACKAGE] with your namespace -->
+                                    <shadedPattern>org.vicky.vicky_utils.anvilgui</shadedPattern> <!-- Replace [YOUR_PLUGIN_PACKAGE] with your namespace -->
                                 </relocation>
                             </relocations>
                             <filters>

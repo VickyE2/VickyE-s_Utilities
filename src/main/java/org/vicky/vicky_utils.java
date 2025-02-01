@@ -2,6 +2,7 @@
 package org.vicky;
 
 import static org.vicky.global.Global.*;
+import static org.vicky.utilities.DatabaseManager.SQLManager.generator;
 
 import java.io.File;
 import java.util.*;
@@ -17,182 +18,225 @@ import org.vicky.listeners.DeathListener;
 import org.vicky.listeners.SpawnListener;
 import org.vicky.mythic.MechanicRegistrar;
 import org.vicky.utilities.*;
+import org.vicky.utilities.DatabaseManager.SQLManager;
+import org.vicky.utilities.DatabaseManager.SQLManagerBuilder;
+import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
+import org.vicky.utilities.DatabaseManager.utils.Hbm2DdlAutoType;
 
 public final class vicky_utils extends JavaPlugin {
 
-  public static vicky_utils plugin;
+    public static vicky_utils plugin;
+    private List<Class<?>> pendingMappingClasses = new ArrayList<>();
+    boolean exceptionOccurred = false;
 
-  boolean exceptionOccurred = false;
+    public static vicky_utils getPlugin() {
+        return plugin;
+    }
 
-  public static vicky_utils getPlugin() {
-    return plugin;
-  }
-
-  @Override
-  public void onEnable() {
-
-    // Plugin startup logic
-    if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null
-        && Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
-
-      Global.placeholderStorer = new PlaceholderStorer();
-      Global.stringStorer = new StringStore();
-      Global.customDamageHandler = new CustomDamageHandler(this);
-      Global.mechanicRegistrar = new MechanicRegistrar(this);
-
-      MainLogger logger1 = new MainLogger(this);
-
-      getLogger().info(ANSIColor.colorize("purple[Rendering Vicky's Utilities Accessible]"));
-
-      if (Bukkit.getPluginManager().getPlugin("ItemsAdder") != null) {
-        FileManager fileManager = new FileManager(this);
-        getLogger().info("ItemsAdder is present. Extracting Default Files");
-        List<String> files = List.of("contents/vicky_utls/");
-        fileManager.extractDefaultIAAssets(files);
-      } else {
-        getLogger().warning("ItemsAdder isn't present. Defaulting to basic settings");
-      }
-
-      try {
-        Map<String, CustomEffect> effects = new HashMap<>();
-
-        Bleeding bleeding = new Bleeding(this);
-        effects.put("bleeding", bleeding);
-
-        DeathMessages.add("bleeding", "{player} bled to death.");
-        DeathMessages.add("bleeding", "{player} couldn't stop the bleeding.");
-
-        getServer().getPluginManager().registerEvents(new DeathListener(effects), this);
-        getServer().getPluginManager().registerEvents(new SpawnListener(customDamageHandler), this);
-
-        getLogger()
-            .info(
-                ANSIColor.colorize(
-                    "Effects and DeathMessages have been sucessfully Registered.",
-                    ANSIColor.PURPLE));
-      } catch (Exception e) {
-        exceptionOccurred = true;
-        getLogger()
-            .info(
-                ANSIColor.colorize(
-                    "Unable to register Effects and DeathMessages..... Error:" + e.getMessage(),
-                    ANSIColor.RED_BOLD));
-      } finally {
-        if (exceptionOccurred) {
-          getLogger()
-              .info(
-                  ANSIColor.colorize(
-                      "Continuing with Loading Some Errors Might Occur", ANSIColor.LIGHT_RED));
+    @Override
+    public void onLoad() {
+        try {
+            databaseManager = new SQLManagerBuilder()
+                    .addMappingClass(DatabasePlayer.class)
+                    .addMappingClasses(pendingMappingClasses)
+                    .setUsername(generator.generate(20, true, true, true, false))
+                    .setPassword(generator.generatePassword(30))
+                    .setShowSql(false)
+                    .setFormatSql(false)
+                    .setDialect("org.hibernate.community.dialect.SQLiteDialect")
+                    .setDdlAuto(Hbm2DdlAutoType.UPDATE)
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-      }
+    }
 
-      mechanicRegistrar.registerAll();
+    @Override
+    public void onEnable() {
 
-      new PlaceholderExpansions(this).register();
+        // Plugin startup logic
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null
+                && Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
 
-      placeholderStorer.storePlaceholder(
-          "vicky_utils",
-          "isBleeding",
-          this.getName(),
-          "Returns weather the player is currently being affected by the custom BLEEDING mechanic"
-              + " of mythic mobs.");
+            configManager = new ConfigManager(this, "./global/global_configs.yml");
+            Config config = new Config(this);
+            config.registerConfigs();
 
-      MainLogger logger = new MainLogger(this);
-      logger.getHooks();
+            Global.placeholderStorer = new PlaceholderStorer();
+            Global.stringStorer = new StringStore();
+            Global.customDamageHandler = new CustomDamageHandler(this);
+            Global.mechanicRegistrar = new MechanicRegistrar(this);
 
-      getServer()
-          .getScheduler()
-          .scheduleSyncDelayedTask(
-              this,
-              () -> {
+            databaseManager.configureSessionFactory();
+            databaseManager.startDatabase();
+
+            plugin = this;
+            MainLogger logger1 = new MainLogger(this);
+
+            getLogger().info(ANSIColor.colorize("purple[Rendering Vicky's Utilities Accessible]"));
+
+            if (Bukkit.getPluginManager().getPlugin("ItemsAdder") != null) {
+                FileManager fileManager = new FileManager(this);
+                getLogger().info("ItemsAdder is present. Extracting Default Files");
+                List<String> files = List.of("contents/vicky_utls/");
+                fileManager.extractDefaultIAAssets(files);
+            } else {
+                getLogger().warning("ItemsAdder isn't present. Defaulting to basic settings");
+            }
+
+            try {
+                Map<String, CustomEffect> effects = new HashMap<>();
+
+                Bleeding bleeding = new Bleeding(this);
+                effects.put("bleeding", bleeding);
+
+                DeathMessages.add("bleeding", "{player} bled to death.");
+                DeathMessages.add("bleeding", "{player} couldn't stop the bleeding.");
+
+                getServer().getPluginManager().registerEvents(new DeathListener(effects), this);
+                getServer().getPluginManager().registerEvents(new SpawnListener(customDamageHandler), this);
+
                 getLogger()
+                        .info(
+                                ANSIColor.colorize(
+                                        "Effects and DeathMessages have been sucessfully Registered.",
+                                        ANSIColor.PURPLE));
+            } catch (Exception e) {
+                exceptionOccurred = true;
+                getLogger()
+                        .info(
+                                ANSIColor.colorize(
+                                        "Unable to register Effects and DeathMessages..... Error:" + e.getMessage(),
+                                        ANSIColor.RED_BOLD));
+            } finally {
+                if (exceptionOccurred) {
+                    getLogger()
+                            .info(
+                                    ANSIColor.colorize(
+                                            "Continuing with Loading Some Errors Might Occur", ANSIColor.LIGHT_RED));
+                }
+            }
+
+            mechanicRegistrar.registerAll();
+
+
+
+            new PlaceholderExpansions(this).register();
+
+            placeholderStorer.storePlaceholder(
+                    "vicky_utils",
+                    "isBleeding",
+                    this.getName(),
+                    "Returns weather the player is currently being affected by the custom BLEEDING mechanic"
+                            + " of mythic mobs.");
+
+            MainLogger logger = new MainLogger(this);
+            logger.getHooks();
+
+            getServer()
+                    .getScheduler()
+                    .scheduleSyncDelayedTask(
+                            this,
+                            () -> {
+                                getLogger()
+                                        .info(
+                                                ANSIColor.colorize(
+                                                        "Placeholders from Plugin and its Addons have been registered: ",
+                                                        ANSIColor.CYAN));
+                                logger1.getPlaceholders();
+                                getLogger()
+                                        .info(ANSIColor.colorize("Getting Registered Mechanics", ANSIColor.CYAN));
+                                logger1.getMechanics();
+                            });
+
+        } else if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) {
+            exceptionOccurred = true;
+            getLogger()
+                    .severe(
+                            ANSIColor.colorize(
+                                    "Could not find PlaceholderAPI! This plugin is required.", ANSIColor.RED));
+            Bukkit.getPluginManager().disablePlugin(this);
+        } else {
+            exceptionOccurred = true;
+            getLogger()
+                    .severe(
+                            ANSIColor.colorize(
+                                    "Could not find MythicAPI! Ensure MythicMobs is Present.", ANSIColor.RED));
+            Bukkit.getPluginManager().disablePlugin(this);
+        }
+    }
+
+    @Override
+    public void onDisable() {
+        if (exceptionOccurred) {
+            getLogger()
                     .info(
-                        ANSIColor.colorize(
-                            "Placeholders from Plugin and its Addons have been registered: ",
-                            ANSIColor.CYAN));
-                logger1.getPlaceholders();
-                getLogger()
-                    .info(ANSIColor.colorize("Getting Registered Mechanics", ANSIColor.CYAN));
-                logger1.getMechanics();
-              });
-
-    } else if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) {
-      exceptionOccurred = true;
-      getLogger()
-          .severe(
-              ANSIColor.colorize(
-                  "Could not find PlaceholderAPI! This plugin is required.", ANSIColor.RED));
-      Bukkit.getPluginManager().disablePlugin(this);
-    } else {
-      exceptionOccurred = true;
-      getLogger()
-          .severe(
-              ANSIColor.colorize(
-                  "Could not find MythicAPI! Ensure MythicMobs is Present.", ANSIColor.RED));
-      Bukkit.getPluginManager().disablePlugin(this);
+                            ANSIColor.colorize(
+                                    "Rendering Utilities Inaccessible. Dependant Plugins will not Work",
+                                    ANSIColor.RED_BOLD));
+        } else {
+            getLogger().info("Rendering Utilities Inaccessible");
+        }
     }
-  }
 
-  @Override
-  public void onDisable() {
-    if (exceptionOccurred) {
-      getLogger()
-          .info(
-              ANSIColor.colorize(
-                  "Rendering Utilities Inaccessible. Dependant Plugins will not Work",
-                  ANSIColor.RED_BOLD));
-    } else {
-      getLogger().info("Rendering Utilities Inaccessible");
+    public CustomDamageHandler getCustomDamageHandler() {
+        return customDamageHandler;
     }
-  }
 
-  public CustomDamageHandler getCustomDamageHandler() {
-    return customDamageHandler;
-  }
-
-  public static void hookDependantPlugin(@NotNull JavaPlugin plugin) {
-    getPlugin()
-        .getLogger()
-        .info(
-            ANSIColor.colorize("New plugin hooked successfully: green[" + plugin.getName() + "]"));
-    hookedPlugins.add(plugin);
-  }
-
-  public static void unhookDependantPlugin(@NotNull JavaPlugin plugin) {
-    boolean removed = hookedPlugins.remove(plugin);
-    if (removed) {
-      getPlugin()
-          .getLogger()
-          .info(ANSIColor.colorize("Plugin purple[" + plugin.getName() + "] has been unhooked"));
-    } else {
-      getPlugin()
-          .getLogger()
-          .warning(
-              ANSIColor.colorize(
-                  "Plugin bold["
-                      + plugin.getName()
-                      + "] wasn't found among hooked plugins. Please contact the plugin developers"
-                      + " if this isn't a development environment."));
+    public static void hookDependantPlugin(@NotNull JavaPlugin plugin) {
+        getPlugin()
+                .getLogger()
+                .info(
+                        ANSIColor.colorize("New plugin hooked successfully: green[" + plugin.getName() + "]"));
+        hookedPlugins.add(plugin);
     }
-  }
 
-  public static String getHookedDependantPlugins() {
-    StringBuilder plugins = new StringBuilder();
-    plugins.append(ANSIColor.colorize("cyan[Hooked Plugins: ] \n"));
-    for (JavaPlugin plugin : hookedPlugins) {
-      plugins.append(ANSIColor.colorize("   - purple[" + plugin.getName() + "]"));
+    public static void unhookDependantPlugin(@NotNull JavaPlugin plugin) {
+        boolean removed = hookedPlugins.remove(plugin);
+        if (removed) {
+            getPlugin()
+                    .getLogger()
+                    .info(ANSIColor.colorize("Plugin purple[" + plugin.getName() + "] has been unhooked"));
+        } else {
+            getPlugin()
+                    .getLogger()
+                    .warning(
+                            ANSIColor.colorize(
+                                    "Plugin bold["
+                                            + plugin.getName()
+                                            + "] wasn't found among hooked plugins. Please contact the plugin developers"
+                                            + " if this isn't a development environment."));
+        }
     }
-    return plugins.toString();
-  }
 
-  public void createFolder(String name) {
-    File folder = new File(getDataFolder(), name);
-    if (!folder.exists()) {
-      try {
-        folder.mkdir();
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
+    public static String getHookedDependantPlugins() {
+        StringBuilder plugins = new StringBuilder();
+        plugins.append(ANSIColor.colorize("cyan[Hooked Plugins: ] \n"));
+        for (JavaPlugin plugin : hookedPlugins) {
+            plugins.append(ANSIColor.colorize("   - purple[" + plugin.getName() + "]"));
+        }
+        return plugins.toString();
     }
-  }
+
+    /**
+     * Called by dependent plugins to register their mapping classes.
+     */
+    public void registerMappingClass(Class<?> clazz) {
+        pendingMappingClasses.add(clazz);
+    }
+
+    public SQLManager getSQLManager() {
+        return databaseManager;
+    }
+
+    public void createFolder(String name) {
+        File folder = new File(getDataFolder(), name);
+        if (!folder.exists()) {
+            try {
+                folder.mkdir();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }

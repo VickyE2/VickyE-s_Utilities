@@ -39,7 +39,7 @@ public class MainLogger {
               "Plugin 'Vicky's Economy Plugin' is missing... You probably don't need Economyxaa"
                   + " functionality. Loaded either ways");
     }
-    vicky_utils.getHookedDependantPlugins();
+    plugin.getLogger().info(vicky_utils.getHookedDependantPlugins());
   }
 
   public void getPlaceholders() {

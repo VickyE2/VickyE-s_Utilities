@@ -25,4 +25,3 @@ dependencies:
     ProtocolLib:
       load: AFTER
       required: true
-

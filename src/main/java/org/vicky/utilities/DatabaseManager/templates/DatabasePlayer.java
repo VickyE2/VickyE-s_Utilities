@@ -1,60 +1,73 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.utilities.DatabaseManager.templates;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.ColumnDefault;
-
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import org.hibernate.annotations.ColumnDefault;
+import org.vicky.utilities.DatabaseTemplate;
+import org.vicky.utilities.RanksLister;
 
 /**
  * <strong>If you would like to extend this class for a more versatile database entity:</strong>
- * <p>
- * <@>Entity<br>
- * public class ExtendedGlobalPlayer extends GlobalPlayer {<br>
- *     <@>JoinTable(<br>
- *         name = "player_advancements",<br>
- *         joinColumns = @JoinColumn(name = "player_id"),<br>
- *         inverseJoinColumns = @JoinColumn(name = "advancement_id")<br>
- *     )<br>
- *     <@>OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)<br>
- *     private List<Advancement> accomplishedAdvancements = new ArrayList<>();<br>
- * }<br>
- * </p>
+ * <pre>
+ * <strong>@</strong>Entity
+ * public class ExtendedGlobalPlayer extends GlobalPlayer {
+ *     <strong>@</strong>JoinTable(
+ *         name = "player_advancements",
+ *         joinColumns = @JoinColumn(name = "player_id"),
+ *         inverseJoinColumns = @JoinColumn(name = "advancement_id")
+ *     )
+ *     <strong>@</strong>OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+ *     private List"<"Advancement">" accomplishedAdvancements = new ArrayList"<>"();
+ * }
+ * </pre>
+ * @author VickyE2
  */
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@Table(
-        name = "ServerDatabasePlayers"
-)
-public class DatabasePlayer {
-    @Id
-    private String id;
-    @Column
-    private boolean isFirstTime;
-    @Column
-    @ColumnDefault(value = "light_theme")
-    private String userTheme;
+@Table(name = "ServerDatabasePlayers")
+public class DatabasePlayer implements DatabaseTemplate {
+  @Id
+  @Column(name = "player_id", unique = true, nullable = false)
+  private String id;
 
-    public UUID getId() {
-        return UUID.fromString(id);
-    }
+  @Column private boolean isFirstTime;
 
-    public void setId(UUID id) {
-        this.id = id.toString();
-    }
+  @Column
+  @ColumnDefault(value = "light_theme")
+  private String userTheme;
 
-    public boolean isFirstTime() {
-        return this.isFirstTime;
-    }
+  public UUID getId() {
+    return UUID.fromString(id);
+  }
 
-    public void setFirstTime(boolean firstTime) {
-        this.isFirstTime = firstTime;
-    }
+  public void setId(UUID id) {
+    this.id = id.toString();
+  }
 
-    public void setUserTheme(String userTheme) {
-        this.userTheme = userTheme;
+  public int getRank() {
+    RanksLister lister = new RanksLister();
+    try {
+      return lister.getHighestWeighingGroupWeight(this.getId()).get().orElse(0);
+    } catch (ExecutionException | InterruptedException e) {
+      return 0;
     }
+  }
 
-    public String getUserTheme() {
-        return userTheme;
-    }
+  public boolean isFirstTime() {
+    return this.isFirstTime;
+  }
+
+  public void setFirstTime(boolean firstTime) {
+    this.isFirstTime = firstTime;
+  }
+
+  public void setUserTheme(String userTheme) {
+    this.userTheme = userTheme;
+  }
+
+  public String getUserTheme() {
+    return userTheme;
+  }
 }

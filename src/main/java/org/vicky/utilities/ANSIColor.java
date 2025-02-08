@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024. */
+/* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.utilities;
 
 import java.util.HashMap;
@@ -6,6 +6,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * This is a class for making ansi codes in console
+ */
 public class ANSIColor {
   // Reset
   public static final String RESET = "\033[0m"; // Text Reset
@@ -13,6 +16,8 @@ public class ANSIColor {
   // Regular Colors
   public static final String BLACK = "\033[0;30m"; // BLACK
   public static final String RED = "\033[0;31m"; // RED
+  public static final String ORANGE = "\033[38;5;208m\n"; // ORANGE
+  public static final String PINK = "\033[38;5;205m\n"; // PINK
   public static final String GREEN = "\033[0;32m"; // GREEN
   public static final String YELLOW = "\033[0;33m"; // YELLOW
   public static final String BLUE = "\033[0;34m"; // BLUE
@@ -29,6 +34,8 @@ public class ANSIColor {
   public static final String PURPLE_BOLD = "\033[1;35m"; // PURPLE
   public static final String CYAN_BOLD = "\033[1;36m"; // CYAN
   public static final String WHITE_BOLD = "\033[1;37m"; // WHITE
+  public static final String ORANGE_BOLD = "\033[1;38;5;208m\n"; // ORANGE
+  public static final String PINK_BOLD = "\033[1;38;5;205m"; // PINK
 
   // High Intensity Colors (Bright)
   public static final String DARK_GRAY = "\033[0;90m"; // DARK GRAY
@@ -52,6 +59,8 @@ public class ANSIColor {
   static {
     COLOR_MAP.put("black", BLACK);
     COLOR_MAP.put("red", RED);
+    COLOR_MAP.put("orange", ORANGE);
+    COLOR_MAP.put("pink", PINK);
     COLOR_MAP.put("green", GREEN);
     COLOR_MAP.put("yellow", YELLOW);
     COLOR_MAP.put("blue", BLUE);
@@ -60,6 +69,8 @@ public class ANSIColor {
     COLOR_MAP.put("white", WHITE);
     COLOR_MAP.put("black_bold", BLACK_BOLD);
     COLOR_MAP.put("red_bold", RED_BOLD);
+    COLOR_MAP.put("orange_bold", ORANGE_BOLD);
+    COLOR_MAP.put("pink_bold", PINK_BOLD);
     COLOR_MAP.put("green_bold", GREEN_BOLD);
     COLOR_MAP.put("yellow_bold", YELLOW_BOLD);
     COLOR_MAP.put("blue_bold", BLUE_BOLD);
@@ -97,6 +108,9 @@ public class ANSIColor {
    * @deprecated
    * This method is rather too rigid and dosent support multi colors on a single string without splitting it. I might remove this method later.....might...
    * <p>Use {@link #colorize(String)}</p>
+   * @param message This is the string the ansi color is to be applied to
+   * @param color The specific ansi color to apply
+   * @return Returns an ansi enriched text
    */
   @Deprecated
   public static String colorize(String message, String color) {
@@ -115,6 +129,8 @@ public class ANSIColor {
    * To use this you could go:
    * <p style="padding-left: 20px;"><em><b>colorize('color[style[...message...]] color[style[...message...]] ...')</b></em></p>
    * <p>styles should come inside the color.</p>
+   * @param message This is the string containing all the regex-color-message
+   * @return Returns an ansi enriched text
    */
   public static String colorize(String message) {
     while (true) {
@@ -142,9 +158,9 @@ public class ANSIColor {
   }
 
   /**
-   *
+   * This removes all ansi codes from a text. Usually useful for log saving.
    * @param input The string to be cleaned of ansi codes
-   * @return This returns the inputted string with no ansi codes for log saving functionalities
+   * @return This returns the inputted string with no ansi codes for log-saving functionalities
    */
   public static String removeAnsiCodes(String input) {
     return input.replaceAll("\u001B\\[[;\\d]*m", "");

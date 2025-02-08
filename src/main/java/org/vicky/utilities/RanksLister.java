@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024. */
+/* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.utilities;
 
 import java.util.*;
@@ -67,14 +67,19 @@ public class RanksLister {
     return userFuture.thenApply(
         user ->
             user.getInheritedGroups(user.getQueryOptions()).stream() // Get inherited groups
-                .max(
-                    Comparator.comparingInt(
-                        group ->
-                            group
-                                .getWeight()
-                                .orElse(0))) // Compare by group weight, defaulting to 0 if not set
-                .map(Group::getName) // Get the name of the group with the highest weight
+                .max(Comparator.comparingInt(group -> group.getWeight().orElse(0)))
+                .map(Group::getName)
                 .orElse(user.getPrimaryGroup()));
+  }
+
+  public CompletableFuture<OptionalInt> getHighestWeighingGroupWeight(UUID who) {
+    CompletableFuture<User> userFuture = luckPerms.getUserManager().loadUser(who);
+    return userFuture.thenApply(
+        user ->
+            user.getInheritedGroups(user.getQueryOptions()).stream() // Get inherited groups
+                .max(Comparator.comparingInt(group -> group.getWeight().orElse(0)))
+                .map(Group::getWeight)
+                .orElse(OptionalInt.of(0)));
   }
 
   public CompletableFuture<String> getUserPrefix(UUID who) {

@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024. */
+/* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.effects;
 
 import java.util.HashMap;
@@ -26,7 +26,6 @@ public class Bleeding implements CustomEffect {
   @Override
   public void applyEffect(LivingEntity entity, int durationInSeconds, int level) {
     if (bleedingEntities.containsKey(entity.getUniqueId())) {
-      // Entity is already bleeding
       return;
     }
 
@@ -86,7 +85,6 @@ public class Bleeding implements CustomEffect {
   }
 
   private double calculateBleedingDamage(int level) {
-    // Damage calculation formula for bleeding
     return -34 * Math.exp(-0.5 * (level * Math.cos(34.1) + level * Math.sin(39))) + 34;
   }
 }

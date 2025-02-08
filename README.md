@@ -131,3 +131,29 @@
 - This allows for colors to be added to Logs and to create Gradients. Thats all.
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

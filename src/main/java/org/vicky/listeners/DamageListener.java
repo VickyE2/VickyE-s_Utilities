@@ -8,7 +8,6 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.metadata.MetadataValue;
 
 public class DamageListener implements Listener {
-
   @EventHandler
   public void onEntityDamage(EntityDamageEvent event) {
     Entity entity = event.getEntity();

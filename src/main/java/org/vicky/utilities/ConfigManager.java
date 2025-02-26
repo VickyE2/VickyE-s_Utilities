@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024. */
+/* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.utilities;
 
 import java.io.*;
@@ -14,13 +14,16 @@ import org.spongepowered.configurate.ConfigurationOptions;
 import org.spongepowered.configurate.loader.ConfigurationLoader;
 import org.spongepowered.configurate.yaml.NodeStyle;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
+import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class ConfigManager {
 
   public ConfigurationLoader<CommentedConfigurationNode> loader;
   public CommentedConfigurationNode rootNode;
   public JavaPlugin plugin;
+  public ContextLogger logger = new ContextLogger(ContextLogger.ContextType.SYSTEM, "CONFIG-YML");
   public ConfigurationOptions options;
+  public boolean shouldLog = true;
 
   // Constructor 1: With a specified path
   public ConfigManager(JavaPlugin plugin, String path) {
@@ -28,9 +31,20 @@ public class ConfigManager {
     createConfig(path);
   }
 
+  public ConfigManager(JavaPlugin plugin, String path, boolean shouldLog) {
+    this.plugin = plugin;
+    this.shouldLog = shouldLog;
+    createConfig(path);
+  }
+
   // Constructor 2: Without a path
   public ConfigManager(JavaPlugin plugin) {
     this.plugin = plugin;
+  }
+
+  public ConfigManager(JavaPlugin plugin, boolean shouldLog) {
+    this.plugin = plugin;
+    this.shouldLog = shouldLog;
   }
 
   // Create or load the config file
@@ -51,10 +65,13 @@ public class ConfigManager {
       try {
         // Create the file if it does not exist
         configFile.createNewFile();
-        plugin.getLogger().info("Created new config file: " + path);
+        if (shouldLog) {
+          logger.printBukkit("Created new config file: " + path);
+        }
         loadConfigValues();
       } catch (IOException e) {
-        plugin.getLogger().severe("Failed to create new config file: " + e.getMessage());
+        logger.printBukkit(
+            "Failed to create new config file: " + e.getMessage(), ContextLogger.LogType.ERROR);
       }
     } else {
       loadConfigValues();
@@ -78,10 +95,13 @@ public class ConfigManager {
       try {
         // Create the file if it does not exist
         configFile.createNewFile();
-        plugin.getLogger().info("Created new config file: " + pat);
+        if (shouldLog) {
+          logger.printBukkit("Created new config file: " + pat);
+        }
         loadConfigValues();
       } catch (IOException e) {
-        plugin.getLogger().severe("Failed to create new config file: " + e.getMessage());
+        logger.printBukkit(
+            "Failed to create new config file: " + e.getMessage(), ContextLogger.LogType.ERROR);
       }
     } else {
       loadConfigValues();
@@ -96,7 +116,9 @@ public class ConfigManager {
     loader = YamlConfigurationLoader.builder().path(configFile.toPath()).build();
 
     if (!configFile.exists()) {
-      plugin.getLogger().severe("File " + file + "does not exist.");
+      if (shouldLog) {
+        logger.printBukkit("File " + file + "does not exist.", ContextLogger.LogType.ERROR);
+      }
     } else {
       loadConfigValues();
     }
@@ -106,9 +128,12 @@ public class ConfigManager {
   public void loadConfigValues() {
     try {
       rootNode = loader.load(options); // Load the config directly
-      plugin.getLogger().info("Config loaded successfully.");
+      if (shouldLog) {
+        logger.printBukkit("Config loaded successfully.", ContextLogger.LogType.AMBIENCE);
+      }
     } catch (Exception e) {
-      plugin.getLogger().warning("Failed to load configurations from config.yml " + e);
+      logger.printBukkit(
+          "Failed to load configurations from config.yml " + e, ContextLogger.LogType.WARNING);
       e.getCause();
     }
   }
@@ -132,30 +157,26 @@ public class ConfigManager {
           rootNode = loader.load(ConfigurationOptions.defaults());
 
           // Log success
-          plugin
-              .getLogger()
-              .info(
-                  configFileName
-                      + " Has been successfully loaded from zip-file: "
-                      + zipFilePath.getFileName());
+          if (shouldLog)
+            logger.printBukkit(
+                configFileName
+                    + " Has been successfully loaded from zip-file: "
+                    + zipFilePath.getFileName());
         }
       } else {
-        plugin
-            .getLogger()
-            .info(
-                "Could not find the required '"
-                    + configFileName
-                    + "' config file inside zip-file: "
-                    + zipFilePath.getFileName());
+        if (shouldLog)
+          logger.printBukkit(
+              "Could not find the required '"
+                  + configFileName
+                  + "' config file inside zip-file: "
+                  + zipFilePath.getFileName());
       }
     } catch (Exception e) {
-      plugin
-          .getLogger()
-          .info(
-              "Failed to load configurations from zip file: "
-                  + zipFilePath.getFileName()
-                  + " reason: "
-                  + e.getMessage());
+      logger.printBukkit(
+          "Failed to load configurations from zip file: "
+              + zipFilePath.getFileName()
+              + " reason: "
+              + e.getMessage());
     }
   }
 
@@ -164,7 +185,7 @@ public class ConfigManager {
     try {
       loader.save(rootNode);
     } catch (IOException e) {
-      plugin.getLogger().severe("Could not save config.yml!");
+      logger.printBukkit("Could not save config.yml!", ContextLogger.LogType.ERROR);
       e.printStackTrace();
     }
   }
@@ -179,7 +200,8 @@ public class ConfigManager {
     try {
       return rootNode.node((Object[]) path.split("\\.")).get(Object.class);
     } catch (Exception e) {
-      plugin.getLogger().severe("Failed to get config value at path: " + path);
+      logger.printBukkit(
+          "Failed to get config value at path: " + path, ContextLogger.LogType.ERROR);
       e.printStackTrace();
       return null;
     }
@@ -190,9 +212,13 @@ public class ConfigManager {
       CommentedConfigurationNode node = rootNode.node((Object[]) key.split("\\."));
       node.set(values); // Set the list of values
       saveConfig(); // Save changes to the config file
-      plugin.getLogger().info("Config value set for " + key + ": " + values);
+      if (shouldLog) {
+        logger.printBukkit("Config value set for " + key + ": " + values);
+      }
     } catch (Exception e) {
-      plugin.getLogger().warning("Failed to set config value for " + key + ": " + e.getMessage());
+      logger.printBukkit(
+          "Failed to set config value for " + key + ": " + e.getMessage(),
+          ContextLogger.LogType.WARNING);
     }
   }
 
@@ -208,9 +234,9 @@ public class ConfigManager {
         }
       }
     } catch (Exception e) {
-      plugin
-          .getLogger()
-          .severe("Failed to get list config value for " + key + ": " + e.getMessage());
+      logger.printBukkit(
+          "Failed to get list config value for " + key + ": " + e.getMessage(),
+          ContextLogger.LogType.ERROR);
     }
     return values;
   }
@@ -244,9 +270,9 @@ public class ConfigManager {
       // Set the value and comment
       childNode.set(value).comment(comment);
     } catch (Exception e) {
-      plugin
-          .getLogger()
-          .warning("Failed to add config: " + parentKey + "." + childKey + " with value: " + value);
+      logger.printBukkit(
+          "Failed to add config: " + parentKey + "." + childKey + " with value: " + value,
+          ContextLogger.LogType.WARNING);
     }
     saveConfig(); // Save changes to the config file
   }
@@ -256,7 +282,7 @@ public class ConfigManager {
     try {
       rootNode.node(key).set(value).comment(comment);
     } catch (Exception e) {
-      plugin.getLogger().warning("Failed to add config: " + key);
+      logger.printBukkit("Failed to add config: " + key, ContextLogger.LogType.WARNING);
     }
     saveConfig(); // Save changes to the config file
   }

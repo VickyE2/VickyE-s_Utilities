@@ -18,12 +18,12 @@ public class Theme implements DatabaseTemplate {
   @NaturalId
   private String name;
 
-  public UUID getId() {
-    return UUID.fromString(id);
+  public String getId() {
+    return id;
   }
 
-  public void setId(UUID id) {
-    this.id = id.toString();
+  public void setId(String id) {
+    this.id = id;
   }
 
   public String getName() {

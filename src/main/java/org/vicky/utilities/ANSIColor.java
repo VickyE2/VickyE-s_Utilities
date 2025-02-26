@@ -16,8 +16,8 @@ public class ANSIColor {
   // Regular Colors
   public static final String BLACK = "\033[0;30m"; // BLACK
   public static final String RED = "\033[0;31m"; // RED
-  public static final String ORANGE = "\033[38;5;208m\n"; // ORANGE
-  public static final String PINK = "\033[38;5;205m\n"; // PINK
+  public static final String ORANGE = "\033[38;5;208m"; // ORANGE
+  public static final String PINK = "\033[38;5;205m"; // PINK
   public static final String GREEN = "\033[0;32m"; // GREEN
   public static final String YELLOW = "\033[0;33m"; // YELLOW
   public static final String BLUE = "\033[0;34m"; // BLUE
@@ -34,7 +34,7 @@ public class ANSIColor {
   public static final String PURPLE_BOLD = "\033[1;35m"; // PURPLE
   public static final String CYAN_BOLD = "\033[1;36m"; // CYAN
   public static final String WHITE_BOLD = "\033[1;37m"; // WHITE
-  public static final String ORANGE_BOLD = "\033[1;38;5;208m\n"; // ORANGE
+  public static final String ORANGE_BOLD = "\033[1;38;5;208m"; // ORANGE
   public static final String PINK_BOLD = "\033[1;38;5;205m"; // PINK
 
   // High Intensity Colors (Bright)

@@ -9,6 +9,13 @@ items:
       generate: true
       textures:
         - glyphs/green_arrow_right
+  green_arrow_left:
+    display_name: Green Arrow Left
+    resource:
+      material: GREEN_STAINED_GLASS_PANE
+      generate: true
+      textures:
+        - glyphs/green_arrow_left
   red_failed_x:
     display_name: Red Failed
     resource:

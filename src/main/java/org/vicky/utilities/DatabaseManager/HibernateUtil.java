@@ -7,7 +7,6 @@ import org.hibernate.SessionFactory;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
 import org.hibernate.internal.SessionFactoryImpl;
-import org.hibernate.jpa.HibernatePersistenceProvider;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
@@ -15,7 +14,7 @@ public class HibernateUtil {
   public static SessionFactory sessionFactory = null;
   private static ContextLogger logger =
       new ContextLogger(ContextLogger.ContextType.HIBERNATE, "UTIL");
-  private static EntityManagerFactory ENTITY_MANAGER_FACTORY = null;
+  private static EntityManagerFactory ENTITY_MANAGER_FACTORY;
 
   public static void initialise(SQLManager manager) {
     try {
@@ -24,12 +23,13 @@ public class HibernateUtil {
       sessionFactory = manager.getSessionFactory();
       sessionFactory.openSession();
 
-      HibernatePersistenceProvider persistenceProvider = new HibernatePersistenceProvider();
-      ENTITY_MANAGER_FACTORY =
-          persistenceProvider.createEntityManagerFactory("vUtls", sessionFactory.getProperties());
+      ENTITY_MANAGER_FACTORY = sessionFactory.createEntityManager().getEntityManagerFactory();
 
       if (sessionFactory == null) {
+        logger.printBukkit(ANSIColor.colorize("red[SessionFactory is NULL!]"), true);
         throw new IllegalStateException("SessionFactoryBuilder could not be initialized.");
+      } else {
+        logger.printBukkit(ANSIColor.colorize("green[SessionFactory initialized successfully!]"));
       }
 
       EventListenerRegistry eventListenerRegistry =

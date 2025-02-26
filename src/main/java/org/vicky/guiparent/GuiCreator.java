@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -18,6 +19,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.vicky.listeners.BaseGuiListener;
+import org.vicky.utilities.ContextLogger.ContextLogger;
+import org.vicky.utilities.DatabaseManager.apis.DatabasePlayerAPI;
+import org.vicky.utilities.DatabaseManager.dao_s.DatabasePlayerDAO;
+import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
 
 /**
  * GuiCreator is a utility class responsible for creating and opening both GUI inventories
@@ -30,6 +35,7 @@ public class GuiCreator {
 
   private final JavaPlugin plugin;
   private final BaseGuiListener listener;
+  private final ContextLogger logger = new ContextLogger(ContextLogger.ContextType.SYSTEM, "GUI");
 
   // Flag indicating if a textured GUI can be created.
   boolean canBeMade = false;
@@ -69,6 +75,7 @@ public class GuiCreator {
           String textureKey,
           int offset,
           ItemConfig... itemConfigs) {
+
     if (height < 1 || width < 1 || width > 9) {
       player.sendMessage("Invalid dimensions for the GUI.");
       return;
@@ -82,7 +89,7 @@ public class GuiCreator {
     if (textured && textureKey != null && !textureKey.isEmpty() && itemsAdder != null) {
       FontImageWrapper texture = new FontImageWrapper(textureKey);
       if (!texture.exists()) {
-        Bukkit.getLogger().warning("Gui Texture: " + textureKey + " Does not exist");
+        logger.printBukkit("Gui Texture: " + textureKey + " Does not exist", ContextLogger.LogType.WARNING, true);
         inventory = Bukkit.createInventory(new GUIHolder(), slots, title);
       } else {
         inventory = Bukkit.createInventory(new GUIHolder(), slots, title);
@@ -112,6 +119,153 @@ public class GuiCreator {
     }
   }
 
+  public enum ArrowGap {
+    SMALL(1),
+    MEDIUM(2),
+    WIDE(3);
+
+    public final int gap;
+    ArrowGap(int gap) {
+      this.gap = gap;
+    }
+  }
+
+  /**
+   * Opens a paginated GUI for the given player with custom item configurations, a starting slot, and texture support.
+   *
+   * @param player        The player who will see the GUI.
+   * @param itemConfigs   The list of ItemConfig objects to display.
+   * @param page          The current page number.
+   * @param itemsPerPage  The number of items per page.
+   * @param title         The title of the GUI.
+   * @param startingSlot  The slot index (0-based) where the items should start appearing.
+   * @param textured      Whether the GUI should be textured.
+   * @param textureKey    The key for the texture if textured is true.
+   * @param offset        The vertical offset for the texture.
+   */
+  public void openPaginatedGUI(
+          Player player,
+          int height,
+          ArrowGap spacing,
+          List<GuiCreator.ItemConfig> itemConfigs,
+          int page,
+          int itemsPerPage,
+          String title,
+          int startingSlot,
+          boolean textured,
+          String textureKey,
+          int offset) {
+
+    DatabasePlayer player1 = new DatabasePlayerDAO().findById(player.getUniqueId());
+    String themeId = player1.getUserTheme();
+
+    int totalItems = itemConfigs.size();
+    int totalPages = (int) Math.ceil((double) totalItems / itemsPerPage);
+    page = Math.max(1, Math.min(page, totalPages));
+
+    int startIndex = (page - 1) * itemsPerPage;
+    int endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+    // Total slots based on height (e.g., height * 9)
+    int slots = 9 * height;
+    Inventory inventory = Bukkit.createInventory(new GUIHolder(), slots, title);
+
+    // Populate page items starting at the specified startingSlot.
+    int displaySlot = startingSlot;
+    for (int i = startIndex; i < endIndex; i++) {
+      GuiCreator.ItemConfig config = itemConfigs.get(i);
+      ItemStack item = createItem(config, player);
+      if (displaySlot < slots) {
+        inventory.setItem(displaySlot++, item);
+      }
+    }
+
+    // Calculate center slot of the bottom row.
+    int centerSlot = ((height - 1) * 9) + 4;
+    // Determine positions for navigation buttons based on the spacing gap.
+    int prevSlot = Math.max(0, centerSlot - spacing.gap);
+    int nextSlot = Math.min(slots - 1, centerSlot + spacing.gap);
+
+    // Create navigation buttons using ItemConfig and ButtonActions:
+    if (page > 1) {
+      GuiCreator.ItemConfig prevConfig = new GuiCreator.ItemConfig(
+              Material.ARROW,
+              "ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ (" + (page - 1) + ")",
+              Integer.toString(prevSlot),
+              true,
+              null,
+              "vicky_themes:left_arrow_" + themeId,
+              List.of(ChatColor.GREEN + "ᴄʟɪᴄᴋ ᴛᴏ ɢᴏ ᴛᴏ ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ")
+      );
+      // Register a ButtonAction that reopens the GUI at page-1.
+      int finalPage = page;
+      listener.registerButton(
+              ButtonAction.ofRunCode(p -> openPaginatedGUI(
+                      player, height, spacing, itemConfigs, finalPage - 1, itemsPerPage, title, startingSlot, textured, textureKey, offset
+              ), true),
+              prevConfig
+      );
+      inventory.setItem(prevSlot, createItem(prevConfig, player));
+    }
+    else {
+      GuiCreator.ItemConfig prevConfig = new GuiCreator.ItemConfig(
+              Material.ARROW,
+              "ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ (" + (page - 1) + ")",
+              Integer.toString(prevSlot),
+              true,
+              null,
+              "vicky_themes:left_arrow_" + themeId + "_disabled",
+              List.of(ChatColor.GREEN + "ᴛʜɪs ɪs ᴛʜᴇ ғɪʀsᴛ ᴘᴀɢᴇ")
+      );
+      inventory.setItem(prevSlot, createItem(prevConfig, player));
+    }
+    if (page < totalPages) {
+      GuiCreator.ItemConfig nextConfig = new GuiCreator.ItemConfig(
+              Material.ARROW,
+              "ɴᴇxᴛ ᴘᴀɢᴇ (" + (page + 1) + ")",
+              Integer.toString(nextSlot),
+              true,
+              null,
+              "vicky_themes:right_arrow_" + themeId,
+              List.of(ChatColor.GREEN + "ᴄʟɪᴄᴋ ᴛᴏ ɢᴏ ᴛᴏ ɴᴇxᴛ ᴘᴀɢᴇ")
+      );
+      int finalPage1 = page;
+      listener.registerButton(
+              ButtonAction.ofRunCode(p -> openPaginatedGUI(
+                      player, height, spacing, itemConfigs, finalPage1 + 1, itemsPerPage, title, startingSlot, textured, textureKey, offset
+              ), true),
+              nextConfig
+      );
+      inventory.setItem(nextSlot, createItem(nextConfig, player));
+    }
+    else {
+      GuiCreator.ItemConfig prevConfig = new GuiCreator.ItemConfig(
+              Material.ARROW,
+              "ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ (" + (page - 1) + ")",
+              Integer.toString(prevSlot),
+              true,
+              null,
+              "vicky_themes:right_arrow_" + themeId + "_disabled",
+              List.of(ChatColor.GREEN + "ᴛʜɪs ɪs ᴛʜᴇ ʟᴀsᴛ ᴘᴀɢᴇ")
+      );
+      inventory.setItem(prevSlot, createItem(prevConfig, player));
+    }
+
+    // Set the inventory in the listener and open it.
+    listener.setGuiInventory(inventory);
+    player.openInventory(inventory);
+
+    // Apply texture if available.
+    if (textured && textureKey != null && !textureKey.isEmpty()) {
+      FontImageWrapper texture = new FontImageWrapper(textureKey);
+      if (texture.exists()) {
+        TexturedInventoryWrapper.setPlayerInventoryTexture(player, texture, title, 0, offset);
+      } else {
+        logger.printBukkit("Gui Texture: " + textureKey + " does not exist", ContextLogger.LogType.WARNING);
+      }
+    }
+  }
+
   /**
    * Opens an anvil GUI for the given player with custom item configurations and a completion action.
    *
@@ -121,8 +275,8 @@ public class GuiCreator {
    * @param rightItemConfig  The ItemConfig for the right input slot (can be null).
    * @param outputItemConfig The ItemConfig for the output slot (can be null).
    * @param title            The title of the anvil GUI window.
-   * @param canClickLeft     If true, the left slot is interactable.
-   * @param canClickRight    If true, the right slot is interactable.
+   * @param canClickLeft     If true, the left slot is intractable.
+   * @param canClickRight    If true, the right slot is intractable.
    * @param completionAction A BiFunction that takes a Player and a String (the input text) and returns a list of AnvilGUI.ResponseAction to determine the anvil GUI's behavior upon a click.
    */
   public void openAnvilGUI(
@@ -249,7 +403,7 @@ public class GuiCreator {
         customItem.getItemStack().setItemMeta(meta);
         return customItem.getItemStack();
       } else {
-        plugin.getLogger().warning("ItemsAdder item '" + itemConfig.getItemsAdderName() + "' could not be found!");
+        logger.printBukkit("ItemsAdder item '" + itemConfig.getItemsAdderName() + "' could not be found!", ContextLogger.LogType.ERROR, true);
       }
     }
     // Fallback: create a regular item

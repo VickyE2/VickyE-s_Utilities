@@ -132,7 +132,8 @@ public class SQLManager {
             scanner.getClassesFromJar(pack.getValue(), pack.getKey(), DatabaseTemplate.class));
       }
 
-      for (Class<?> clazz : mappingClasses) {
+      for (Class<?> clazz : mappingClasses.reversed()) {
+        logger.printBukkit(String.valueOf(clazz), ContextLogger.LogType.AMBIENCE);
         configuration.addAnnotatedClass(clazz);
       }
 
@@ -147,12 +148,10 @@ public class SQLManager {
 
       StandardServiceRegistry serviceRegistry =
           new StandardServiceRegistryBuilder()
-              .addService(ClassLoaderService.class, new AggregatedClassLoaderService(classLoader))
               .applySettings(configuration.getProperties())
+              .addService(ClassLoaderService.class, new AggregatedClassLoaderService(classLoader))
               .applySettings(settings)
               .build();
-
-      logger.printBukkit("Mapping classes: " + mappingClasses);
 
       sessionFactory = configuration.buildSessionFactory(serviceRegistry);
     } catch (Exception e) {

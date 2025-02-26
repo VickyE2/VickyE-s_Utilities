@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024. */
+/* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.utilities;
 
 import java.io.File;
@@ -14,11 +14,13 @@ import org.spongepowered.configurate.jackson.FieldValueSeparatorStyle;
 import org.spongepowered.configurate.jackson.JacksonConfigurationLoader;
 import org.spongepowered.configurate.loader.ConfigurationLoader;
 import org.spongepowered.configurate.loader.HeaderMode;
+import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class JsonConfigManager {
   public ConfigurationLoader<? extends ConfigurationNode> loader;
   public ConfigurationNode rootNode;
   private final JavaPlugin plugin;
+  public ContextLogger logger = new ContextLogger(ContextLogger.ContextType.SYSTEM, "CONFIG-JSON");
   public ConfigurationOptions options;
 
   public JsonConfigManager(JavaPlugin plugin) {
@@ -51,9 +53,10 @@ public class JsonConfigManager {
         try (FileWriter writer = new FileWriter(configFile)) {
           writer.write("{}"); // Start with an empty JSON object
         }
-        plugin.getLogger().info("Created new json file: " + path);
+        logger.printBukkit("Created new json file: " + path);
       } catch (IOException e) {
-        plugin.getLogger().severe("Failed to create new json file: " + e.getMessage());
+        logger.printBukkit(
+            "Failed to create new json file: " + e.getMessage(), ContextLogger.LogType.ERROR);
       }
     } else {
       loadConfigValues();
@@ -64,9 +67,10 @@ public class JsonConfigManager {
   public void loadConfigValues() {
     try {
       rootNode = loader.load(options); // Load the config directly
-      plugin.getLogger().info("Config loaded successfully.");
+      logger.printBukkit("Config loaded successfully.", ContextLogger.LogType.AMBIENCE);
     } catch (Exception e) {
-      plugin.getLogger().warning("Failed to load configurations from config.yml " + e);
+      logger.printBukkit(
+          "Failed to load configurations from config.yml " + e, ContextLogger.LogType.WARNING);
       e.getCause();
     }
   }
@@ -77,9 +81,12 @@ public class JsonConfigManager {
       // Save your configuration
       loader.save(rootNode);
     } catch (ConfigurateException e) {
-      plugin.getLogger().severe("Could not save config asynchronously: " + e.getMessage());
+      logger.printBukkit(
+          "Could not save config asynchronously: " + e.getMessage(), ContextLogger.LogType.ERROR);
       if (e.getCause() instanceof AccessDeniedException) {
-        plugin.getLogger().severe("Access denied while saving config. Check file permissions.");
+        logger.printBukkit(
+            "Access denied while saving config. Check file permissions.",
+            ContextLogger.LogType.ERROR);
       }
     }
   }
@@ -94,7 +101,8 @@ public class JsonConfigManager {
     try {
       return rootNode.node((Object[]) path.split("\\.")).get(Object.class);
     } catch (Exception e) {
-      plugin.getLogger().severe("Failed to get config value at path: " + path);
+      logger.printBukkit(
+          "Failed to get config value at path: " + path, ContextLogger.LogType.ERROR);
       e.printStackTrace();
       return null;
     }
@@ -127,7 +135,8 @@ public class JsonConfigManager {
       // Set the value and comment
       parentNode.set(value);
     } catch (Exception e) {
-      plugin.getLogger().warning("Failed to add config: " + Key + " with value: " + value);
+      logger.printBukkit(
+          "Failed to add config: " + Key + " with value: " + value, ContextLogger.LogType.WARNING);
     }
     saveConfig(); // Save changes to the config file
   }
@@ -164,9 +173,11 @@ public class JsonConfigManager {
                   try (FileWriter writer = new FileWriter(configFile)) {
                     writer.write("{}"); // Start with an empty JSON object
                   }
-                  plugin.getLogger().info("Created new json file: " + path);
+                  logger.printBukkit("Created new json file: " + path);
                 } catch (IOException e) {
-                  plugin.getLogger().severe("Failed to create new json file: " + e.getMessage());
+                  logger.printBukkit(
+                      "Failed to create new json file: " + e.getMessage(),
+                      ContextLogger.LogType.ERROR);
                 }
               }
             })
@@ -180,9 +191,10 @@ public class JsonConfigManager {
         () -> {
           try {
             rootNode = loader.load(options); // Load the config directly
-            plugin.getLogger().info("Config loaded successfully.");
+            logger.printBukkit("Config loaded successfully.", ContextLogger.LogType.AMBIENCE);
           } catch (Exception e) {
-            plugin.getLogger().warning("Failed to load configurations: " + e);
+            logger.printBukkit(
+                "Failed to load configurations: " + e, ContextLogger.LogType.WARNING);
           }
         });
   }
@@ -195,11 +207,13 @@ public class JsonConfigManager {
             // Save your configuration
             loader.save(rootNode);
           } catch (ConfigurateException e) {
-            plugin.getLogger().severe("Could not save config asynchronously: " + e.getMessage());
+            logger.printBukkit(
+                "Could not save config asynchronously: " + e.getMessage(),
+                ContextLogger.LogType.ERROR);
             if (e.getCause() instanceof AccessDeniedException) {
-              plugin
-                  .getLogger()
-                  .severe("Access denied while saving config. Check file permissions.");
+              logger.printBukkit(
+                  "Access denied while saving config. Check file permissions.",
+                  ContextLogger.LogType.ERROR);
             }
           }
         });
@@ -213,9 +227,9 @@ public class JsonConfigManager {
                 ConfigurationNode parentNode = rootNode.node((Object[]) key.split("\\."));
                 parentNode.set(value); // Set the value
               } catch (Exception e) {
-                plugin
-                    .getLogger()
-                    .warning("Failed to add config: " + key + " with value: " + value);
+                logger.printBukkit(
+                    "Failed to add config: " + key + " with value: " + value,
+                    ContextLogger.LogType.WARNING);
                 e.printStackTrace();
               }
             })
@@ -229,7 +243,8 @@ public class JsonConfigManager {
           try {
             return rootNode.node((Object[]) path.split("\\.")).get(Object.class);
           } catch (Exception e) {
-            plugin.getLogger().severe("Failed to get config value at path: " + path);
+            logger.printBukkit(
+                "Failed to get config value at path: " + path, ContextLogger.LogType.ERROR);
             e.printStackTrace();
             return null;
           }

@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024. */
+/* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.utilities;
 
 import java.io.File;
@@ -10,10 +10,12 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class FileManager {
 
   private final JavaPlugin plugin;
+  private ContextLogger logger = new ContextLogger(ContextLogger.ContextType.SYSTEM, "EXTRACTOR");
 
   public FileManager(JavaPlugin plugin) {
     this.plugin = plugin;
@@ -31,7 +33,7 @@ public class FileManager {
       URL jarUrl = plugin.getClass().getProtectionDomain().getCodeSource().getLocation();
 
       try (ZipInputStream zip = new ZipInputStream(jarUrl.openStream())) {
-        plugin.getLogger().info(ANSIColor.colorize("Extracting assets...", ANSIColor.CYAN));
+        logger.printBukkit("Extracting assets...", ContextLogger.LogType.PENDING);
 
         // Root folder where the extracted assets will go (ItemsAdder root)
         File itemsAdderRoot = new File(plugin.getDataFolder().getParent(), "ItemsAdder");
@@ -48,10 +50,10 @@ public class FileManager {
           }
         }
 
-        plugin.getLogger().info("DONE extracting assets!");
+        logger.printBukkit("Extraction complete!", ContextLogger.LogType.SUCCESS);
       }
     } catch (IOException e) {
-      plugin.getLogger().severe("ERROR EXTRACTING assets! StackTrace:");
+      logger.printBukkit("ERROR EXTRACTING assets! StackTrace:", true);
       e.printStackTrace();
     }
   }
@@ -85,9 +87,9 @@ public class FileManager {
           while ((bytesRead = in.read(buffer)) != -1) {
             out.write(buffer, 0, bytesRead);
           }
-          plugin.getLogger().info(ANSIColor.colorize("Extracted: " + entryName, ANSIColor.CYAN));
+          logger.printBukkit("Extracted: " + entryName, ContextLogger.LogType.BASIC);
         } else {
-          plugin.getLogger().warning("Resource not found: " + entryName);
+          logger.printBukkit("Resource not found: " + entryName, ContextLogger.LogType.WARNING);
         }
       }
     }

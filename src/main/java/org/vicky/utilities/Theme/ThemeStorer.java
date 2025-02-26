@@ -1,10 +1,9 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.utilities.Theme;
 
-import static org.vicky.global.Global.databaseManager;
-
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
+import org.vicky.utilities.DatabaseManager.apis.ThemeAPI;
 import org.vicky.utilities.DatabaseManager.templates.Theme;
 import org.vicky.utilities.UUIDGenerator;
 
@@ -18,22 +17,22 @@ public class ThemeStorer {
     if (!isRegisteredTheme(themeId)) {
       logger.print("Added theme: " + ANSIColor.colorize("yellow[" + themeName + "]"));
       Theme context = new Theme();
-      context.setId(UUIDGenerator.generateUUIDFromString(themeId));
+      context.setId(themeId);
       context.setName(themeName);
-      databaseManager.saveEntity(context);
+      new ThemeAPI().createTheme(context);
     } else {
       logger.print("Theme " + ANSIColor.colorize("yellow[" + themeName + "] already exists"));
     }
   }
 
   public boolean isRegisteredTheme(String themeId) {
-    return databaseManager.entityExists(Theme.class, themeId);
+    return new ThemeAPI().doesExistByName(themeId);
   }
 
   public String getThemeID(String themeName) {
-    Theme context = databaseManager.getEntityByNaturalId(Theme.class, themeName);
-    if (context != null) {
-      return context.getId().toString();
+    ThemeAPI service = new ThemeAPI();
+    if (service.doesExistByName(themeName)) {
+      return service.getThemeByName(themeName).getId().toString();
     }
     return null;
   }

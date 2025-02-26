@@ -3,16 +3,16 @@ package org.vicky.listeners;
 
 import static org.vicky.utilities.DeathMessages.getMessages;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
+
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.metadata.MetadataValue;
-import org.vicky.effects.CustomEffect;
+import org.jetbrains.annotations.NotNull;
+import org.vicky.effectsSystem.CustomEffect;
 
 public class DeathListener implements Listener {
 
@@ -27,6 +27,7 @@ public class DeathListener implements Listener {
   @EventHandler
   public void onEntityDeath(EntityDeathEvent event) {
     LivingEntity entity = event.getEntity();
+    LivingEntity killer = entity.getKiller();
 
     // Check if the entity has the custom damage metadata
     if (entity.hasMetadata("customDamageCause") && entity instanceof Player) {
@@ -34,16 +35,20 @@ public class DeathListener implements Listener {
         String customCause = value.asString();
 
         // Get the messages for the custom cause from DeathMessages
-        List<String> messages = getMessages(customCause);
+        Map<String, Boolean> messages = getMessages(customCause);
 
         if (!messages.isEmpty()) {
-          // Broadcast a random death message for the specific cause
-          String deathMessage = messages.get(new Random().nextInt(messages.size()));
-          event
-              .getEntity()
-              .getServer()
-              .broadcastMessage(deathMessage.replace("{player}", entity.getName()));
+          String deathMessage;
+          int messageIndex;
+          List<String> possibleMessages = getPossibleMessages(killer, messages);
+          messageIndex = new Random().nextInt(possibleMessages.size());
+            deathMessage = possibleMessages.get(messageIndex);
+            event
+                    .getEntity()
+                    .getServer()
+                    .broadcastMessage(deathMessage.replace("{player}", entity.getName()).replace("{killer}", killer.getName()));
         }
+        break;
       }
     }
     for (Map.Entry<String, CustomEffect> entry : customEffects.entrySet()) {
@@ -52,5 +57,25 @@ public class DeathListener implements Listener {
         effect.stopEffect(entity); // Stop the effect when the entity dies
       }
     }
+  }
+
+  @NotNull
+  private static List<String> getPossibleMessages(LivingEntity killer, Map<String, Boolean> messages) {
+    List<String> possibleMessages = new ArrayList<>();
+    if (killer != null) {
+      for (Map.Entry<String, Boolean> message : messages.entrySet()) {
+        if (message.getValue()) {
+          possibleMessages.add(message.getKey());
+        }
+      }
+    }
+    else {
+      for (Map.Entry<String, Boolean> message : messages.entrySet()) {
+        if (!message.getValue()) {
+            possibleMessages.add(message.getKey());
+        }
+      }
+    }
+    return possibleMessages;
   }
 }

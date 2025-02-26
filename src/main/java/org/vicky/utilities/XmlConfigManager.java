@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024. */
+/* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.utilities;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -15,11 +15,13 @@ import org.spongepowered.configurate.ConfigurationOptions;
 import org.spongepowered.configurate.loader.AtomicFiles;
 import org.spongepowered.configurate.loader.HeaderMode;
 import org.spongepowered.configurate.xml.XmlConfigurationLoader;
+import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class XmlConfigManager {
   public XmlConfigurationLoader loader;
   public AttributedConfigurationNode rootNode;
   private final JavaPlugin plugin;
+  public ContextLogger logger = new ContextLogger(ContextLogger.ContextType.SYSTEM, "CONFIG-XML");
   public ConfigurationOptions options;
 
   public XmlConfigManager(JavaPlugin plugin) {
@@ -55,10 +57,11 @@ public class XmlConfigManager {
             configFile.toPath(),
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?><config></config>"
                 .getBytes(StandardCharsets.UTF_8));
-        plugin.getLogger().info("Created new xml file: " + path);
+        logger.printBukkit("Created new xml file: " + path);
         loadConfigValues();
       } catch (IOException e) {
-        plugin.getLogger().severe("Failed to create new xml file: " + e.getMessage());
+        logger.printBukkit(
+            "Failed to create new xml file: " + e.getMessage(), ContextLogger.LogType.ERROR);
       }
     } else {
       loadConfigValues();
@@ -97,10 +100,11 @@ public class XmlConfigManager {
         Files.write(
             configFile.toPath(),
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>".getBytes(StandardCharsets.UTF_8));
-        plugin.getLogger().info("Created new xml file: " + path);
+        logger.printBukkit("Created new xml file: " + path);
         loadConfigValues();
       } catch (IOException e) {
-        plugin.getLogger().severe("Failed to create new xml file: " + e.getMessage());
+        logger.printBukkit(
+            "Failed to create new xml file: " + e.getMessage(), ContextLogger.LogType.ERROR);
       }
     } else {
       loadConfigValues();
@@ -115,7 +119,7 @@ public class XmlConfigManager {
     loader = XmlConfigurationLoader.builder().path(configFile.toPath()).build();
 
     if (!configFile.exists()) {
-      plugin.getLogger().severe("File " + file + "does not exist.");
+      logger.printBukkit("File " + file + "does not exist.", ContextLogger.LogType.ERROR);
     } else {
       loadConfigValues();
     }
@@ -125,9 +129,10 @@ public class XmlConfigManager {
   public void loadConfigValues() {
     try {
       rootNode = loader.load(options); // Load the config directly
-      plugin.getLogger().info("Config loaded successfully.");
+      logger.printBukkit("Config loaded successfully.", ContextLogger.LogType.AMBIENCE);
     } catch (Exception e) {
-      plugin.getLogger().warning("Failed to load configurations from config.yml " + e);
+      logger.printBukkit(
+          "Failed to load configurations from config.yml " + e, ContextLogger.LogType.WARNING);
       e.getCause();
     }
   }
@@ -137,7 +142,7 @@ public class XmlConfigManager {
     try {
       loader.save(rootNode);
     } catch (IOException e) {
-      plugin.getLogger().severe("Could not save config.yml!");
+      logger.printBukkit("Could not save config.yml!", ContextLogger.LogType.ERROR);
       e.printStackTrace();
     }
   }
@@ -152,7 +157,8 @@ public class XmlConfigManager {
     try {
       return rootNode.node((Object[]) path.split("\\.")).get(Object.class);
     } catch (Exception e) {
-      plugin.getLogger().severe("Failed to get config value at path: " + path);
+      logger.printBukkit(
+          "Failed to get config value at path: " + path, ContextLogger.LogType.ERROR);
       e.printStackTrace();
       return null;
     }
@@ -163,7 +169,7 @@ public class XmlConfigManager {
       AttributedConfigurationNode node = rootNode.node((Object[]) path.split("\\."));
       return node.childrenList();
     } catch (Exception e) {
-      plugin.getLogger().severe("Failed to get child nodes at path: " + path);
+      logger.printBukkit("Failed to get child nodes at path: " + path, ContextLogger.LogType.ERROR);
       e.printStackTrace();
       return null;
     }
@@ -174,7 +180,8 @@ public class XmlConfigManager {
       AttributedConfigurationNode node = rootNode.node((Object[]) path.split("\\."));
       return node.isList();
     } catch (Exception e) {
-      plugin.getLogger().severe("Failed to check if node is list at path: " + path);
+      logger.printBukkit(
+          "Failed to check if node is list at path: " + path, ContextLogger.LogType.ERROR);
       e.printStackTrace();
       return false;
     }
@@ -185,7 +192,8 @@ public class XmlConfigManager {
       AttributedConfigurationNode node = rootNode.node((Object[]) path.split("\\."));
       return node.isMap();
     } catch (Exception e) {
-      plugin.getLogger().severe("Failed to check if node is map at path: " + path);
+      logger.printBukkit(
+          "Failed to check if node is map at path: " + path, ContextLogger.LogType.ERROR);
       e.printStackTrace();
       return false;
     }
@@ -196,7 +204,7 @@ public class XmlConfigManager {
       AttributedConfigurationNode node = rootNode.node((Object[]) path.split("\\."));
       return node.tagName();
     } catch (Exception e) {
-      plugin.getLogger().severe("Failed to get tag name at path: " + path);
+      logger.printBukkit("Failed to get tag name at path: " + path, ContextLogger.LogType.ERROR);
       e.printStackTrace();
       return null;
     }
@@ -211,7 +219,7 @@ public class XmlConfigManager {
         return null;
       }
     } catch (Exception e) {
-      plugin.getLogger().severe("Failed to get attributes at path: " + path);
+      logger.printBukkit("Failed to get attributes at path: " + path, ContextLogger.LogType.ERROR);
       e.printStackTrace();
       return null;
     }
@@ -250,7 +258,8 @@ public class XmlConfigManager {
       }
       node.set(value);
     } catch (Exception e) {
-      plugin.getLogger().warning("Failed to add config: " + Key + " with value: " + value);
+      logger.printBukkit(
+          "Failed to add config: " + Key + " with value: " + value, ContextLogger.LogType.WARNING);
     }
     saveConfig(); // Save changes to the config file
   }

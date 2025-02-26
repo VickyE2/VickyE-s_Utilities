@@ -1,5 +1,5 @@
 /* Licensed under Apache-2.0 2024-2025. */
-package org.vicky.effects;
+package org.vicky.effectsSystem.effects;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,6 +11,8 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.vicky.effectsSystem.CustomEffect;
+import org.vicky.effectsSystem.EffectType;
 import org.vicky.vicky_utils;
 
 public class Bleeding implements CustomEffect {

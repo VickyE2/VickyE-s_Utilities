@@ -5,22 +5,11 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.vicky.listeners.BaseGuiListener;
 
 public class DefaultGuiListener extends BaseGuiListener {
-
-  @Override
-  @EventHandler
-  public void onInventoryClick(InventoryClickEvent event) {
-    // Default behavior can be left empty or log a message if needed
+  public DefaultGuiListener(JavaPlugin plugin) {
+    super(plugin);
   }
-
-  @Override
-  @EventHandler
-  public void onInventoryClose(InventoryCloseEvent event) {
-    // Default behavior can be left empty or log a message if needed
-  }
-
-  @Override
-  public void setGuiInventory(Inventory inventory) {}
 }

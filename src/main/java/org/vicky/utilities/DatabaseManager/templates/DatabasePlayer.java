@@ -10,18 +10,18 @@ import org.vicky.utilities.RanksLister;
 
 /**
  * <strong>If you would like to extend this class for a more versatile database entity:</strong>
- * <pre>
- * <strong>@</strong>Entity
- * public class ExtendedGlobalPlayer extends GlobalPlayer {
- *     <strong>@</strong>JoinTable(
- *         name = "player_advancements",
- *         joinColumns = @JoinColumn(name = "player_id"),
- *         inverseJoinColumns = @JoinColumn(name = "advancement_id")
+ * <pre>{@code
+ * @Entity
+ * public class ExtendedGlobalPlayer extends DatabasePlayer {
+ *     @JoinTable(
+ *         name = "some_new_field",
+ *         joinColumns = @JoinColumn(name = "some_field_parameter"),
+ *         inverseJoinColumns = @JoinColumn(name = "some_other_table_id")
  *     )
- *     <strong>@</strong>OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
- *     private List"<"Advancement">" accomplishedAdvancements = new ArrayList"<>"();
+ *     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+ *     private List<SomeClass> someClassList = new ArrayList<>();
  * }
- * </pre>
+ * }</pre>
  * @author VickyE2
  */
 @Entity
@@ -35,7 +35,7 @@ public class DatabasePlayer implements DatabaseTemplate {
   @Column private boolean isFirstTime;
 
   @Column
-  @ColumnDefault(value = "light_theme")
+  @ColumnDefault(value = "lt")
   private String userTheme;
 
   public UUID getId() {
@@ -52,6 +52,15 @@ public class DatabasePlayer implements DatabaseTemplate {
       return lister.getHighestWeighingGroupWeight(this.getId()).get().orElse(0);
     } catch (ExecutionException | InterruptedException e) {
       return 0;
+    }
+  }
+
+  public String getRankName() {
+    RanksLister lister = new RanksLister();
+    try {
+      return lister.getHighestWeighingGroup(this.getId()).get();
+    } catch (ExecutionException | InterruptedException e) {
+      return "default";
     }
   }
 

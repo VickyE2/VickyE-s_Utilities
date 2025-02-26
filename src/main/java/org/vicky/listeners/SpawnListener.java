@@ -1,8 +1,6 @@
 /* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.listeners;
 
-import static org.vicky.global.Global.databaseManager;
-
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -11,6 +9,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.vicky.handlers.CustomDamageHandler;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
+import org.vicky.utilities.DatabaseManager.apis.DatabasePlayerAPI;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
 
 public class SpawnListener implements Listener {
@@ -23,7 +22,7 @@ public class SpawnListener implements Listener {
   @EventHandler
   public void onPlayerJoin(PlayerJoinEvent event) {
     final Player player = event.getPlayer();
-    if (!databaseManager.entityExists(DatabasePlayer.class, player.getUniqueId().toString())) {
+    if (!(new DatabasePlayerAPI().getPlayer(player.getUniqueId().toString()) == null)) {
       new ContextLogger(ContextLogger.ContextType.FEATURE, "HIBERNATE-PLAYER")
           .printBukkit(
               ANSIColor.colorize(
@@ -31,7 +30,7 @@ public class SpawnListener implements Listener {
       DatabasePlayer instancedDatabasePlayer = new DatabasePlayer();
       instancedDatabasePlayer.setId(player.getUniqueId());
       instancedDatabasePlayer.setFirstTime(true);
-      databaseManager.saveOrUpdate(instancedDatabasePlayer);
+      new DatabasePlayerAPI().createPlayer(instancedDatabasePlayer);
     }
   }
 

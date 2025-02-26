@@ -4,8 +4,12 @@ package org.vicky.expansions;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.vicky.betterHUD.BossbarManager;
+import org.vicky.betterHUD.BossbarMechanic;
 import org.vicky.utilities.metaDataChecker_TF;
 import org.vicky.vicky_utils;
+
+import java.util.UUID;
 
 public class PlaceholderExpansions extends PlaceholderExpansion {
 
@@ -50,6 +54,6 @@ public class PlaceholderExpansions extends PlaceholderExpansion {
       return Boolean.toString(isBleeding);
     }
     // Return null if the placeholder is not handled
-    return null;
+    return "";
   }
 }

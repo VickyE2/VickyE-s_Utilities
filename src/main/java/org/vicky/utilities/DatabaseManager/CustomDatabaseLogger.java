@@ -135,7 +135,7 @@ public class CustomDatabaseLogger
 
     String format =
         String.format(
-            "%s ~ %s having Id -> %s)%s",
+            "%s ~ %s having Id -> %s%s",
             operation, entityName, entityId, details != null ? " Details: " + details : "");
     if (configManager == null) logger.printBukkit(format);
     else if (configManager.getBooleanValue("Debug")) logger.printBukkit(format);

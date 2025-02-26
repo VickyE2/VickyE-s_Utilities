@@ -20,7 +20,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import javax.imageio.ImageIO;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ConfigManager;
@@ -54,12 +53,12 @@ public class ThemeUnzipper {
 
     try {
       Thread.sleep(700);
-      this.guiManager = new ConfigManager(plugin);
+      this.guiManager = new ConfigManager(plugin, false);
       guiManager.createPathedConfig(configFile + "/guis.yml");
       guiManager.loadConfigValues();
       guiManager.setConfigValue("info", "namespace", "vicky_themes", null);
 
-      this.buttonManager = new ConfigManager(plugin);
+      this.buttonManager = new ConfigManager(plugin, false);
       buttonManager.createPathedConfig(configFile + "/items.yml");
       buttonManager.loadConfigValues();
       buttonManager.setConfigValue("info", "namespace", "vicky_themes", null);
@@ -162,7 +161,7 @@ public class ThemeUnzipper {
       for (Path zipPath : zipFiles) {
         boolean filenowFound = false;
         boolean fileFound;
-        ConfigManager manager = new ConfigManager(plugin);
+        ConfigManager manager = new ConfigManager(plugin, false);
         try (ZipFile zipFile = new ZipFile(zipPath.toFile())) {
           ZipEntry requiredEntry = zipFile.getEntry("themes.yml");
           if (requiredEntry == null || requiredEntry.isDirectory()) {
@@ -186,7 +185,8 @@ public class ThemeUnzipper {
               ConfigurationNode guiFolder = themeNode.node("gui_folder");
               ConfigurationNode buttonsFolder = themeNode.node("buttons_folder");
               ConfigurationNode textsFolder = themeNode.node("texts_folder");
-              logger.print("Loading theme with id: " + themeId);
+              logger.printBukkit(
+                  "Loading theme with id: " + themeId, ContextLogger.LogType.PENDING);
               if (!storer.isRegisteredTheme(themeName)) {
 
                 if (guiFolder.virtual() || guiFolder.isNull()) {
@@ -230,7 +230,7 @@ public class ThemeUnzipper {
                             logger.printBukkit(
                                 "Failed to create directories: " + parentDir.getAbsolutePath(),
                                 true);
-                            continue; // Skip this file if directories cannot be created
+                            continue;
                           }
                         }
 
@@ -284,15 +284,15 @@ public class ThemeUnzipper {
                       filenowFound = false;
                       for (String format : allowedImageFormats) {
                         logger.printBukkit(
-                            ANSIColor.colorize(
-                                "yellow[ No file found for any allowed format. Using provided value"
-                                    + " from config if any.]"));
+                            "yellow[ No file found for any allowed format. Using provided value"
+                                + " from config if any.]",
+                            ContextLogger.LogType.WARNING);
                         ConfigurationNode guisNode = themeNode.node("guis");
                         String guiValue = guisNode.getString(currentGui);
                         String file =
                             manager.getStringValue(guiFolder.getString() + "/" + guiValue + format);
                         String imagefile = currentGui + "_" + themeId + format;
-                        logger.print("Checking for file: " + file);
+                        logger.printBukkit("Checking for file: " + file);
                         ZipEntry entry = zip.getEntry(file);
                         if (entry != null && !entry.isDirectory()) {
                           filenowFound = true;
@@ -354,7 +354,7 @@ public class ThemeUnzipper {
                                 heightdiff,
                                 null);
 
-                            logger.print("file_now_found: " + filenowFound);
+                            logger.printBukkit("file_now_found: " + filenowFound);
                             break;
                           } else {
                             logger.printBukkit(
@@ -598,7 +598,7 @@ public class ThemeUnzipper {
                         logger.printBukkit(
                             "No file found for any allowed format. Using provided value from"
                                 + " config if any.",
-                            true);
+                            ContextLogger.LogType.WARNING);
                         ConfigurationNode buttonsNode = themeNode.node("buttons");
                         String buttonsValue;
                         String file = "";
@@ -861,14 +861,16 @@ public class ThemeUnzipper {
                     .forEach(File::delete);
 
                 logger.printBukkit(
-                    ANSIColor.colorize(
-                        "Theme with id "
-                            + ANSIColor.colorize(themeId, ANSIColor.YELLOW_BOLD)
-                            + " has successfully been loaded",
-                        ANSIColor.PURPLE_BOLD));
+                    "Theme with id "
+                        + ANSIColor.colorize(themeId, ANSIColor.YELLOW_BOLD)
+                        + " has successfully been loaded",
+                    ContextLogger.LogType.SUCCESS);
 
                 storer.addTheme(themeId, themeName);
               } else {
+                logger.printBukkit(
+                    "Theme with id " + themeId + " has already been registered",
+                    ContextLogger.LogType.AMBIENCE);
                 break;
               }
             }

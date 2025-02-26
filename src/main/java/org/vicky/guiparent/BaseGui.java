@@ -16,7 +16,15 @@ public abstract class BaseGui {
     this.listener =
         listener != null
             ? listener
-            : new DefaultGuiListener(); // Use provided listener or default one
+            : new DefaultGuiListener(plugin); // Use provided listener or default one
+    this.guiManager = new GuiCreator(plugin, listener);
+
+    // Register the listener for GUI actions
+    plugin.getServer().getPluginManager().registerEvents(this.listener, plugin);
+  }
+  public BaseGui(JavaPlugin plugin) {
+    this.plugin = plugin;
+    this.listener = new DefaultGuiListener(plugin); // Use provided listener or default one
     this.guiManager = new GuiCreator(plugin, listener);
 
     // Register the listener for GUI actions

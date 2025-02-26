@@ -4,6 +4,7 @@ package org.vicky;
 import static org.vicky.global.Global.*;
 import static org.vicky.utilities.DatabaseManager.SQLManager.generator;
 
+import jakarta.persistence.EntityManager;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -15,8 +16,8 @@ import java.util.jar.JarFile;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
-import org.vicky.effects.Bleeding;
-import org.vicky.effects.CustomEffect;
+import org.vicky.effectsSystem.effects.Bleeding;
+import org.vicky.effectsSystem.CustomEffect;
 import org.vicky.expansions.PlaceholderExpansions;
 import org.vicky.global.Global;
 import org.vicky.handlers.CustomDamageHandler;
@@ -42,6 +43,7 @@ public final class vicky_utils extends JavaPlugin {
   private ClassLoader loader;
   private static final Map<String, String> pendingDBTemplates = new HashMap<>();
   private static final Map<String, String> pendingDBTemplatesUtils = new HashMap<>();
+  private static final Map<String, CustomEffect> pendingEffects = new HashMap<>();
   boolean exceptionOccurred = false;
 
   public static vicky_utils getPlugin() {
@@ -126,13 +128,14 @@ public final class vicky_utils extends JavaPlugin {
       }
 
       try {
-        Map<String, CustomEffect> effects = new HashMap<>();
+        Map<String, CustomEffect> effects = new HashMap<>(pendingEffects);
 
         Bleeding bleeding = new Bleeding(this);
         effects.put("bleeding", bleeding);
 
-        DeathMessages.add("bleeding", "{player} bled to death.");
-        DeathMessages.add("bleeding", "{player} couldn't stop the bleeding.");
+        DeathMessages.add("bleeding", "{player} bled to death.", false);
+        DeathMessages.add("bleeding", "{player} couldn't stop bleeding and died.", false);
+        DeathMessages.add("bleeding", "{player} bled to death whilst fighting {killer}", true);
 
         getServer().getPluginManager().registerEvents(new DeathListener(effects), this);
         getServer().getPluginManager().registerEvents(new SpawnListener(customDamageHandler), this);
@@ -140,7 +143,7 @@ public final class vicky_utils extends JavaPlugin {
         getLogger()
             .info(
                 ANSIColor.colorize(
-                    "Effects and DeathMessages have been sucessfully Registered.",
+                    "Effects and DeathMessages have been successfully Registered.",
                     ANSIColor.PURPLE));
       } catch (Exception e) {
         exceptionOccurred = true;
@@ -225,7 +228,14 @@ public final class vicky_utils extends JavaPlugin {
     }
 
     try {
-      getLogger().info("Extracting folder: " + folderPath + " to " + destinationFolder);
+      getLogger()
+          .info(
+              ANSIColor.colorize(
+                  "orange[Extracting folder:] yellow["
+                      + folderPath
+                      + "] orange[to] yellow["
+                      + destinationFolder
+                      + "]"));
       URL jarUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
       JarFile jarFile = new JarFile(new File(jarUrl.toURI()));
 
@@ -329,6 +339,15 @@ public final class vicky_utils extends JavaPlugin {
   }
 
   /**
+   * Called by dependent plugins to register their custom player effects.
+   */
+  public static void registerCustomEffect(String effectName, CustomEffect customEffect) {
+    pendingEffects.put(effectName, customEffect);
+    new ContextLogger(ContextLogger.ContextType.SYSTEM, "EFFECTS")
+        .printBukkit("Added custom effect" + ANSIColor.colorize("yellow[" + effectName + "]"));
+  }
+
+  /**
    * Called by dependent plugins to register their mapping class utilities like Enums, Classes and Objects.
    */
   public static void registerTemplateUtilityPackage(String jarName, String packageName) {
@@ -340,6 +359,10 @@ public final class vicky_utils extends JavaPlugin {
 
   public SQLManager getSQLManager() {
     return sqlManager;
+  }
+
+  public EntityManager getEntityManager() {
+    return HibernateUtil.getEntityManager();
   }
 
   public HibernateDatabaseManager getDatabaseManager() {

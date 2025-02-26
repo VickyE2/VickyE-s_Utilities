@@ -99,7 +99,7 @@ public class AggregatedClassLoaderService implements ClassLoaderService {
    * Generates a proxy instance for the specified interfaces.
    */
   @Override
-  public <T> T generateProxy(InvocationHandler handler, Class<?>... interfaces) {
+  public <T> T generateProxy(InvocationHandler handler, Class... interfaces) {
     return (T) Proxy.newProxyInstance(aggregatedClassLoader, interfaces, handler);
   }
 

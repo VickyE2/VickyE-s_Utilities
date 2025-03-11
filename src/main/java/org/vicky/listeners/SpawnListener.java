@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024-2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.listeners;
 
 import org.bukkit.entity.Player;
@@ -10,6 +10,7 @@ import org.vicky.handlers.CustomDamageHandler;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 import org.vicky.utilities.DatabaseManager.apis.DatabasePlayerAPI;
+import org.vicky.utilities.DatabaseManager.dao_s.DatabasePlayerDAO;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
 
 public class SpawnListener implements Listener {
@@ -22,7 +23,7 @@ public class SpawnListener implements Listener {
   @EventHandler
   public void onPlayerJoin(PlayerJoinEvent event) {
     final Player player = event.getPlayer();
-    if (!(new DatabasePlayerAPI().getPlayer(player.getUniqueId().toString()) == null)) {
+    if (new DatabasePlayerDAO().findById(player.getUniqueId()).isEmpty()) {
       new ContextLogger(ContextLogger.ContextType.FEATURE, "HIBERNATE-PLAYER")
           .printBukkit(
               ANSIColor.colorize(
@@ -30,7 +31,13 @@ public class SpawnListener implements Listener {
       DatabasePlayer instancedDatabasePlayer = new DatabasePlayer();
       instancedDatabasePlayer.setId(player.getUniqueId());
       instancedDatabasePlayer.setFirstTime(true);
-      new DatabasePlayerAPI().createPlayer(instancedDatabasePlayer);
+      new DatabasePlayerDAO().save(instancedDatabasePlayer);
+    } else {
+      DatabasePlayer instancedDatabasePlayer =
+          new DatabasePlayerDAO().findById(player.getUniqueId()).get();
+      instancedDatabasePlayer.setFirstTime(false);
+      new DatabasePlayerAPI()
+          .updatePlayer(player.getUniqueId().toString(), instancedDatabasePlayer);
     }
   }
 

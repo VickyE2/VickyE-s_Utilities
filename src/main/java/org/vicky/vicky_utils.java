@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024-2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky;
 
 import static org.vicky.global.Global.*;
@@ -13,11 +13,12 @@ import java.net.URL;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
-import org.vicky.effectsSystem.effects.Bleeding;
 import org.vicky.effectsSystem.CustomEffect;
+import org.vicky.effectsSystem.effects.Bleeding;
 import org.vicky.expansions.PlaceholderExpansions;
 import org.vicky.global.Global;
 import org.vicky.handlers.CustomDamageHandler;
@@ -31,16 +32,18 @@ import org.vicky.utilities.DatabaseManager.HibernateUtil;
 import org.vicky.utilities.DatabaseManager.SQLManager;
 import org.vicky.utilities.DatabaseManager.SQLManagerBuilder;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
+import org.vicky.utilities.DatabaseManager.templates.ExtendedPlayerBase;
 import org.vicky.utilities.DatabaseManager.templates.Theme;
 import org.vicky.utilities.DatabaseManager.templates.ThemeRegistry;
 import org.vicky.utilities.DatabaseManager.utils.Hbm2DdlAutoType;
 import org.vicky.utilities.Theme.ThemeStorer;
 import org.vicky.utilities.Theme.ThemeUnzipper;
 
+@SuppressWarnings({"deprecation", "UnstableApiUsage"})
 public final class vicky_utils extends JavaPlugin {
 
   public static vicky_utils plugin;
-  private ClassLoader loader;
+  private static ClassLoader loader;
   private static final Map<String, String> pendingDBTemplates = new HashMap<>();
   private static final Map<String, String> pendingDBTemplatesUtils = new HashMap<>();
   private static final Map<String, CustomEffect> pendingEffects = new HashMap<>();
@@ -53,12 +56,14 @@ public final class vicky_utils extends JavaPlugin {
   @Override
   public void onLoad() {
     try {
-      loader = Bukkit.getPluginManager().getPlugin("Vicky-s_Utilities").getClass().getClassLoader();
+      loader = this.getClassLoader();
+      config = new Config(this);
       sqlManager =
           new SQLManagerBuilder()
               .addMappingClass(DatabasePlayer.class)
               .addMappingClass(Theme.class)
               .addMappingClass(ThemeRegistry.class)
+              .addMappingClass(ExtendedPlayerBase.class)
               .setUsername(generator.generate(20, true, true, true, false))
               .setPassword(generator.generatePassword(30))
               .setShowSql(false)
@@ -73,23 +78,32 @@ public final class vicky_utils extends JavaPlugin {
 
   @Override
   public void onEnable() {
-
-    // Plugin startup logic
     if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null
         && Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
-
+      Bukkit.getLogger()
+          .info(
+              ANSIColor.gradientColorize(
+                  String.format(
+                      """
+gradient-bottom-#AA0000-#DDDD00[
+ _  _  __  ___  __ _  _  _  _ ____    _  _  ____  __  __    __  ____  __  ____  ____
+/ )( \\(  )/ __)(  / )( \\/ )(// ___)  / )( \\(_  _)(  )(  )  (  )(_  _)(  )(  __)/ ___)       dark_gray[v %s]
+\\ \\/ / )(( (__  )  (  )  /   \\___ \\  ) \\/ (  )(   )( / (_/\\ )(   )(   )(  ) _) \\___ \\
+ \\__/ (__)\\___)(__\\_)(__/    (____/  \\____/ (__) (__)\\____/(__) (__) (__)(____)(____/]
+""",
+                      this.getDescription().getVersion())));
       plugin = this;
+      classLoader.getLoaders().add(this.getClassLoader());
+      Thread.currentThread().setContextClassLoader(classLoader);
 
-      configManager = new ConfigManager(this, "./global/global_configs.yml");
-      configManager.loadConfigValues();
-      Config config = new Config(this);
+      globalConfigManager = new ConfigManager(this, "./global/global_configs.yml");
+      globalConfigManager.loadConfigValues();
       config.registerConfigs();
 
       Global.placeholderStorer = new PlaceholderStorer();
       Global.stringStorer = new StringStore();
       Global.customDamageHandler = new CustomDamageHandler(this);
       Global.mechanicRegistrar = new MechanicRegistrar(this);
-
       sqlManager.configureSessionFactory();
       sqlManager.startDatabase();
       databaseManager = new HibernateDatabaseManager();
@@ -287,8 +301,7 @@ public final class vicky_utils extends JavaPlugin {
   }
 
   public static void hookDependantPlugin(@NotNull JavaPlugin plugin) {
-    getPlugin()
-        .getLogger()
+    Bukkit.getLogger()
         .info(
             ANSIColor.colorize("New plugin hooked successfully: green[" + plugin.getName() + "]"));
     hookedPlugins.add(plugin);
@@ -313,12 +326,18 @@ public final class vicky_utils extends JavaPlugin {
   }
 
   public static String getHookedDependantPlugins() {
-    StringBuilder plugins = new StringBuilder();
-    plugins.append(ANSIColor.colorize("cyan[Hooked Plugins: ] \n"));
-    for (JavaPlugin plugin : hookedPlugins) {
-      plugins.append(ANSIColor.colorize("   - purple[" + plugin.getName() + "]"));
-    }
-    return plugins.toString();
+    // Header colored in cyan.
+    String header = ANSIColor.colorize("cyan[Hooked Plugins: ]");
+    String plugins =
+        hookedPlugins.stream()
+            .map(
+                plugin -> {
+                  String rainbowMarker = "rainbow-purple-pink" + "[" + plugin.getName() + "]";
+                  return "   - " + ANSIColor.rainbowColorize(rainbowMarker);
+                })
+            .collect(Collectors.joining("\n")); // Join with a newline between each entry.
+
+    return header + "\n" + plugins;
   }
 
   public static Map<String, String> getPendingDBTemplates() {
@@ -378,6 +397,18 @@ public final class vicky_utils extends JavaPlugin {
         e.printStackTrace();
       }
     }
+  }
+
+  public static ConfigManager getGlobalCOnfigManager() {
+    return globalConfigManager;
+  }
+
+  public static Config getConfigMapper() {
+    return config;
+  }
+
+  public static void addClassLoader(ClassLoader clazzLoader) {
+    classLoader.getLoaders().add(clazzLoader);
   }
 
   public ClassLoader getLoader() {

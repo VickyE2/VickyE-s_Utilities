@@ -1,10 +1,9 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager.templates;
 
 import jakarta.persistence.*;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import org.hibernate.annotations.ColumnDefault;
 import org.vicky.utilities.DatabaseTemplate;
 import org.vicky.utilities.RanksLister;
 
@@ -12,7 +11,8 @@ import org.vicky.utilities.RanksLister;
  * <strong>If you would like to extend this class for a more versatile database entity:</strong>
  * <pre>{@code
  * @Entity
- * public class ExtendedGlobalPlayer extends DatabasePlayer {
+ * @Table(name = "extended_global_player_type_a")
+ * public class ExtendedGlobalPlayer extends ExtendedPlayerBase {
  *     @JoinTable(
  *         name = "some_new_field",
  *         joinColumns = @JoinColumn(name = "some_field_parameter"),
@@ -22,11 +22,17 @@ import org.vicky.utilities.RanksLister;
  *     private List<SomeClass> someClassList = new ArrayList<>();
  * }
  * }</pre>
+ * Some way to get the ExtendedGlobalPlayer of a DatabasePlayer
+ * <pre>{@code
+ *  TypedQuery<ExtendedPlayerTypeA> query = em.createQuery(
+ *     "SELECT e FROM ExtendedPlayerTypeA e WHERE e.databasePlayer.id = :playerId", ExtendedPlayerTypeA.class);
+ *  query.setParameter("playerId", "some-player-id");
+ *  ExtendedPlayerTypeA extensions = query.getSingleResult();
+ * }</pre>
  * @author VickyE2
  */
 @Entity
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@Table(name = "ServerDatabasePlayers")
+@Table(name = "DatabasePlayers")
 public class DatabasePlayer implements DatabaseTemplate {
   @Id
   @Column(name = "player_id", unique = true, nullable = false)
@@ -34,9 +40,7 @@ public class DatabasePlayer implements DatabaseTemplate {
 
   @Column private boolean isFirstTime;
 
-  @Column
-  @ColumnDefault(value = "lt")
-  private String userTheme;
+  @Column private String userTheme = "lt";
 
   public UUID getId() {
     return UUID.fromString(id);
@@ -46,6 +50,7 @@ public class DatabasePlayer implements DatabaseTemplate {
     this.id = id.toString();
   }
 
+  @Transient
   public int getRank() {
     RanksLister lister = new RanksLister();
     try {
@@ -55,6 +60,7 @@ public class DatabasePlayer implements DatabaseTemplate {
     }
   }
 
+  @Transient
   public String getRankName() {
     RanksLister lister = new RanksLister();
     try {

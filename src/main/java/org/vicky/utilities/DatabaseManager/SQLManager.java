@@ -1,5 +1,7 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager;
+
+import static org.vicky.global.Global.classLoader;
 
 import java.io.*;
 import java.util.*;
@@ -10,7 +12,6 @@ import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 import org.vicky.utilities.ContextLogger.ContextLogger;
-import org.vicky.utilities.DatabaseManager.utils.AggregatedClassLoader;
 import org.vicky.utilities.DatabaseManager.utils.AggregatedClassLoaderService;
 import org.vicky.utilities.DatabaseTemplate;
 import org.vicky.utilities.JarClassScanner;
@@ -137,14 +138,8 @@ public class SQLManager {
         configuration.addAnnotatedClass(clazz);
       }
 
-      AggregatedClassLoader classLoader = new AggregatedClassLoader(scanner.getClassLoaders());
-      classLoader.getLoaders().add(Thread.currentThread().getContextClassLoader());
-      classLoader.getLoaders().add(vicky_utils.getPlugin().getClass().getClassLoader());
-
       Map<String, Object> settings = new HashMap<>();
       settings.put(AvailableSettings.CLASSLOADERS, List.of(classLoader));
-
-      Thread.currentThread().setContextClassLoader(classLoader);
 
       StandardServiceRegistry serviceRegistry =
           new StandardServiceRegistryBuilder()

@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024-2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -9,11 +9,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.spongepowered.configurate.AttributedConfigurationNode;
 import org.spongepowered.configurate.ConfigurationOptions;
 import org.spongepowered.configurate.loader.AtomicFiles;
 import org.spongepowered.configurate.loader.HeaderMode;
+import org.spongepowered.configurate.serialize.SerializationException;
 import org.spongepowered.configurate.xml.XmlConfigurationLoader;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
@@ -242,6 +244,24 @@ public class XmlConfigManager {
   // Get string config value
   public String getStringValue(String path) {
     return rootNode.node((Object[]) path.split("\\.")).getString();
+  }
+
+  // Get uuid config value
+  public UUID getUUIDValue(String path) {
+    try {
+      return rootNode.node((Object[]) path.split("\\.")).get(UUID.class);
+    } catch (SerializationException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  // Get enum config value
+  public <T extends Enum<T>> T getEnumValue(String path, Class<T> enumClass) {
+    try {
+      return rootNode.node((Object[]) path.split("\\.")).get(enumClass);
+    } catch (SerializationException e) {
+      throw new RuntimeException("Failed to deserialize enum from path: " + path, e);
+    }
   }
 
   // Set a config value, ensuring parent nodes exist

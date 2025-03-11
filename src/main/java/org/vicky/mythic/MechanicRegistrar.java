@@ -1,18 +1,15 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.mythic;
 
-import static org.vicky.global.Global.configManager;
+import static org.vicky.global.Global.globalConfigManager;
 import static org.vicky.global.Global.stringStorer;
 
-import io.lumine.mythic.bukkit.events.MythicMechanicLoadEvent;
 import io.lumine.mythic.api.config.MythicLineConfig;
-
+import io.lumine.mythic.bukkit.events.MythicMechanicLoadEvent;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
-
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
@@ -31,6 +28,7 @@ import org.vicky.mythic.mechanics.BleedingMechanic;
 public class MechanicRegistrar {
 
   private final Plugin plugin;
+
   /**
    * Maps a mechanic name to a factory function that creates a new BaseMechanic.
    */
@@ -69,19 +67,24 @@ public class MechanicRegistrar {
    *                 </pre>
    */
   public void addMechanic(String mechanicName, Class<? extends BaseMechanic> mechanic) {
-    mechanicMap.put(mechanicName, (config, plugin) -> {
-      try {
-        return mechanic.getConstructor(MythicLineConfig.class, Plugin.class)
+    mechanicMap.put(
+        mechanicName,
+        (config, plugin) -> {
+          try {
+            return mechanic
+                .getConstructor(MythicLineConfig.class, Plugin.class)
                 .newInstance(config, plugin);
-      } catch (Exception e) {
-        try {
-          return mechanic.getConstructor(MythicLineConfig.class)
-                  .newInstance(config);
-        } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException ex) {
-          throw new RuntimeException(ex);
-        }
-      }
-    });
+          } catch (Exception e) {
+            try {
+              return mechanic.getConstructor(MythicLineConfig.class).newInstance(config);
+            } catch (NoSuchMethodException
+                | InvocationTargetException
+                | InstantiationException
+                | IllegalAccessException ex) {
+              throw new RuntimeException(ex);
+            }
+          }
+        });
   }
 
   /**
@@ -112,8 +115,9 @@ public class MechanicRegistrar {
       if (mechanicMap.containsKey(mechanicKey)) {
         BaseMechanic mechanic = mechanicMap.get(mechanicKey).apply(event.getConfig(), plugin);
         event.register(mechanic);
-        stringStorer.storeString(plugin.getName(), "mm_mechanics", "-- Registered " + mechanicKey + " mechanic!");
-      } else if (configManager.getBooleanValue("Debug")) {
+        stringStorer.storeString(
+            plugin.getName(), "mm_mechanics", "-- Registered " + mechanicKey + " mechanic!");
+      } else if (globalConfigManager.getBooleanValue("Debug")) {
         plugin.getLogger().warning("-- Unrecognized mechanic: " + event.getMechanicName());
       }
     }

@@ -1,11 +1,9 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager.utils;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
 
 public class AggregatedClassLoader extends ClassLoader {
   private final List<ClassLoader> delegates;
@@ -16,7 +14,6 @@ public class AggregatedClassLoader extends ClassLoader {
    * @param delegates A list of class loaders to aggregate.
    */
   public AggregatedClassLoader(List<ClassLoader> delegates) {
-    // Optionally, you can choose a parent class loader here. For example, the system class loader.
     super(ClassLoader.getSystemClassLoader());
     this.delegates = delegates;
   }
@@ -53,13 +50,16 @@ public class AggregatedClassLoader extends ClassLoader {
 
   @Override
   public Enumeration<URL> getResources(String name) throws IOException {
-    Vector<URL> resources = new Vector<>();
-    for (ClassLoader delegate : delegates) {
-      Enumeration<URL> urls = delegate.getResources(name);
-      while (urls.hasMoreElements()) {
-        resources.add(urls.nextElement());
+    Set<URL> urls = new LinkedHashSet<>(); // Avoid duplicates
+
+    // Loop through the registered class loaders and get resources
+    for (ClassLoader loader : delegates) {
+      Enumeration<URL> resources = loader.getResources(name);
+      while (resources.hasMoreElements()) {
+        urls.add(resources.nextElement());
       }
     }
-    return resources.elements();
+
+    return Collections.enumeration(urls);
   }
 }

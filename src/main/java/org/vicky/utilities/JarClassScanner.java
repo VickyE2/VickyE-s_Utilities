@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
 import java.io.File;
@@ -24,7 +24,7 @@ public class JarClassScanner {
   private static final Map<String, ChildFirstURLClassLoader> jarLoaderMap = new HashMap<>();
 
   // Also, track all class loaders used (for aggregation later)
-  private List<ClassLoader> classLoaders = new ArrayList<>();
+  private final List<ClassLoader> classLoaders = new ArrayList<>();
 
   public List<ClassLoader> getClassLoaders() {
     return classLoaders;
@@ -39,7 +39,7 @@ public class JarClassScanner {
    * @param packageName The {@link String packageName} to scan for classes in the {@link java.util.jar.JarFile contextJar}
    * @param parentClass The {@link Class class} required to extend or implement to be reflected
    * @return A {@link List} of Classes that extend or implement the {@link Class ParentClass}
-  */
+   */
   public List<Class<?>> getClassesFromJar(
       String jarFileName, String packageName, Class<?> parentClass) {
     List<Class<?>> matchingClasses = new ArrayList<>();

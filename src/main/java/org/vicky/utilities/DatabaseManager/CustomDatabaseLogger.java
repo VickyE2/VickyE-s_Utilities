@@ -1,12 +1,11 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager;
 
-import static org.vicky.global.Global.configManager;
+import static org.vicky.global.Global.globalConfigManager;
 
 import org.hibernate.HibernateException;
 import org.hibernate.event.spi.*;
 import org.hibernate.persister.entity.EntityPersister;
-import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class CustomDatabaseLogger
@@ -37,13 +36,22 @@ public class CustomDatabaseLogger
     EntityPersister persister = event.getPersister();
     Object[] oldState = event.getOldState();
     Object[] newState = event.getState();
-
     String[] propertyNames = persister.getPropertyNames();
-    for (int i = 0; i < propertyNames.length; i++) {
-      if (oldState != null && newState != null && !oldState[i].equals(newState[i])) {
-        changes.append(
-            String.format(
-                "Field '%s' ~ Altered '%s' to '%s'. ", propertyNames[i], oldState[i], newState[i]));
+
+    if (oldState != null && newState != null) {
+      for (int i = 0; i < propertyNames.length; i++) {
+        Object oldVal = oldState[i];
+        Object newVal = newState[i];
+        // If both are null, there's no change.
+        if (oldVal == null && newVal == null) {
+          continue;
+        }
+        // If one is null or they are not equal, log the change.
+        if (oldVal == null || !oldVal.equals(newVal)) {
+          changes.append(
+              String.format(
+                  "Field '%s' ~ Altered '%s' to '%s'. ", propertyNames[i], oldVal, newVal));
+        }
       }
     }
 
@@ -126,19 +134,18 @@ public class CustomDatabaseLogger
       entityId = idField.get(entity).toString();
     } catch (NoSuchFieldException | IllegalAccessException e) {
       logger.printBukkit(
-          "["
-              + ANSIColor.colorize("red[HIBERNATE-DB]")
-              + "] Unable to retrieve ID for entity: "
-              + entityName,
-          true);
+          "Unable to retrieve ID for entity: "
+              + entityName
+              + ". It probably extends a class that has the parameter...",
+          ContextLogger.LogType.WARNING);
     }
 
     String format =
         String.format(
             "%s ~ %s having Id -> %s%s",
             operation, entityName, entityId, details != null ? " Details: " + details : "");
-    if (configManager == null) logger.printBukkit(format);
-    else if (configManager.getBooleanValue("Debug")) logger.printBukkit(format);
+    if (globalConfigManager == null) logger.printBukkit(format);
+    else if (globalConfigManager.getBooleanValue("Debug")) logger.printBukkit(format);
   }
 
   @Override

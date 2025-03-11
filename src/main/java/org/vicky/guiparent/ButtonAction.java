@@ -2,7 +2,6 @@
 package org.vicky.guiparent;
 
 import java.lang.reflect.Constructor;
-import java.util.Arrays;
 import java.util.function.Consumer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -19,7 +18,7 @@ import org.bukkit.plugin.java.JavaPlugin;
  *
  * <p>
  * This class now provides modern, lambda-friendly static factory methods for creating instances,
- * and the older constructors are marked as deprecated.
+ * and the older constructors are marked as deprecated tho still used.....I suggest using the static factories...
  * </p>
  */
 public class ButtonAction {
@@ -81,7 +80,11 @@ public class ButtonAction {
    * @deprecated Use {@link #ofOpenGui(Class, JavaPlugin, boolean)} instead.
    */
   @Deprecated
-  public ButtonAction(ActionType actionType, Class<? extends BaseGui> guiClass, JavaPlugin plugin, boolean closeGui) {
+  public ButtonAction(
+      ActionType actionType,
+      Class<? extends BaseGui> guiClass,
+      JavaPlugin plugin,
+      boolean closeGui) {
     this.actionType = actionType;
     this.guiClass = guiClass;
     this.customAction = null;
@@ -135,9 +138,10 @@ public class ButtonAction {
    * @param guiClass The class of the GUI to open.
    * @param plugin   The JavaPlugin instance.
    * @param closeGui Whether to close the current GUI before opening the new one.
-   * @return A new ButtonAction instance configured to open a GUI.
+   * @return A new {@link ButtonAction} instance configured to open a GUI.
    */
-  public static ButtonAction ofOpenGui(Class<? extends BaseGui> guiClass, JavaPlugin plugin, boolean closeGui) {
+  public static ButtonAction ofOpenGui(
+      Class<? extends BaseGui> guiClass, JavaPlugin plugin, boolean closeGui) {
     return new ButtonAction(ActionType.OPEN_GUI, guiClass, plugin, closeGui);
   }
 
@@ -146,7 +150,7 @@ public class ButtonAction {
    *
    * @param item     The ItemStack to give.
    * @param closeGui Whether to close the GUI after giving the item.
-   * @return A new ButtonAction instance configured to give an item.
+   * @return A new {@link ButtonAction} instance configured to give an item.
    */
   public static ButtonAction ofGiveItem(ItemStack item, boolean closeGui) {
     return new ButtonAction(ActionType.GIVE_ITEM, item, closeGui);
@@ -157,7 +161,7 @@ public class ButtonAction {
    *
    * @param command  The command string to run.
    * @param closeGui Whether to close the GUI after executing the command.
-   * @return A new ButtonAction instance configured to run a command.
+   * @return A new {@link ButtonAction} instance configured to run a command.
    */
   public static ButtonAction ofRunCommand(String command, boolean closeGui) {
     return new ButtonAction(ActionType.RUN_COMMAND, command, closeGui);
@@ -166,9 +170,10 @@ public class ButtonAction {
   /**
    * Creates a ButtonAction for running custom code using a lambda.
    *
-   * @param customAction A Consumer&lt;Player&gt; representing the custom code to execute.\n   *                     The lambda receives the player as its argument.
-   * @param closeGui     Whether to close the GUI after executing the custom code.
-   * @return A new ButtonAction instance configured to run custom code.
+   * @param customAction A Consumer&lt;Player&gt; representing the custom code to execute.
+   * The lambda receives the player as its argument.
+   * @param closeGui Whether to close the GUI after executing the custom code.
+   * @return A new {@link ButtonAction} instance configured to run custom code.
    */
   public static ButtonAction ofRunCode(Consumer<Player> customAction, boolean closeGui) {
     return new ButtonAction(customAction, closeGui);
@@ -179,7 +184,7 @@ public class ButtonAction {
    *
    * @param action   A Runnable representing the action to execute.
    * @param closeGui Whether to close the GUI after executing the action.
-   * @return A new ButtonAction instance configured to run the given action.
+   * @return A new {@link ButtonAction} instance configured to run the given action.
    */
   public static ButtonAction ofRunAction(Runnable action, boolean closeGui) {
     return new ButtonAction(ActionType.RUN_CLASS, action, closeGui);
@@ -187,7 +192,13 @@ public class ButtonAction {
 
   /**
    * Creates a generic ButtonAction with custom action data.
-   * <p>\n   * This method is intended for advanced usage where action data is used to determine behavior.\n   *</p>\n   *\n   * @param actionType The type of action.\n   * @param actionData Arbitrary data associated with the action.\n   * @param closeGui   Whether to close the GUI after executing the action.\n   * @return A new ButtonAction instance configured with the provided parameters.\n   */
+   * <p>
+   * This method is intended for advanced usage where action data is used to determine behavior.
+   * @param actionType The type of action.
+   * @param actionData Arbitrary data associated with the action.
+   * @param closeGui   Whether to close the GUI after executing the action.
+   * @return A new {@link ButtonAction} instance configured with the provided parameters.
+   */
   public static ButtonAction ofGeneric(ActionType actionType, Object actionData, boolean closeGui) {
     return new ButtonAction(actionType, actionData, closeGui);
   }
@@ -208,7 +219,7 @@ public class ButtonAction {
         try {
           // Assuming the GUI class has a constructor that accepts a JavaPlugin argument.
           Constructor<? extends BaseGui> constructor =
-                  guiClass.getDeclaredConstructor(JavaPlugin.class);
+              guiClass.getDeclaredConstructor(JavaPlugin.class);
           // Instantiate the GUI with the main_plugin and display it to the player.
           BaseGui gui = constructor.newInstance(main_plugin);
           gui.showGui(player);
@@ -234,7 +245,8 @@ public class ButtonAction {
       case RUN_COMMAND:
         if (actionData instanceof String) {
           String command = (String) actionData;
-          Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replace("%player%", player.getName()));
+          Bukkit.dispatchCommand(
+              Bukkit.getConsoleSender(), command.replace("%player%", player.getName()));
           if (closeGui) {
             player.closeInventory();
           }
@@ -267,7 +279,7 @@ public class ButtonAction {
   /**
    * Gets the action type of this ButtonAction.
    *
-   * @return the ActionType representing this action's category.
+   * @return the {@link ActionType} representing this action's category.
    */
   public ActionType getActionType() {
     return actionType;
@@ -276,7 +288,7 @@ public class ButtonAction {
   /**
    * Gets the custom action (lambda) associated with this ButtonAction, if any.
    *
-   * @return a Consumer<Player> representing the custom action, or null if not defined.
+   * @return a {@link Consumer<Player>} of type player representing the custom action, or null if not defined.
    */
   public Consumer<Player> getCustomAction() {
     return customAction;
@@ -285,7 +297,7 @@ public class ButtonAction {
   /**
    * Gets the runnable action associated with this ButtonAction, if any.
    *
-   * @return a Runnable representing the action logic, or null if not defined.
+   * @return a {@link Runnable} representing the action logic, or null if not defined.
    */
   public Runnable getAction() {
     return action;
@@ -294,7 +306,7 @@ public class ButtonAction {
   /**
    * Gets the action data associated with this ButtonAction.
    *
-   * @return an Object representing additional data for the action.
+   * @return an {@link Object} representing additional data for the action.
    */
   public Object getActionData() {
     return actionData;

@@ -99,4 +99,69 @@ public class HexGenerator {
     }
     return matcher.appendTail(buffer).toString();
   }
+
+  /**
+   * Converts ANSI escape sequences for RGB colors (e.g. "\u001B[38;2;R;G;Bm")
+   * to the Bukkit hex format ("§x§R§R§G§G§B§B").
+   *
+   * @param message The message containing ANSI escape sequences.
+   * @return The message with ANSI escape sequences replaced by Bukkit hex color codes.
+   */
+  public static String convertAnsiEscapeToBukkitHex(String message) {
+    // Pattern to match ANSI escape sequences of the form: \u001B[38;2;R;G;B m
+    Pattern pattern = Pattern.compile("\\u001B\\[38;2;(\\d+);(\\d+);(\\d+)m");
+    Matcher matcher = pattern.matcher(message);
+    StringBuffer sb = new StringBuffer();
+
+    while (matcher.find()) {
+      int r = Integer.parseInt(matcher.group(1));
+      int g = Integer.parseInt(matcher.group(2));
+      int b = Integer.parseInt(matcher.group(3));
+      String hex = String.format("#%02X%02X%02X", r, g, b);
+      String bukkitHex =
+          COLOR_CHAR
+              + "x"
+              + COLOR_CHAR
+              + hex.charAt(1)
+              + COLOR_CHAR
+              + hex.charAt(2)
+              + COLOR_CHAR
+              + hex.charAt(3)
+              + COLOR_CHAR
+              + hex.charAt(4)
+              + COLOR_CHAR
+              + hex.charAt(5)
+              + COLOR_CHAR
+              + hex.charAt(6);
+      matcher.appendReplacement(sb, Matcher.quoteReplacement(bukkitHex));
+    }
+    matcher.appendTail(sb);
+    return sb.toString();
+  }
+
+  /**
+   * Converts a hex color string (e.g. "#1E90FF") to the corresponding Bukkit hex color code.
+   *
+   * @param hex the hex color string (must start with "#")
+   * @return the Bukkit hex color code (e.g. "§x§1§E§9§0§F§F")
+   */
+  public static String of(String hex) {
+    if (hex == null || !hex.matches("^#([A-Fa-f0-9]{6})$")) {
+      throw new IllegalArgumentException("Invalid hex color: " + hex);
+    }
+    return COLOR_CHAR
+        + "x"
+        + COLOR_CHAR
+        + hex.charAt(1)
+        + COLOR_CHAR
+        + hex.charAt(2)
+        + COLOR_CHAR
+        + hex.charAt(3)
+        + COLOR_CHAR
+        + hex.charAt(4)
+        + COLOR_CHAR
+        + hex.charAt(5)
+        + COLOR_CHAR
+        + hex.charAt(6);
+  }
 }

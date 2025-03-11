@@ -1,10 +1,11 @@
-/* Licensed under Apache-2.0 2024-2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.spongepowered.configurate.ConfigurateException;
@@ -14,6 +15,7 @@ import org.spongepowered.configurate.jackson.FieldValueSeparatorStyle;
 import org.spongepowered.configurate.jackson.JacksonConfigurationLoader;
 import org.spongepowered.configurate.loader.ConfigurationLoader;
 import org.spongepowered.configurate.loader.HeaderMode;
+import org.spongepowered.configurate.serialize.SerializationException;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class JsonConfigManager {
@@ -125,6 +127,24 @@ public class JsonConfigManager {
   // Get string config value
   public synchronized String getStringValue(String path) {
     return rootNode.node((Object[]) path.split("\\.")).getString();
+  }
+
+  // Get uuid config value
+  public UUID getUUIDValue(String path) {
+    try {
+      return rootNode.node((Object[]) path.split("\\.")).get(UUID.class);
+    } catch (SerializationException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  // Get enum config value
+  public <T extends Enum<T>> T getEnumValue(String path, Class<T> enumClass) {
+    try {
+      return rootNode.node((Object[]) path.split("\\.")).get(enumClass);
+    } catch (SerializationException e) {
+      throw new RuntimeException("Failed to deserialize enum from path: " + path, e);
+    }
   }
 
   // Set a config value, ensuring parent nodes exist

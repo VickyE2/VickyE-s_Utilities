@@ -26,6 +26,7 @@ const healthValue = document.getElementById('healthValue');
 const reversedCheckbox = document.getElementById('reversedCheckbox');
 const offsetXInput = document.getElementById('offsetX');
 const offsetYInput = document.getElementById('offsetY');
+const resetHealthBarOnNewStage = document.getElementById('resetHBONS');
 const offsetLeftXInput = document.getElementById('offsetLeftX');
 const offsetLeftYInput = document.getElementById('offsetLeftY');
 const offsetRightXInput = document.getElementById('offsetRightX');
@@ -50,7 +51,7 @@ let animType = document.getElementById('animType').value;
 let duration = parseFloat(document.getElementById('animDuration').value);
 let xEquation = document.getElementById('xEquation').value;
 let yEquation = document.getElementById('yEquation').value;
-let actualName = bossName.value;
+let actualName = bossName.value.toLowerCase();
 let nextStageThreashold = 0;
 let animatedMainFrames = '';
 let animationHandler = null;
@@ -59,6 +60,7 @@ let defaultMainTextureAnimation = null;
 let defaultOverlayDouble = null;
 let defaultOverlayNormal = null;
 let hasMadeTable = false;
+let stageIntervals = [];
 
 /* Tasks */
 setInterval(() => {
@@ -139,8 +141,9 @@ animatedStageFilesInput.addEventListener('change', () => {
 });
 stageForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  actualName = bossName.value;
+  let actualName = bossName.value.toLowerCase();
   const threshold = parseFloat(document.getElementById("stageThreshold").value);
+  stageIntervals.push(threshold / 100);
 
   let stageObj = {
     threshold: threshold,
@@ -219,7 +222,7 @@ stageForm.addEventListener("submit", async (e) => {
       fileReadPromises.push(
         readFileAsDataURL(file).then((dataURL) => {
           // Generate a fileName for packaging.
-          const fileName = actualName + "_stage_" + threshold + "_" + i.toString().padStart(5, "0") + ".png";
+          const fileName = actualName + "_stage_" + threshold + "_" + i.toString().padStart(1, "0") + ".png";
           frames.push({
             src: dataURL,
             duration: duration,
@@ -408,7 +411,7 @@ document.getElementById("editStageForm").addEventListener("submit", async (e) =>
       const order = parseInt(orderInput.value) || (i + 1);
       fileReadPromises.push(
         readFileAsDataURL(file).then((dataURL) => {
-          const fileName = actualName + "_stage_" + threshold + "_" + i.toString().padStart(5, "0") + ".png";
+          const fileName = actualName + "_stage_" + threshold + "_" + i.toString().padStart(1, "0") + ".png";
           frames.push({
             src: dataURL,
             duration: duration,
@@ -529,7 +532,7 @@ animatedFilesInput.addEventListener('change', () => {
 });
 startAnimationBtn.addEventListener('click', async () => {
   const files = animatedFilesInput.files;
-  actualName = bossName.value;
+  let actualName = bossName.value.toLowerCase();
   console.log("[Animation] Starting animation for:", actualName);
 
   const frames = [];
@@ -542,7 +545,7 @@ startAnimationBtn.addEventListener('click', async () => {
     console.log(`[Animation] Processing file "${file.name}" with duration=${duration} and order=${order}`);
     try {
       const dataURL = await readFileAsDataURL(file);
-      const fileName = actualName + '_animated_main_texture_' + i.toString().padStart(5, '0') + '.png';
+      const fileName = actualName + '_amt_' + i.toString().padStart(2, '0') + '.png';
       frames.push({
         src: dataURL,
         duration: duration,
@@ -606,7 +609,7 @@ healthSlider.addEventListener('input', () => {
 });
 reversedCheckbox.addEventListener('change', updateOverlayCrop);
 document.getElementById('bossName').addEventListener('change', () => {
-  actualName = bossName.value;
+  let actualName = bossName.value.toLowerCase();
 });
 document.getElementById('playAnimationButton').addEventListener('click', () => {
   const healthPercent = parseFloat(healthSlider.value);
@@ -814,14 +817,14 @@ function openEditModal(stageKey) {
   document.getElementById("editStageModal").classList.remove("hidden");
 }
 function generateZip() {
-  actualName = bossName.value;
+  let actualName = bossName.value.toLowerCase();
   console.log("[ZIP] actualName:", actualName);
 
   const zip = new JSZip();
   const splitsAmount = healthSplits.value;
   console.log("[ZIP] splitsAmount:", splitsAmount);
 
-  const assetsDir = zip.folder('assets/BetterBossbars/' + actualName);
+  const assetsDir = zip.folder('assets/betterbossbars');
   const imagesDir = zip.folder('images');
   const hudDir = zip.folder('huds');
   const layoutDir = zip.folder('layouts');
@@ -829,8 +832,8 @@ function generateZip() {
 
   const bossListener = {
     clazz: 'placeholder',
-    value: '(number)bossbar_entity_' + actualName + '_current_health',
-    max: '(number)bossbar_entity_' + actualName + '_max_health',
+    value: '(number)papi:bossbar_entity_' + actualName + '_current_health',
+    max: '(number)papi:bossbar_entity_' + actualName + '_max_health',
   };
 
   // Process main texture (static or animated)
@@ -844,7 +847,7 @@ function generateZip() {
         assetsDir.file(actualName + '_main_texture.png', blob);
         console.log("[ZIP] Added file:", actualName + '_main_texture.png');
       }
-      FullImageYml += generateSingleImage(actualName + '_holder', 'assets/BetterBossbars/' + actualName + '/' + actualName + '_main_texture.png') + '\n\n';
+      FullImageYml += generateSingleImage(actualName + '_holder', "betterbossbars/" + actualName + '_main_texture.png') + '\n\n';
       stageMap.set(`${actualName}_default`, {
         images: [{
           name: actualName + '_holder',
@@ -865,12 +868,12 @@ function generateZip() {
           console.log("[ZIP] Added animated frame file:", frame.fileName);
         }
       });
-      FullImageYml += generateSequenceImage(actualName + '_animated_main_texture', animatedMainFrames) + '\n\n';
+      FullImageYml += generateSequenceImage(actualName + '_amt', animatedMainFrames) + '\n\n';
       stageMap.set(`${actualName}_default`, {
         threshold: 100,
         animated: true,
         images: [{
-          name: actualName + '_animated_main_texture',
+          name: actualName + '_amt',
           x: 0,
           y: 0
         }],
@@ -885,17 +888,17 @@ function generateZip() {
     if (!stage.animated) {
       const blob = dataURLtoBlob(stage.src);
       if (blob) {
-        assetsDir.file(`${actualName}_texture_stage_${stage.threshold}.png`, blob);
-        console.log("[ZIP] Added texture stage file:", `${actualName}_texture_stage_${stage.threshold}.png`);
+        assetsDir.file(`${actualName}_ts_${stage.threshold}.png`, blob);
+        console.log("[ZIP] Added texture stage file:", `${actualName}_ts_${stage.threshold}.png`);
         FullImageYml += generateSingleImage(
-          actualName + `${actualName}_texture_stage__${stage.threshold}`,
-          "assets/BetterBossars/" + actualName + "/" + `${actualName}_texture_stage_${stage.threshold}.png`
+          actualName + `${actualName}_ts_${stage.threshold}`,
+          "betterbossbars/" + "/" + `${actualName}_ts_${stage.threshold}.png`
         ) + "\n\n";
         stageMap.set(`${actualName}_stage_${stage.threshold}`, {
           threshold: stage.threshold,
           animated: false,
           images: [{
-            name: `${actualName}_texture_stage_${stage.threshold}`,
+            name: `${actualName}_ts_${stage.threshold}`,
             x: 0,
             y: 0
           }]
@@ -913,7 +916,7 @@ function generateZip() {
         }
       });
       FullImageYml += generateSequenceImage(
-        `${actualName}_stage_${stage.threshold}`,
+        `${actualName}_ts_${stage.threshold}`,
         stage.animatedFrames
       ) + "\n\n";
       stageMap.set(`${actualName}_stage_${stage.threshold}`, {
@@ -922,7 +925,7 @@ function generateZip() {
         animConfig: stage.animConfig,
         animatedFrames: stage.animatedFrames,
         images: [{
-          name: `${actualName}_texture_stage_${stage.threshold}`,
+          name: `${actualName}_ts_${stage.threshold}`,
           x: 0,
           y: 0
         }]
@@ -930,28 +933,37 @@ function generateZip() {
       console.log("[ZIP] Set animated stage in stageMap for threshold", stage.threshold);
     }
   });
-
+  let stageThreasholds = [{tre: 100}];
   // Process overlay images based on bossbarType.
   if (bossbarTypeSelect.value === 'normal') {
+    overlayStagesNormal.sort((a, b) => a.threshold - b.threshold);
+    overlayStagesNormal.forEach((stage, index) => {
+      stageThreasholds.push(
+        {tre: stage.treashold}
+      );
+    });
+    stageThreasholds.sort((a, b) => a.tre - b.tre);
     console.log("[ZIP] Processing overlay for normal mode...");
     const defaultOverlayData = overlayImage.dataset.default || overlayImage.src;
     if (defaultOverlayData) {
       const blob = dataURLtoBlob(defaultOverlayData);
       if (blob) {
-        assetsDir.file(actualName + '_main_overlay.png', blob);
-        console.log("[ZIP] Added main overlay file:", actualName + '_main_overlay.png');
+        assetsDir.file(actualName + '_mo.png', blob);
+        console.log("[ZIP] Added main overlay file:", actualName + '_mo.png');
       }
       FullImageYml += generateListenerImage(
-        actualName + '_main_overlay',
-        'assets/BetterBossars/' + actualName + '/' + actualName + '_main_overlay.png',
+        actualName + '_mo',
+        "betterbossbars/" + '/' + actualName + '_mo.png',
         splitsAmount,
         reversedCheckbox.checked ? 'right' : 'left',
-        bossListener
+        bossListener,
+        stageThreashold[0].tre,
+        stageThreashold[1].tre || 0
       ) + '\n\n';
       const defaultStage = stageMap.get(`${actualName}_default`);
       if (defaultStage) {
         defaultStage.images.push({
-          name: actualName + '_main_overlay',
+          name: actualName + '_mo',
           x: offsetXInput.value,
           y: offsetYInput.value
         });
@@ -959,17 +971,19 @@ function generateZip() {
       }
     }
     overlayStagesNormal.forEach((stage, index) => {
-      if (nextStageThreashold <= stage.threshold) nextStageThreashold = stage.threshold;
+      if (nextStageThreashold < stage.threshold) nextStageThreashold = stage.threshold;
       const blob = dataURLtoBlob(stage.src);
       if (blob) {
-        assetsDir.file(`${actualName}_overlay_stage_${index}_${stage.threshold}.png`, blob);
-        console.log("[ZIP] Added overlay stage file (normal):", `${actualName}_overlay_stage_${index}_${stage.threshold}.png`);
+        assetsDir.file(`${actualName}_os_${index}_${stage.threshold}.png`, blob);
+        console.log("[ZIP] Added overlay stage file (normal):", `${actualName}_os_${index}_${stage.threshold}.png`);
         FullImageYml += generateListenerImage(
-          `${actualName}_overlay_stage_${index}_${stage.threshold}`,
-          'assets/BetterBossars/' + actualName + '/' + `${actualName}_overlay_stage_${index}_${stage.threshold}.png`,
+          `${actualName}_os_${index}_${stage.threshold}`,
+          "betterbossbars/" + `${actualName}_os_${index}_${stage.threshold}.png`,
           splitsAmount,
           reversedCheckbox.checked ? 'right' : 'left',
-          bossListener
+          bossListener,
+          stageThreashold[index + 1].tre,
+          stageThreashold[index + 2].tre || 0
         ) + '\n\n';
         const stageEntry = stageMap.get(`${actualName}_stage_${stage.threshold}`);
         if (stageEntry) {
@@ -978,7 +992,7 @@ function generateZip() {
           // Here we assume threshold is stored as a number.
           stageEntry.threshold = stage.threshold;
           stageEntry.images.push({
-            name: `${actualName}_overlay_stage_${index}_${stage.threshold}`,
+            name: `${actualName}_os_${index}_${stage.threshold}`,
             x: offsetXInput.value,
             y: offsetYInput.value
           });
@@ -988,26 +1002,35 @@ function generateZip() {
     });
   }
   else {
+    overlayStagesDouble.sort((a, b) => a.threshold - b.threshold);
+    overlayStagesDouble.forEach((stage, index) => {
+      stageThreasholds.push(
+        {tre: stage.treashold}
+      );
+    });
+    stageThreasholds.sort((a, b) => a.tre - b.tre);
     console.log("[ZIP] Processing overlay for double mode...");
     const defaultOverlayLeft = overlayImageLeft.dataset.default || overlayImageLeft.src;
     const defaultOverlayRight = overlayImageRight.dataset.default || overlayImageRight.src;
     if (defaultOverlayLeft) {
       const blob = dataURLtoBlob(defaultOverlayLeft);
       if (blob) {
-        assetsDir.file(actualName + '_main_overlay_left.png', blob);
-        console.log("[ZIP] Added main overlay left file:", actualName + '_main_overlay_left.png');
+        assetsDir.file(actualName + '_mol.png', blob);
+        console.log("[ZIP] Added main overlay left file:", actualName + '_mol.png');
       }
       FullImageYml += generateListenerImage(
-        actualName + '_main_overlay_left',
-        'assets/BetterBossars/' + actualName + '/' + actualName + '_main_overlay_left.png',
+        actualName + '_mol',
+        "betterbossbars/" + '/' + actualName + '_mol.png',
         splitsAmount,
         reversedCheckbox.checked ? 'right' : 'left',
-        bossListener
+        bossListener,
+        stageThreashold[0].tre,
+        stageThreashold[1].tre || 0
       ) + '\n\n';
       let defaultStage = stageMap.get(`${actualName}_default`);
       if (defaultStage) {
         defaultStage.images.push({
-          name: actualName + '_main_overlay_left',
+          name: actualName + '_mol',
           x: offsetLeftXInput.value,
           y: offsetLeftYInput.value
         });
@@ -1017,20 +1040,22 @@ function generateZip() {
     if (defaultOverlayRight) {
       const blob = dataURLtoBlob(defaultOverlayRight);
       if (blob) {
-        assetsDir.file(actualName + '_main_overlay_right.png', blob);
-        console.log("[ZIP] Added main overlay right file:", actualName + '_main_overlay_right.png');
+        assetsDir.file(actualName + '_mor.png', blob);
+        console.log("[ZIP] Added main overlay right file:", actualName + '_mor.png');
       }
       FullImageYml += generateListenerImage(
-        actualName + '_main_overlay_right',
-        'assets/BetterBossars/' + actualName + '/' + actualName + '_main_overlay_right.png',
+        actualName + '_mor',
+        "betterbossbars/" + '/' + actualName + '_mor.png',
         splitsAmount,
         reversedCheckbox.checked ? 'left' : 'right',
-        bossListener
+        bossListener,
+        stageThreashold[0].tre,
+        stageThreashold[1].tre || 0
       ) + '\n\n';
       let defaultStage = stageMap.get(`${actualName}_default`);
       if (defaultStage) {
         defaultStage.images.push({
-          name: actualName + '_main_overlay_right',
+          name: actualName + '_mor',
           x: offsetRightXInput.value,
           y: offsetRightYInput.value
         });
@@ -1043,38 +1068,42 @@ function generateZip() {
       const blobRight = dataURLtoBlob(stage.right);
       if (nextStageThreashold < stage.threshold) nextStageThreashold = stage.threshold;
       if (blobLeft) {
-        assetsDir.file(`${actualName}_overlay_stage_${stage.threshold}_left.png`, blobLeft);
-        console.log("[ZIP] Added overlay stage file (double left):", `${actualName}_overlay_stage_${stage.threshold}_left.png`);
+        assetsDir.file(`${actualName}_os_${stage.threshold}_l.png`, blobLeft);
+        console.log("[ZIP] Added overlay stage file (double left):", `${actualName}_os_${stage.threshold}_l.png`);
       }
       if (blobRight) {
-        assetsDir.file(`overlay_stage_${stage.threshold}_right.png`, blobRight);
-        console.log("[ZIP] Added overlay stage file (double right):", `overlay_stage_${stage.threshold}_right.png`);
+        assetsDir.file(`${actualName}_os_${stage.threshold}_r.png`, blobRight);
+        console.log("[ZIP] Added overlay stage file (double right):", `os_${stage.threshold}_r.png`);
       }
       FullImageYml += generateListenerImage(
-        `${actualName}_overlay_stage_${stage.threshold}_left`,
-        'assets/BetterBossars/' + actualName + '/' + `${actualName}_overlay_stage_${stage.threshold}_left.png`,
+        `${actualName}_os_${stage.threshold}_l`,
+        "betterbossbars/" + '/' + `${actualName}_os_${stage.threshold}_l.png`,
         splitsAmount,
-        reversedCheckbox.checked ? 'reversed' : 'normal',
-        bossListener
+        reversedCheckbox.checked ? 'right' : 'left',
+        bossListener,
+        stageThreashold[index + 1].tre,
+        stageThreashold[index + 2].tre || 0
       ) + '\n\n';
       FullImageYml += generateListenerImage(
-        `${actualName}_overlay_stage_${stage.threshold}_right`,
-        'assets/BetterBossars/' + actualName + '/' + `${actualName}_overlay_stage_${stage.threshold}_right.png`,
+        `${actualName}_os_${stage.threshold}_r`,
+        "betterbossbars/" + `${actualName}_os_${stage.threshold}_r.png`,
         splitsAmount,
         reversedCheckbox.checked ? 'left' : 'right',
-        bossListener
+        bossListener,
+        stageThreashold[index + 1].tre,
+        stageThreashold[index + 2].tre || 0
       ) + '\n\n';
       let contextStage = stageMap.get(`${actualName}_stage_${stage.threshold}`);
       if (contextStage) {
         // Update contextStage images.
         contextStage.threshold = stage.threshold; // update threshold
         contextStage.images.push({
-          name: `${actualName}_overlay_stage_${stage.threshold}_left`,
+          name: `${actualName}_os_${stage.threshold}_l`,
           x: offsetLeftXInput.value,
           y: offsetLeftYInput.value
         });
         contextStage.images.push({
-          name: `${actualName}_overlay_stage_${stage.threshold}_right`,
+          name: `${actualName}_os_${stage.threshold}_r`,
           x: offsetRightXInput.value,
           y: offsetRightYInput.value
         });
@@ -1082,9 +1111,9 @@ function generateZip() {
       }
     });
   }
-  let ymlNamePreix = "";
-  if (document.getElementById("useNameForYmlCheckbox").checked) ymlNamePreix = `${actualName.toLowerCase()}`;
-  else ymlNamePreix = "better";
+  let ymlNamePrefix = "";
+  if (document.getElementById("useNameForYmlCheckbox").checked) ymlNamePrefix = `${actualName.toLowerCase()}`;
+  else ymlNamePrefix = "better";
 
   imagesDir.file(ymlNamePrefix + "-bossbar-images.yml", FullImageYml);
 
@@ -1104,22 +1133,28 @@ function generateZip() {
 function generateSingleImage(imageID, imageName) {
   return `${imageID}:
   type: single
-  file: "${imageName}"`;
+  file: ${imageName}`;
 }
-function generateListenerImage(imageID, imageName, splits, splitType, listener) {
+function generateListenerImage(imageID, imageName, splits, splitType, listener, stagePercent = 100, nextStagePercent = 0) {
   let yaml = `${imageID}:
   type: listener
-  file: "${imageName}"
+  file: ${imageName}
   split: ${splits}
   split-type: ${splitType}
   setting:
     listener:
       class: ${listener.clazz}\n`;
   if (listener.value != null) {
-    yaml += `      value: "${listener.value}"\n`;
+    if (resetHealthBarOnNewStage.checked)
+    yaml += `      value: "(((number)${listener.value} - ${nextStagePercent}) / (${stagePercent} - ${nextStagePercent}))"\n`;
+    else
+    yaml += `      value: "(number)${listener.value}"\n`;
   }
   if (listener.max != null) {
-    yaml += `      max: "${listener.max}"\n`;
+    if (resetHealthBarOnNewStage.checked)
+    yaml += `      max: "((number)${stagePercent} - ${nextStagePercent})"\n`;
+    else
+    yaml += `      max: "(number)${listener.max}"\n`;
   }
   return yaml;
 }
@@ -1175,14 +1210,13 @@ function generateLayoutYamlFromMap(stageMapB, actualName, animConfig) {
   return yaml;
 }
 function generateSequenceImage(imageID, framesArray) {
-
   framesArray.sort((a, b) => a.order - b.order);
   let yaml = `${imageID}:\n  type: sequence\n  files:\n`;
   framesArray.forEach((frame) => {
     if (frame.duration && frame.duration !== 1) {
-      yaml += `    - "assets/BetterBossbars/${actualName}/${frame.fileName}":${frame.duration}\n`;
+      yaml += `    - betterbossbars/${frame.fileName}:${frame.duration}\n`;
     } else {
-      yaml += `    - "assets/BetterBossbars/${actualName}/${frame.fileName}"\n`;
+      yaml += `    - betterbossbars/${frame.fileName}\n`;
     }
   });
   return yaml;
@@ -1199,14 +1233,36 @@ function generateHudYaml(layouts) {
 }
 function updateOverlayCrop() {
   const healthPercent = healthSlider.value / 100;
+  let displayHealth = healthPercent;
+
+  // If resetHealthBarOnNewStage is enabled, normalize progress within the current stage.
+  if (resetHealthBarOnNewStage.checked) {
+    // Sort thresholds descending (e.g. [0.9, 0.7, 0.5, 0.33])
+    const sortedThresholds = stageIntervals.slice().sort((a, b) => b - a);
+    // Build boundaries: full health (1), followed by the sorted thresholds, then 0.
+    const boundaries = [1, ...sortedThresholds, 0];
+
+    // Find the stage in which healthPercent falls.
+    for (let i = 0; i < boundaries.length - 1; i++) {
+      // We check if healthPercent is between boundaries[i] (upper) and boundaries[i+1] (lower)
+      if (healthPercent <= boundaries[i] && healthPercent > boundaries[i + 1]) {
+        // Normalize the health progress within this stage.
+        displayHealth = (boundaries[i] - healthPercent) / (boundaries[i] - boundaries[i + 1]);
+        break;
+      }
+    }
+  }
+
   const containerWidth = bossbarDisplay.clientWidth;
-  const scaleValue = parseFloat(getComputedStyle(bossbarDisplay).getPropertyValue('--scale')) || 1;
+  const scaleValue =
+  parseFloat(getComputedStyle(bossbarDisplay).getPropertyValue('--scale')) || 1;
+
   if (bossbarTypeSelect.value === 'normal') {
     const posX = parseInt(offsetXInput.value) || 0;
     const posY = parseInt(offsetYInput.value) || 0;
 
     overlayImage.style.transform = `translate(${posX * scaleValue}px, ${posY * scaleValue}px) scale(${scaleValue})`;
-    const visibleWidth = containerWidth * healthPercent;
+    const visibleWidth = containerWidth * displayHealth;
     const cropPx = containerWidth - visibleWidth;
     if (!reversedCheckbox.checked) {
       overlayImage.style.clipPath = `inset(0 ${cropPx}px 0 0)`;
@@ -1216,8 +1272,7 @@ function updateOverlayCrop() {
     overlayImage.style.display = 'block';
     overlayImageLeft.style.display = 'none';
     overlayImageRight.style.display = 'none';
-  }
-  else if (bossbarTypeSelect.value === 'double') {
+  } else if (bossbarTypeSelect.value === 'double') {
     const halfWidth = containerWidth / 2;
     const leftPosX = parseInt(offsetLeftXInput.value) || 0;
     const leftPosY = parseInt(offsetLeftYInput.value) || 0;
@@ -1225,7 +1280,7 @@ function updateOverlayCrop() {
     const rightPosX = parseInt(offsetRightXInput.value) || 0;
     const rightPosY = parseInt(offsetRightYInput.value) || 0;
     overlayImageRight.style.transform = `translate(${rightPosX * scaleValue}px, ${rightPosY * scaleValue}px) scale(${scaleValue})`;
-    const visibleHalf = halfWidth * healthPercent;
+    const visibleHalf = halfWidth * displayHealth;
     const cropHalf = halfWidth - visibleHalf;
     if (!reversedCheckbox.checked) {
       overlayImageLeft.style.clipPath = `inset(0 ${cropHalf}px 0 0)`;

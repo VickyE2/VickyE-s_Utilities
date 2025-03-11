@@ -1,11 +1,10 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.Theme;
 
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 import org.vicky.utilities.DatabaseManager.apis.ThemeAPI;
 import org.vicky.utilities.DatabaseManager.templates.Theme;
-import org.vicky.utilities.UUIDGenerator;
 
 public class ThemeStorer {
   private ContextLogger logger =
@@ -26,7 +25,7 @@ public class ThemeStorer {
   }
 
   public boolean isRegisteredTheme(String themeId) {
-    return new ThemeAPI().doesExistByName(themeId);
+    return new ThemeAPI().doesExistById(themeId);
   }
 
   public String getThemeID(String themeName) {

@@ -1,8 +1,9 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager.apis;
 
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import java.util.Optional;
 import java.util.UUID;
 import org.vicky.utilities.DatabaseManager.dao_s.DatabasePlayerDAO;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
@@ -22,11 +23,11 @@ public class DatabasePlayerAPI {
   @Produces(MediaType.APPLICATION_JSON)
   public DatabasePlayer getPlayer(@PathParam("id") String id) {
     UUID playerId = UUID.fromString(id);
-    DatabasePlayer player = playerDAO.findById(playerId);
-    if (player == null) {
+    Optional<DatabasePlayer> player = playerDAO.findById(playerId);
+    if (player.isEmpty()) {
       throw new NotFoundException("Player not found for id: " + id);
     }
-    return player;
+    return player.get();
   }
 
   @POST

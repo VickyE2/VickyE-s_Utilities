@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.Theme;
 
 import static org.vicky.global.Global.hookedPlugins;
@@ -68,7 +68,7 @@ public class ThemeUnzipper {
   }
 
   public void setRequiredImages() {
-    if (hookedPlugins.stream().anyMatch(p -> p.getName().equals(""))) {
+    if (hookedPlugins.stream().anyMatch(k -> k.getName().equals("VickyEs-Party_and_Friends"))) {
       requiredGuis.addAll(
           List.of(
               "friends_gui_change_status_panel",
@@ -79,6 +79,10 @@ public class ThemeUnzipper {
               "friends_gui_request_panel",
               "party_gui_main_panel",
               "party_gui_member_panel"));
+    }
+    if (hookedPlugins.stream()
+        .anyMatch(k -> k.getName().equals("VickyEs_Survival_Plus_Essentials"))) {
+      requiredGuis.add("trinket_gui");
     }
 
     requiredButtons =
@@ -187,7 +191,7 @@ public class ThemeUnzipper {
               ConfigurationNode textsFolder = themeNode.node("texts_folder");
               logger.printBukkit(
                   "Loading theme with id: " + themeId, ContextLogger.LogType.PENDING);
-              if (!storer.isRegisteredTheme(themeName)) {
+              if (!storer.isRegisteredTheme(themeId)) {
 
                 if (guiFolder.virtual() || guiFolder.isNull()) {
                   logger.printBukkit(
@@ -972,6 +976,9 @@ public class ThemeUnzipper {
     }
     if (Objects.equals(currentGui, "party_gui_member_panel")) {
       heightdiff = 22;
+    }
+    if (Objects.equals(currentGui, "trinket_gui")) {
+      heightdiff = 8;
     }
     return heightdiff;
   }

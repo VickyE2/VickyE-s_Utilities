@@ -1,8 +1,9 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager.dao_s;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
+import java.util.Optional;
 import java.util.UUID;
 import org.vicky.utilities.DatabaseManager.HibernateUtil;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
@@ -17,11 +18,10 @@ public class DatabasePlayerDAO {
    * @param id the UUID of the player
    * @return the DatabasePlayer instance or null if not found
    */
-  public DatabasePlayer findById(UUID id) {
-    EntityManager em = HibernateUtil.getEntityManager(); // Open new EntityManager
-    DatabasePlayer player = em.find(DatabasePlayer.class, id.toString());
-    em.close(); // Close it after usage
-    return player;
+  public Optional<DatabasePlayer> findById(UUID id) {
+    try (EntityManager em = HibernateUtil.getEntityManager()) {
+      return Optional.ofNullable(em.find(DatabasePlayer.class, id.toString()));
+    }
   }
 
   /**
@@ -80,10 +80,8 @@ public class DatabasePlayerDAO {
     EntityTransaction transaction = em.getTransaction();
     try {
       transaction.begin();
-      DatabasePlayer player = findById(id);
-      if (player != null) {
-        em.remove(player);
-      }
+      Optional<DatabasePlayer> player = findById(id);
+      player.ifPresent(em::remove);
       transaction.commit();
     } catch (Exception e) {
       if (transaction.isActive()) {

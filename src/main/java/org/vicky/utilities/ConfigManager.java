@@ -1,10 +1,11 @@
-/* Licensed under Apache-2.0 2024-2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
 import java.io.*;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -12,6 +13,7 @@ import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.ConfigurationOptions;
 import org.spongepowered.configurate.loader.ConfigurationLoader;
+import org.spongepowered.configurate.serialize.SerializationException;
 import org.spongepowered.configurate.yaml.NodeStyle;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 import org.vicky.utilities.ContextLogger.ContextLogger;
@@ -244,6 +246,24 @@ public class ConfigManager {
   // Get boolean config value
   public boolean getBooleanValue(String path) {
     return rootNode.node((Object[]) path.split("\\.")).getBoolean();
+  }
+
+  // Get uuid config value
+  public UUID getUUIDValue(String path) {
+    try {
+      return rootNode.node((Object[]) path.split("\\.")).get(UUID.class);
+    } catch (SerializationException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  // Get enum config value
+  public <T extends Enum<T>> T getEnumValue(String path, Class<T> enumClass) {
+    try {
+      return rootNode.node((Object[]) path.split("\\.")).get(enumClass);
+    } catch (SerializationException e) {
+      throw new RuntimeException("Failed to deserialize enum from path: " + path, e);
+    }
   }
 
   // Get double config value

@@ -1,9 +1,8 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager.apis;
 
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-import java.util.UUID;
 import org.vicky.utilities.DatabaseManager.dao_s.ThemeDAO;
 import org.vicky.utilities.DatabaseManager.templates.Theme;
 
@@ -44,6 +43,14 @@ public class ThemeAPI {
   @Produces(MediaType.APPLICATION_JSON)
   public boolean doesExistByName(@PathParam("name") String name) {
     Theme theme = themeDAO.findByName(name);
+    return theme != null;
+  }
+
+  @GET
+  @Path("/id/{id}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public boolean doesExistById(@PathParam("id") String id) {
+    Theme theme = themeDAO.findById(id);
     return theme != null;
   }
 

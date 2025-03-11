@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager;
 
 import jakarta.persistence.EntityManager;

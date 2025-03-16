@@ -1,9 +1,11 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.vicky.global.Global;
 import org.vicky.guiparent.GuiCreator;
 
@@ -23,14 +25,18 @@ public class Config {
   /**
    * {@link org.vicky.guiparent.GuiCreator.AllowedItemStack} isn't allowed...
    */
-  public <T> void addConfig(String key, GuiCreator.ItemConfig.AllowedNBTType<T> value) {
+  public <T> void addConfig(@NotNull String key, GuiCreator.ItemConfig.AllowedNBTType<T> value) {
     configs.put(key, value.getValue());
   }
 
   public void registerConfigs() {
     for (String key : configs.keySet()) {
       if (!Global.globalConfigManager.doesPathExist(key)) {
-        Global.globalConfigManager.setBracedConfigValue(key, configs.getOrDefault(key, ""), "");
+        String[] split = key.split("\\.");
+        String contextKey = split[0];
+        String contextChild = String.join(".", Arrays.copyOfRange(split, 1, split.length));
+        Global.globalConfigManager.setConfigValue(
+            contextKey, contextChild, configs.getOrDefault(key, ""), null);
       }
       Global.globalConfigManager.saveConfig();
     }

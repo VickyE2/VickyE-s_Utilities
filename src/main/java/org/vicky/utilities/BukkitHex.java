@@ -1,6 +1,8 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
+import static org.vicky.utilities.HexGenerator.interpolateColor;
+
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,7 +17,7 @@ public class BukkitHex {
   // Reset
   public static final String RESET = ChatColor.RESET.toString();
 
-  // Regular Colors
+  // Regular Colors (using Bukkit defaults or hex via HexGenerator)
   public static final String BLACK = ChatColor.BLACK.toString();
   public static final String RED = ChatColor.RED.toString();
   public static final String ORANGE = HexGenerator.of("#FFA500");
@@ -32,7 +34,7 @@ public class BukkitHex {
   public static final String RED_BOLD = ChatColor.BOLD.toString() + ChatColor.RED;
   public static final String ORANGE_BOLD = ChatColor.BOLD + HexGenerator.of("#FFA500");
   public static final String PINK_BOLD = ChatColor.BOLD + HexGenerator.of("#FFC0CB");
-  public static final String GREEN_BOLD = ChatColor.BOLD + ChatColor.GREEN.toString();
+  public static final String GREEN_BOLD = ChatColor.BOLD.toString() + ChatColor.GREEN;
   public static final String YELLOW_BOLD = ChatColor.BOLD.toString() + ChatColor.YELLOW;
   public static final String BLUE_BOLD = ChatColor.BOLD.toString() + ChatColor.BLUE;
   public static final String PURPLE_BOLD = ChatColor.BOLD.toString() + ChatColor.DARK_PURPLE;
@@ -57,18 +59,37 @@ public class BukkitHex {
   public static final String STRIKETHROUGH = ChatColor.STRIKETHROUGH.toString();
 
   private static final Map<String, String> COLOR_MAP = new HashMap<>();
-  // Regex pattern to match color markers like red[...] or purple[...]
-  private static final Pattern COLOR_PATTERN = Pattern.compile("([a-zA-Z_]+)\\[([^\\]]+)\\]");
-  // Updated pattern for rainbow effect:
-  // Format: rainbow[-<length>]-color1-color2-...-colorN[Text]
+  // COLOR_PATTERN: matches either a named color (first char not '#') or a hex color, followed by
+  // text in brackets.
+  private static final Pattern COLOR_PATTERN =
+      Pattern.compile("((?!#)[A-Za-z_]+|#[A-Fa-f0-9]{6})\\[([^\\]]*)\\]");
+
+  // RAINBOW_PATTERN: Format: rainbow[-<length>]-color1-color2-...-colorN[Text]
   private static final Pattern RAINBOW_PATTERN =
-      Pattern.compile("^rainbow(?:-(\\d+))?((?:-[a-zA-Z0-9_]+)+)\\[([^\\]]+)\\]$");
-  // Combined regex: matches either a rainbow marker or a simple marker like "red[...]"
+      Pattern.compile(
+          "^rainbow(?:-(\\d+))?((?:-(?:[A-Za-z_]+|#[A-Fa-f0-9]{6}))+)" + "\\[([^\\]]*)\\]$");
+
+  // GRADIENT marker: Format: gradient[-<alignment>]-#RRGGBB-#RRGGBB[Text]
+  private static final Pattern GRADIENT_PATTERN =
+      Pattern.compile(
+          "^gradient(?:-([a-zA-Z]+))?-(#[A-Fa-f0-9]{6})-(#[A-Fa-f0-9]{6})\\[([^\\]]*)\\]$");
+
+  /**
+   * Combined regex: matches either a rainbow marker, a gradient marker, or a simple color marker.
+   * <pre>
+   * {@code
+   * - Rainbow: rainbow[-<length>]-color1-color2-...-colorN[Text]
+   * - Gradient: gradient[-<alignment>]-#RRGGBB-#RRGGBB[Text] | gradient-45deg-top-#FF0000-#00FF00-#0000FF[Line1\nLine2\nLine3]
+   * - Simple: red[Text] or #AA0000[Text]
+   * }
+   * </pre>
+   */
   private static final Pattern MIXED_COLOR_PATTERN =
       Pattern.compile(
           "((?:rainbow(?:-[a-zA-Z0-9_]+)+)|"
-              + "(?:gradient(?:-(?:[a-zA-Z]+))?-(?:#[A-Fa-f0-9]{6})-(?:#[A-Fa-f0-9]{6}))|"
-              + "[a-zA-Z_]+)\\[([^\\]]+)\\]");
+              + "(?:gradient(?:-(?:[a-zA-Z]+))?-(?:#[A-Fa-f0-9]{6})-(?:#[A-Fa-f0-9]{6})|"
+              + "gradient-\\d+deg-[a-zA-Z]+-(?:#[A-Fa-f0-9]{6}(?:-#[A-Fa-f0-9]{6})+))|"
+              + "(?:[a-zA-Z_]+|#[A-Fa-f0-9]{6}))\\[([^\\]]+)\\]");
 
   static {
     COLOR_MAP.put("black", BLACK);
@@ -107,41 +128,37 @@ public class BukkitHex {
   }
 
   /**
-   * @deprecated Use {@link #colorize(String)} instead.
-   */
-  @Deprecated
-  public static String colorize(String message, String color) {
-    String colorCode = COLOR_MAP.getOrDefault(color.toLowerCase(), RESET);
-    return colorCode + message + RESET;
-  }
-
-  /**
-   * Processes a string containing color markers (e.g. red[Hello]) and replaces them with Bukkit color codes.
+   * Processes a string containing simple color markers (e.g. red[Hello] or #AA0000[Hello]) and replaces
+   * them with Bukkit color codes.
    *
    * @param message The input string with markers.
-   * @return The string with Bukkit color codes applied.
+   * @return The string with color codes applied.
    */
   public static String colorize(String message) {
-    while (true) {
-      Matcher matcher = COLOR_PATTERN.matcher(message);
-      if (!matcher.find()) {
-        break;
-      }
-      String color = matcher.group(1).toLowerCase();
+    Matcher matcher = COLOR_PATTERN.matcher(message);
+    while (matcher.find()) {
+      String marker = matcher.group(1);
       String text = matcher.group(2);
-      String processedText = colorize(text);
-      String colorCode = COLOR_MAP.getOrDefault(color, RESET);
+      String processedText = colorize(text); // Recursive processing.
+      String colorCode;
+      if (marker.startsWith("#")) {
+        // If it's a hex code, use our HexGenerator.
+        colorCode = HexGenerator.convertAnsiEscapeToBukkitHex(marker);
+      } else {
+        colorCode = COLOR_MAP.getOrDefault(marker.toLowerCase(), RESET);
+      }
       message = matcher.replaceFirst(Matcher.quoteReplacement(colorCode + processedText + RESET));
+      matcher = COLOR_PATTERN.matcher(message);
     }
     return message;
   }
 
   /**
-   * Applies a rainbow effect to the text inside a marker.
-   * Format: rainbow[-<length>]-color1-color2-...-colorN[Text]
+   * Applies a rainbow effect to the text in a rainbow marker.
+   * Expected format: rainbow[-<length>]-color1-color2-...-colorN[Text]
    *
-   * @param message The input string in rainbow format.
-   * @return The string with a rainbow effect using Bukkit color codes.
+   * @param message The full rainbow marker string.
+   * @return The string with a rainbow effect.
    */
   public static String rainbowColorize(String message) {
     Matcher matcher = RAINBOW_PATTERN.matcher(message);
@@ -152,23 +169,22 @@ public class BukkitHex {
     String colorPart = matcher.group(2);
     String text = matcher.group(3);
 
-    // Remove the leading dash and split colors.
+    // Remove leading dash and split colors.
     String[] colorNames = colorPart.substring(1).split("-");
     List<String> colorCodes = new ArrayList<>();
     for (String name : colorNames) {
-      String code = COLOR_MAP.getOrDefault(name.toLowerCase(), RESET);
+      String code =
+          name.startsWith("#")
+              ? HexGenerator.convertAnsiEscapeToBukkitHex(name)
+              : COLOR_MAP.getOrDefault(name.toLowerCase(), RESET);
       colorCodes.add(code);
     }
-
-    int segLength;
-    if (lengthStr != null) {
-      segLength = Integer.parseInt(lengthStr);
-    } else {
-      segLength = (int) Math.ceil((double) text.length() / colorCodes.size());
-    }
+    int segLength =
+        lengthStr != null
+            ? Integer.parseInt(lengthStr)
+            : (int) Math.ceil((double) text.length() / colorCodes.size());
 
     StringBuilder sb = new StringBuilder();
-    // Process the text in segments of segLength characters.
     for (int i = 0; i < text.length(); i += segLength) {
       int end = Math.min(i + segLength, text.length());
       String segment = text.substring(i, end);
@@ -180,85 +196,238 @@ public class BukkitHex {
   }
 
   /**
-   * Processes a string that may contain standard color markers, rainbow markers, or gradient markers.
+   * Applies a gradient effect to text based on a gradient marker.
+   * Supported formats:
+   *   gradient-#FF0000-#00FF00[Text] (default alignment "left")
+   *   gradient-center-#FF0000-#00FF00[Text]
+   *   gradient-45deg-top-#FF0000-#00FF00-#0000FF[Line1\nLine2\nLine3]
    *
-   * Supports:
-   *   - "red[Hello]"
-   *   - "rainbow-blue-green[World]"
-   *   - "gradient-#FF0000-#00FF00[Gradient Text]" or "gradient-center-#FF0000-#00FF00[Gradient Text]"
+   * @param message The full gradient marker string.
+   * @return The string with a gradient applied.
+   */
+  public static String gradientColorize(String message) {
+    if (!message.startsWith("gradient-")) {
+      return colorize(message);
+    }
+    // If the marker contains "deg", use the manual (angle-based) method.
+    if (message.contains("deg")) {
+      return gradientColorizeAngleMultiLine(message);
+    } else {
+      // Fallback: assume format "gradient-color1-color2[Text]"
+      int openBracket = message.indexOf('[');
+      if (openBracket < 0) return message;
+      String marker = message.substring(0, openBracket);
+      String text = message.substring(openBracket + 1, message.lastIndexOf(']'));
+      String[] parts = marker.split("-");
+      if (parts.length < 3) return message;
+      String alignment = "left"; // default alignment
+      String startColor = parts[1];
+      String endColor = parts[2];
+      if (text.contains("\n")) {
+        return Arrays.stream(text.split("\n"))
+            .map(line -> gradientHorizontal(line, alignment, startColor, endColor))
+            .collect(Collectors.joining("\n"));
+      } else {
+        return gradientHorizontal(text, alignment, startColor, endColor);
+      }
+    }
+  }
+
+  /**
+   * Applies a gradient effect to multi-line text based on a marker of the format:
+   * <pre>
+   * gradient-[angle]deg-[direction]-color1-color2-...-colorN[Text]
+   * </pre>
+   * The angle (in degrees) is used to adjust the interpolation non-linearly.
+   * The direction can be:
+   * <ul>
+   *   <li>"top" (vertical gradient; top line uses first color, bottom uses last)</li>
+   *   <li>"bottom" (vertical gradient reversed)</li>
+   *   <li>"left" (horizontal gradient on each line; leftmost character uses first color)</li>
+   *   <li>"right" (horizontal gradient reversed)</li>
+   * </ul>
+   *
+   * @param marker The full gradient marker string.
+   * @return The multi-line text with the gradient applied using ANSI escape codes.
+   */
+  public static String gradientColorizeAngleMultiLine(String marker) {
+    // Expected marker format: gradient-[angle]deg-[direction]-#RRGGBB(-#RRGGBB)*[Text]
+    Pattern pattern =
+        Pattern.compile(
+            "^gradient-(\\d+)deg-([a-zA-Z]+)-((?:#[A-Fa-f0-9]{6}(?:-#[A-Fa-f0-9]{6})*))\\[([^\\]]*)\\]$");
+    Matcher matcher = pattern.matcher(marker);
+    if (!matcher.matches()) {
+      return marker; // Unchanged if it doesn't match expected format.
+    }
+
+    int angle = Integer.parseInt(matcher.group(1));
+    String direction = matcher.group(2).toLowerCase(); // "top", "bottom", "left", or "right"
+    String colorsStr = matcher.group(3); // e.g. "#FF0000-#00FF00-#0000FF"
+    String text = matcher.group(4);
+
+    // Split colors
+    List<String> colors = Arrays.asList(colorsStr.split("-"));
+    if (colors.size() < 2) {
+      return marker; // Need at least two colors for a gradient.
+    }
+
+    // Split text into lines.
+    String[] lines = text.split("\n");
+    int totalLines = lines.length;
+    if (totalLines == 0) return "";
+
+    // Normalize the angle to a factor: 90° means linear (factor=1.0).
+    double rawFactor = angle / 90.0;
+    double factor = Math.max(0.5, Math.min(rawFactor, 2.0)); // Clamp factor between 0.5 and 2.0.
+
+    // Branch based on direction:
+    if (direction.equals("top") || direction.equals("bottom")) {
+      // Vertical gradient: each line's color is interpolated based on its line index.
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < totalLines; i++) {
+        double ratio = (double) i / (totalLines - 1);
+        double adjusted =
+            direction.equals("top") ? Math.pow(ratio, factor) : 1 - Math.pow(1 - ratio, factor);
+        int segments = colors.size() - 1;
+        double segmentLength = 1.0 / segments;
+        int segmentIndex = (int) Math.min(Math.floor(adjusted / segmentLength), segments - 1);
+        double localRatio = (adjusted - (segmentIndex * segmentLength)) / segmentLength;
+        String startColor = colors.get(segmentIndex);
+        String endColor = colors.get(segmentIndex + 1);
+        String interpHex = interpolateColor(startColor, endColor, localRatio);
+        String ansiColor = HexGenerator.of(interpHex);
+        sb.append(ansiColor).append(lines[i]).append(RESET);
+        if (i < totalLines - 1) {
+          sb.append("\n");
+        }
+      }
+      return sb.toString();
+    } else if (direction.equals("left") || direction.equals("right")) {
+      // Horizontal gradient: apply to each line separately.
+      return Arrays.stream(lines)
+          .map(line -> gradientHorizontalMulti(line, direction, colors, factor))
+          .collect(Collectors.joining("\n"));
+    } else {
+      // Fallback: return unmodified text if direction is not recognized.
+      return text;
+    }
+  }
+
+  /**
+   * Applies a horizontal gradient effect to a single line of text based on multiple color stops.
+   *
+   * @param text      The text line to colorize.
+   * @param direction The direction: "left" means gradient from left (first color) to right (last color),
+   *                  "right" means reversed.
+   * @param colors    The list of hex color stops.
+   * @param factor    The non-linear factor derived from the angle.
+   * @return The line with an ANSI horizontal gradient applied.
+   */
+  private static String gradientHorizontalMulti(
+      String text, String direction, List<String> colors, double factor) {
+    int length = text.length();
+    StringBuilder sb = new StringBuilder();
+    int segments = colors.size() - 1;
+    double segmentLength = 1.0 / segments;
+    for (int i = 0; i < length; i++) {
+      double baseRatio = (double) i / (length - 1);
+      double ratio;
+      switch (direction) {
+        case "left":
+          ratio = Math.pow(baseRatio, factor);
+          break;
+        case "right":
+          ratio = 1 - Math.pow(1 - baseRatio, factor);
+          break;
+        default:
+          ratio = baseRatio;
+      }
+      int segmentIndex = (int) Math.min(Math.floor(ratio / segmentLength), segments - 1);
+      double localRatio = (ratio - (segmentIndex * segmentLength)) / segmentLength;
+      String startColor = colors.get(segmentIndex);
+      String endColor = colors.get(segmentIndex + 1);
+      String interpHex = interpolateColor(startColor, endColor, localRatio);
+      String ansiColor = HexGenerator.of(interpHex);
+      sb.append(ansiColor).append(text.charAt(i));
+    }
+    sb.append(RESET);
+    return sb.toString();
+  }
+
+  /**
+   * Processes a string that may contain rainbow, gradient, or simple color markers.
    *
    * @param message The input string with markers.
-   * @return The ANSI-enriched string.
+   * @return The string with Bukkit color codes applied.
    */
   public static String colorizeMixed(String message) {
-    while (true) {
-      Matcher matcher = MIXED_COLOR_PATTERN.matcher(message);
-      if (!matcher.find()) {
-        break;
-      }
-
-      String marker =
-          matcher.group(1).toLowerCase(); // e.g., "red", "rainbow-blue-green", "gradient-..."
-      String text = matcher.group(2);
+    Matcher matcher = MIXED_COLOR_PATTERN.matcher(message);
+    while (matcher.find()) {
       String replacement;
-
-      if (marker.startsWith("rainbow")) {
+      if (matcher.group(1) != null) { // Rainbow alternative (group 1 = full rainbow marker)
         replacement = rainbowColorize(matcher.group(0));
-      } else if (marker.startsWith("gradient")) {
-        // Marker formats supported:\n"
-        // "gradient-#FF0000-#00FF00" (default alignment 'left')\n"
-        // "gradient-center-#FF0000-#00FF00"\n
-        String[] parts = marker.split("-");
-        String alignment;
-        String startColor;
-        String endColor;
-        if (parts.length == 3) {
-          alignment = "left"; // default alignment\n"
-          startColor = parts[1];
-          endColor = parts[2];
-        } else if (parts.length == 4) {
-          alignment = parts[1];
-          startColor = parts[2];
-          endColor = parts[3];
-        } else {
-          replacement = text; // Fallback if format is invalid\n"
-          continue;
-        }
-        replacement = gradientColorize(text, alignment, startColor, endColor);
-      } else {
-        String colorCode = COLOR_MAP.getOrDefault(marker, RESET);
+      } else if (matcher.group(5)
+          != null) { // Gradient alternative (group 5 = full gradient marker)
+        // Use the gradientColorize method (it expects the entire marker string)
+        replacement = gradientColorize(matcher.group(0));
+      } else if (matcher.group(10)
+          != null) { // Simple color alternative (group 10 = color, group 11 = text)
+        String marker = matcher.group(10);
+        String text = matcher.group(11);
+        String colorCode =
+            marker.startsWith("#")
+                ? HexGenerator.convertAnsiEscapeToBukkitHex(marker)
+                : COLOR_MAP.getOrDefault(marker.toLowerCase(), RESET);
         replacement = colorCode + colorize(text) + RESET;
+      } else {
+        replacement = matcher.group(0);
       }
-
       message = matcher.replaceFirst(Matcher.quoteReplacement(replacement));
+      matcher = MIXED_COLOR_PATTERN.matcher(message);
     }
     return message;
   }
 
-  /**
-   * Applies a gradient effect to a given text.
-   * If the text is multi-line (contains newline characters) and the alignment is \"top\" or \"bottom\",\n
-   * the gradient is applied vertically; otherwise, it is applied horizontally (line by line).
-   *
-   * @param text the text to gradient-colorize
-   * @param alignment the alignment for the gradient (e.g. \"left\", \"right\", \"center\", \"top\", \"bottom\")
-   * @param startColor the starting hex color (e.g. \"#FF0000\")
-   * @param endColor the ending hex color (e.g. \"#00FF00\")
-   * @return the text with a gradient applied using ANSI true-color escape sequences
-   */
-  private static String gradientColorize(
+  // Horizontal gradient: per-character interpolation.
+  private static String gradientHorizontal(
       String text, String alignment, String startColor, String endColor) {
-    if (text.contains("\n")) {
-      if (alignment.equals("top") || alignment.equals("bottom")) {
-        return gradientVertical(text, alignment, startColor, endColor);
-      } else {
-        return Arrays.stream(text.split("\n"))
-            .map(line -> gradientHorizontal(line, alignment, startColor, endColor))
-            .collect(Collectors.joining("\n"));
-      }
-    } else {
-      return gradientHorizontal(text, alignment, startColor, endColor);
+    int length = text.length();
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < length; i++) {
+      double ratio =
+          switch (alignment) {
+            case "left" -> (double) i / (length - 1);
+            case "right" -> (double) (length - 1 - i) / (length - 1);
+            case "center" -> (double) i / (length - 1);
+            default -> (double) i / (length - 1);
+          };
+      String hexColor = interpolateColor(startColor, endColor, ratio);
+      String bukkitColor = HexGenerator.of(hexColor);
+      sb.append(bukkitColor).append(text.charAt(i));
     }
+    sb.append(RESET);
+    return sb.toString();
+  }
+
+  // Vertical gradient: one color per line.
+  private static String gradientVertical(
+      String text, String alignment, String startColor, String endColor) {
+    String[] lines = text.split("\n");
+    int total = lines.length;
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < total; i++) {
+      double ratio = (double) i / (total - 1);
+      if (alignment.equals("bottom")) {
+        ratio = 1 - ratio;
+      }
+      String hexColor = interpolateColor(startColor, endColor, ratio);
+      String bukkitColor = HexGenerator.of(hexColor);
+      sb.append(bukkitColor).append(lines[i]).append(RESET);
+      if (i < total - 1) {
+        sb.append("\n");
+      }
+    }
+    return sb.toString();
   }
 
   /**
@@ -279,135 +448,5 @@ public class BukkitHex {
    */
   public void addCustomColor(String colorName, String hexCode) {
     COLOR_MAP.put(colorName.toLowerCase(), HexGenerator.of(hexCode));
-  }
-
-  /**
-   * Applies a gradient effect to text based on a marker.
-   * Expected format:
-   *   gradient-{alignment}-{startColor}-{endColor}[Text to colorize]
-   *
-   * Alignment options:
-   *   left, right, center (for horizontal gradient) and
-   *   top, bottom (for vertical gradient on multi–line text)
-   *
-   * @param message the gradient marker and text
-   * @return the Bukkit enriched string with a gradient effect
-   */
-  public static String gradientColorize(String message) {
-    if (!message.startsWith("gradient-")) {
-      return colorize(message);
-    }
-    int openBracket = message.indexOf('[');
-    if (openBracket < 0) return message;
-    String marker = message.substring(0, openBracket);
-    String text = message.substring(openBracket + 1, message.lastIndexOf(']'));
-    String[] parts = marker.split("-");
-    if (parts.length < 4) return message;
-    // parts[0] is "gradient"
-    String alignment = parts[1].toLowerCase();
-    String startColor = parts[2];
-    String endColor = parts[3];
-
-    if (text.contains("\n")) {
-      if (alignment.equals("top") || alignment.equals("bottom")) {
-        return gradientVertical(text, alignment, startColor, endColor);
-      } else {
-        // Horizontal gradient applied on each line using stream map/collect
-        return Arrays.stream(text.split("\n"))
-            .map(line -> gradientHorizontal(line, alignment, startColor, endColor))
-            .collect(Collectors.joining("\n"));
-      }
-    } else {
-      return gradientHorizontal(text, alignment, startColor, endColor);
-    }
-  }
-
-  private static String interpolateColor(String startColor, String endColor, double ratio) {
-    int startR = Integer.parseInt(startColor.substring(1, 3), 16);
-    int startG = Integer.parseInt(startColor.substring(3, 5), 16);
-    int startB = Integer.parseInt(startColor.substring(5, 7), 16);
-
-    int endR = Integer.parseInt(endColor.substring(1, 3), 16);
-    int endG = Integer.parseInt(endColor.substring(3, 5), 16);
-    int endB = Integer.parseInt(endColor.substring(5, 7), 16);
-
-    int newR = (int) (startR + ratio * (endR - startR));
-    int newG = (int) (startG + ratio * (endG - startG));
-    int newB = (int) (startB + ratio * (endB - startB));
-
-    return String.format("#%02X%02X%02X", newR, newG, newB);
-  }
-
-  // Horizontal gradient: per-character interpolation.
-  private static String gradientHorizontal(
-      String text, String alignment, String startColor, String endColor) {
-    Matcher matcher = COLOR_PATTERN.matcher(text);
-    List<Pair<String, Boolean>> parts = new ArrayList<>();
-
-    int lastIndex = 0;
-    while (matcher.find()) {
-      if (matcher.start() > lastIndex) {
-        // Add normal text (to be gradient-colored)
-        parts.add(new Pair<>(text.substring(lastIndex, matcher.start()), true));
-      }
-      // Add the color marker itself (not gradient-colored)
-      parts.add(new Pair<>(matcher.group(), false));
-      lastIndex = matcher.end();
-    }
-    if (lastIndex < text.length()) {
-      parts.add(new Pair<>(text.substring(lastIndex), true));
-    }
-
-    // Apply gradient only to actual text
-    int textLength = parts.stream().filter(Pair::getValue).mapToInt(p -> p.getKey().length()).sum();
-    if (textLength == 0) return text; // If no visible text, return as-is
-
-    StringBuilder sb = new StringBuilder();
-    int charIndex = 0;
-
-    for (Pair<String, Boolean> part : parts) {
-      if (!part.getValue()) {
-        sb.append(part.getKey()); // Directly append color markers
-      } else {
-        String segment = part.getKey();
-        for (char c : segment.toCharArray()) {
-          double ratio =
-              switch (alignment) {
-                case "left" -> (double) charIndex / (textLength - 1);
-                case "right" -> (double) (textLength - 1 - charIndex) / (textLength - 1);
-                case "center" -> (double) charIndex / (textLength - 1);
-                default -> (double) charIndex / (textLength - 1);
-              };
-          String hexColor = interpolateColor(startColor, endColor, ratio);
-          String bukkitColor = HexGenerator.of(hexColor);
-          sb.append(bukkitColor).append(c);
-          charIndex++;
-        }
-      }
-    }
-
-    sb.append(RESET); // Reset at the end
-    return sb.toString();
-  }
-
-  // Vertical gradient: one color per line.
-  private static String gradientVertical(
-      String text, String alignment, String startColor, String endColor) {
-    String[] lines = text.split("\n");
-    int total = lines.length;
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < total; i++) {
-      double ratio = (double) i / (total - 1);
-      if (alignment.equals("bottom")) {
-        ratio = 1 - ratio;
-      }
-      String hexColor = interpolateColor(startColor, endColor, ratio);
-      String bukkitColor = HexGenerator.of(hexColor).toString();
-      sb.append(bukkitColor).append(lines[i]).append(RESET);
-      if (i < total - 1) {
-        sb.append("\n");
-      }
-    }
-    return sb.toString();
   }
 }

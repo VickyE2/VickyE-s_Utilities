@@ -2,6 +2,13 @@ info:
   namespace: vicky_utls
 items:
   # buttons for gui
+  old_scroll:
+    display_name: Green Arrow Right
+    resource:
+      material: PAPER
+      generate: true
+      textures:
+        - glyphs/old_scroll
   green_arrow_right:
     display_name: Green Arrow Right
     resource:

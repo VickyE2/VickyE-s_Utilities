@@ -108,8 +108,9 @@ public class ANSIColor {
   private static final Pattern MIXED_COLOR_PATTERN =
       Pattern.compile(
           "((?:rainbow(?:-[a-zA-Z0-9_]+)+)|"
-              + "(?:gradient(?:-(?:[a-zA-Z]+))?-(?:#[A-Fa-f0-9]{6})-(?:#[A-Fa-f0-9]{6}))|"
-              + "[a-zA-Z_]+)\\[([^\\]]+)\\]");
+              + "(?:gradient(?:-(?:[a-zA-Z]+))?-(?:#[A-Fa-f0-9]{6})-(?:#[A-Fa-f0-9]{6})|"
+              + "gradient-\\d+deg-[a-zA-Z]+-(?:#[A-Fa-f0-9]{6}(?:-#[A-Fa-f0-9]{6})+))|"
+              + "(?:[a-zA-Z_]+|#[A-Fa-f0-9]{6}))\\[([^\\]]+)\\]");
 
   /**
    * This is the list of default colors available:
@@ -234,75 +235,44 @@ public class ANSIColor {
    * @param message The input string with markers.
    * @return The ANSI-enriched string.
    */
+  /**
+   * Processes a string that may contain simple color markers, rainbow markers, or gradient markers,
+   * and returns the string with ANSI color codes applied.
+   *
+   * Supported formats:
+   *   - Simple color: "red[Hello]" or "#AA0000[Hello]"
+   *   - Rainbow: "rainbow-5-red-blue[World]"
+   *   - Gradient:
+   *       * Basic: "gradient-#FF0000-#00FF00[Gradient Text]" (default alignment "left")
+   *       * With alignment: "gradient-center-#FF0000-#00FF00[Gradient Text]"
+   *       * Manual multi-line: "gradient-45deg-top-#FF0000-#00FF00-#0000FF[Line1\nLine2\nLine3]"
+   *
+   * @param message The input string with markers.
+   * @return The string with ANSI color codes applied.
+   */
   public static String colorizeMixed(String message) {
-    while (true) {
-      Matcher matcher = MIXED_COLOR_PATTERN.matcher(message);
-      if (!matcher.find()) {
-        break;
-      }
-
-      String marker =
-          matcher.group(1).toLowerCase(); // e.g., "red", "rainbow-blue-green", "gradient-..."
+    // Use our combined pattern (which should capture the marker in group(1) and text in group(2))
+    Matcher matcher = MIXED_COLOR_PATTERN.matcher(message);
+    while (matcher.find()) {
+      String fullMarker = matcher.group(0);
+      String marker = matcher.group(1);
       String text = matcher.group(2);
       String replacement;
-
+      marker = marker.toLowerCase();
       if (marker.startsWith("rainbow")) {
-        replacement = rainbowColorize(matcher.group(0));
+        replacement = rainbowColorize(fullMarker);
       } else if (marker.startsWith("gradient")) {
-        // Marker formats supported:\n"
-        // "gradient-#FF0000-#00FF00" (default alignment 'left')\n"
-        // "gradient-center-#FF0000-#00FF00"\n
-        String[] parts = marker.split("-");
-        String alignment;
-        String startColor;
-        String endColor;
-        if (parts.length == 3) {
-          alignment = "left"; // default alignment\n"
-          startColor = parts[1];
-          endColor = parts[2];
-        } else if (parts.length == 4) {
-          alignment = parts[1];
-          startColor = parts[2];
-          endColor = parts[3];
-        } else {
-          replacement = text; // Fallback if format is invalid\n"
-          continue;
-        }
-        replacement = gradientColorize(text, alignment, startColor, endColor);
+        // Use our updated gradientColorize method which handles both basic and manual (angle-based)
+        // markers.
+        replacement = gradientColorize(fullMarker);
       } else {
         String colorCode = COLOR_MAP.getOrDefault(marker, RESET);
         replacement = colorCode + colorize(text) + RESET;
       }
-
       message = matcher.replaceFirst(Matcher.quoteReplacement(replacement));
+      matcher = MIXED_COLOR_PATTERN.matcher(message);
     }
     return message;
-  }
-
-  /**
-   * Applies a gradient effect to a given text.
-   * If the text is multi-line (contains newline characters) and the alignment is \"top\" or \"bottom\",\n
-   * the gradient is applied vertically; otherwise, it is applied horizontally (line by line).
-   *
-   * @param text the text to gradient-colorize
-   * @param alignment the alignment for the gradient (e.g. \"left\", \"right\", \"center\", \"top\", \"bottom\")
-   * @param startColor the starting hex color (e.g. \"#FF0000\")
-   * @param endColor the ending hex color (e.g. \"#00FF00\")
-   * @return the text with a gradient applied using ANSI true-color escape sequences
-   */
-  private static String gradientColorize(
-      String text, String alignment, String startColor, String endColor) {
-    if (text.contains("\n")) {
-      if (alignment.equals("top") || alignment.equals("bottom")) {
-        return gradientVertical(text, alignment, startColor, endColor);
-      } else {
-        return Arrays.stream(text.split("\n"))
-            .map(line -> gradientHorizontal(line, alignment, startColor, endColor))
-            .collect(Collectors.joining("\n"));
-      }
-    } else {
-      return gradientHorizontal(text, alignment, startColor, endColor);
-    }
   }
 
   /**
@@ -377,48 +347,162 @@ public class ANSIColor {
   }
 
   /**
-   * Applies a gradient effect to text based on a marker.
-   * <p>
-   * Expected marker format:
-   * <code>gradient-{alignment}-{startColor}-{endColor}[Text to colorize]</code>
-   * <br>
-   * Alignment options:
-   * <ul>
-   *   <li><b>left</b>, <b>right</b>, or <b>center</b> for horizontal gradients (per character)</li>
-   *   <li><b>top</b> or <b>bottom</b> for vertical gradients (applied per line when text contains newline characters)</li>
-   * </ul>
-   * </p>
+   * Applies a gradient effect to text based on a gradient marker.
+   * Supported formats:
+   *   gradient-#FF0000-#00FF00[Text] (default alignment "left")
+   *   gradient-center-#FF0000-#00FF00[Text]
+   *   gradient-45deg-top-#FF0000-#00FF00-#0000FF[Line1\nLine2\nLine3]
    *
-   * @param message the gradient marker and text
-   * @return the ANSI enriched string with a gradient effect
+   * @param message The full gradient marker string.
+   * @return The string with a gradient applied.
    */
   public static String gradientColorize(String message) {
     if (!message.startsWith("gradient-")) {
       return colorize(message);
     }
-    int openBracket = message.indexOf('[');
-    if (openBracket < 0) return message;
-    String marker = message.substring(0, openBracket);
-    String text = message.substring(openBracket + 1, message.lastIndexOf(']'));
-    String[] parts = marker.split("-");
-    if (parts.length < 4) return message;
-    // parts[0] is "gradient", parts[1] is alignment, parts[2] is startColor, parts[3] is endColor.
-    String alignment = parts[1].toLowerCase();
-    String startColor = parts[2];
-    String endColor = parts[3];
-
-    if (text.contains("\n")) {
-      if (alignment.equals("top") || alignment.equals("bottom")) {
-        return gradientVertical(text, alignment, startColor, endColor);
-      } else {
-        // Apply horizontal gradient on each line using stream map/collect.
+    // If the marker contains "deg", use the manual (angle-based) method.
+    if (message.contains("deg")) {
+      return gradientColorizeAngleMultiLine(message);
+    } else {
+      // Fallback: assume format "gradient-color1-color2[Text]"
+      int openBracket = message.indexOf('[');
+      if (openBracket < 0) return message;
+      String marker = message.substring(0, openBracket);
+      String text = message.substring(openBracket + 1, message.lastIndexOf(']'));
+      String[] parts = marker.split("-");
+      if (parts.length < 3) return message;
+      String alignment = "left"; // default alignment
+      String startColor = parts[1];
+      String endColor = parts[2];
+      if (text.contains("\n")) {
         return Arrays.stream(text.split("\n"))
             .map(line -> gradientHorizontal(line, alignment, startColor, endColor))
             .collect(Collectors.joining("\n"));
+      } else {
+        return gradientHorizontal(text, alignment, startColor, endColor);
       }
-    } else {
-      return gradientHorizontal(text, alignment, startColor, endColor);
     }
+  }
+
+  /**
+   * Applies a gradient effect to multi-line text based on a marker of the format:
+   * <pre>
+   * gradient-[angle]deg-[direction]-color1-color2-...-colorN[Text]
+   * </pre>
+   * The angle (in degrees) is used to adjust the interpolation non-linearly.
+   * The direction can be:
+   * <ul>
+   *   <li>"top" (vertical gradient; top line uses first color, bottom uses last)</li>
+   *   <li>"bottom" (vertical gradient reversed)</li>
+   *   <li>"left" (horizontal gradient on each line; leftmost character uses first color)</li>
+   *   <li>"right" (horizontal gradient reversed)</li>
+   * </ul>
+   *
+   * @param marker The full gradient marker string.
+   * @return The multi-line text with the gradient applied using ANSI escape codes.
+   */
+  public static String gradientColorizeAngleMultiLine(String marker) {
+    // Expected marker format: gradient-[angle]deg-[direction]-#RRGGBB(-#RRGGBB)*[Text]
+    Pattern pattern =
+        Pattern.compile(
+            "^gradient-(\\d+)deg-([a-zA-Z]+)-((?:#[A-Fa-f0-9]{6}(?:-#[A-Fa-f0-9]{6})*))\\[([^\\]]*)\\]$");
+    Matcher matcher = pattern.matcher(marker);
+    if (!matcher.matches()) {
+      return marker; // Unchanged if it doesn't match expected format.
+    }
+
+    int angle = Integer.parseInt(matcher.group(1));
+    String direction = matcher.group(2).toLowerCase(); // "top", "bottom", "left", or "right"
+    String colorsStr = matcher.group(3); // e.g. "#FF0000-#00FF00-#0000FF"
+    String text = matcher.group(4);
+
+    // Split colors
+    List<String> colors = Arrays.asList(colorsStr.split("-"));
+    if (colors.size() < 2) {
+      return marker; // Need at least two colors for a gradient.
+    }
+
+    // Split text into lines.
+    String[] lines = text.split("\n");
+    int totalLines = lines.length;
+    if (totalLines == 0) return "";
+
+    // Normalize the angle to a factor: 90° means linear (factor=1.0).
+    double rawFactor = angle / 90.0;
+    double factor = Math.max(0.5, Math.min(rawFactor, 2.0)); // Clamp factor between 0.5 and 2.0.
+
+    // Branch based on direction:
+    if (direction.equals("top") || direction.equals("bottom")) {
+      // Vertical gradient: each line's color is interpolated based on its line index.
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < totalLines; i++) {
+        double ratio = (double) i / (totalLines - 1);
+        double adjusted =
+            direction.equals("top") ? Math.pow(ratio, factor) : 1 - Math.pow(1 - ratio, factor);
+        int segments = colors.size() - 1;
+        double segmentLength = 1.0 / segments;
+        int segmentIndex = (int) Math.min(Math.floor(adjusted / segmentLength), segments - 1);
+        double localRatio = (adjusted - (segmentIndex * segmentLength)) / segmentLength;
+        String startColor = colors.get(segmentIndex);
+        String endColor = colors.get(segmentIndex + 1);
+        String interpHex = interpolateColor(startColor, endColor, localRatio);
+        String ansiColor = ansiFromHex(interpHex);
+        sb.append(ansiColor).append(lines[i]).append(RESET);
+        if (i < totalLines - 1) {
+          sb.append("\n");
+        }
+      }
+      return sb.toString();
+    } else if (direction.equals("left") || direction.equals("right")) {
+      // Horizontal gradient: apply to each line separately.
+      return Arrays.stream(lines)
+          .map(line -> gradientHorizontalMulti(line, direction, colors, factor))
+          .collect(Collectors.joining("\n"));
+    } else {
+      // Fallback: return unmodified text if direction is not recognized.
+      return text;
+    }
+  }
+
+  /**
+   * Applies a horizontal gradient effect to a single line of text based on multiple color stops.
+   *
+   * @param text      The text line to colorize.
+   * @param direction The direction: "left" means gradient from left (first color) to right (last color),
+   *                  "right" means reversed.
+   * @param colors    The list of hex color stops.
+   * @param factor    The non-linear factor derived from the angle.
+   * @return The line with an ANSI horizontal gradient applied.
+   */
+  private static String gradientHorizontalMulti(
+      String text, String direction, List<String> colors, double factor) {
+    int length = text.length();
+    StringBuilder sb = new StringBuilder();
+    int segments = colors.size() - 1;
+    double segmentLength = 1.0 / segments;
+    for (int i = 0; i < length; i++) {
+      double baseRatio = (double) i / (length - 1);
+      double ratio;
+      switch (direction) {
+        case "left":
+          ratio = Math.pow(baseRatio, factor);
+          break;
+        case "right":
+          ratio = 1 - Math.pow(1 - baseRatio, factor);
+          break;
+        default:
+          ratio = baseRatio;
+      }
+      int segmentIndex = (int) Math.min(Math.floor(ratio / segmentLength), segments - 1);
+      double localRatio = (ratio - (segmentIndex * segmentLength)) / segmentLength;
+      String startColor = colors.get(segmentIndex);
+      String endColor = colors.get(segmentIndex + 1);
+      String interpHex = interpolateColor(startColor, endColor, localRatio);
+      String ansiColor = ansiFromHex(interpHex);
+      sb.append(ansiColor).append(text.charAt(i));
+    }
+    sb.append(RESET);
+    return sb.toString();
   }
 
   private static String gradientHorizontal(

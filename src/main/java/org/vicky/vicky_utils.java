@@ -4,6 +4,7 @@ package org.vicky;
 import static org.vicky.global.Global.*;
 import static org.vicky.utilities.DatabaseManager.SQLManager.generator;
 
+import dev.jorel.commandapi.CommandAPICommand;
 import jakarta.persistence.EntityManager;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -17,10 +18,12 @@ import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import org.vicky.afk.AFKManager;
 import org.vicky.effectsSystem.CustomEffect;
 import org.vicky.effectsSystem.effects.Bleeding;
 import org.vicky.expansions.PlaceholderExpansions;
 import org.vicky.global.Global;
+import org.vicky.guiparent.GuiCreator;
 import org.vicky.handlers.CustomDamageHandler;
 import org.vicky.listeners.DeathListener;
 import org.vicky.listeners.SpawnListener;
@@ -36,6 +39,7 @@ import org.vicky.utilities.DatabaseManager.templates.ExtendedPlayerBase;
 import org.vicky.utilities.DatabaseManager.templates.Theme;
 import org.vicky.utilities.DatabaseManager.templates.ThemeRegistry;
 import org.vicky.utilities.DatabaseManager.utils.Hbm2DdlAutoType;
+import org.vicky.utilities.Theme.ThemeSelectionGuiListener;
 import org.vicky.utilities.Theme.ThemeStorer;
 import org.vicky.utilities.Theme.ThemeUnzipper;
 
@@ -58,6 +62,25 @@ public final class vicky_utils extends JavaPlugin {
     try {
       loader = this.getClassLoader();
       config = new Config(this);
+      config.addConfig(
+          "defaults.AFKKickMessage",
+          new GuiCreator.AllowedString(
+              "You have been kicked for being AFK too long...This is for your own safety and to"
+                  + " save server resources :D"));
+      config.addConfig(
+          "defaults.BTKMessages",
+          new GuiCreator.AllowedList<>(
+              List.of("You are no longer AFK... now do something", "Welcome back...")));
+      config.addConfig(
+          "defaults.AFKMessages",
+          new GuiCreator.AllowedList<>(
+              List.of("Your lazy ahh went to do smfn...", "Annnnnd AFK....")));
+      config.addConfig("defaults.AFKKickTimer", new GuiCreator.AllowedInteger(-1));
+      config.addConfig("defaults.NoAFKDamage", new GuiCreator.AllowedBoolean(true));
+      config.addConfig("defaults.AFKKickThreshold", new GuiCreator.AllowedInteger(150000));
+      config.addConfig("defaults.AFKThreshold", new GuiCreator.AllowedInteger(300000));
+      config.addConfig("defaults.BFKInvulnerableTime", new GuiCreator.AllowedInteger(10000));
+      config.addConfig("defaults.AllowBFKInvulnerable", new GuiCreator.AllowedBoolean(true));
       sqlManager =
           new SQLManagerBuilder()
               .addMappingClass(DatabasePlayer.class)
@@ -80,18 +103,25 @@ public final class vicky_utils extends JavaPlugin {
   public void onEnable() {
     if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null
         && Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
+      this.getDataFolder().mkdirs();
       Bukkit.getLogger()
           .info(
-              ANSIColor.gradientColorize(
+              ANSIColor.colorizeMixed(
                   String.format(
                       """
-gradient-bottom-#AA0000-#DDDD00[
+gradient-30deg-right-#AA0000-#DDDD00-#00DDDD-#0000AA[
  _  _  __  ___  __ _  _  _  _ ____    _  _  ____  __  __    __  ____  __  ____  ____
-/ )( \\(  )/ __)(  / )( \\/ )(// ___)  / )( \\(_  _)(  )(  )  (  )(_  _)(  )(  __)/ ___)       dark_gray[v %s]
+/ )( \\(  )/ __)(  / )( \\/ )(// ___)  / )( \\(_  _)(  )(  )  (  )(_  _)(  )(  __)/ ___)
 \\ \\/ / )(( (__  )  (  )  /   \\___ \\  ) \\/ (  )(   )( / (_/\\ )(   )(   )(  ) _) \\___ \\
  \\__/ (__)\\___)(__\\_)(__/    (____/  \\____/ (__) (__)\\____/(__) (__) (__)(____)(____/]
+dark_gray[version %s]                                                    dark_gray[by %s]
 """,
-                      this.getDescription().getVersion())));
+                      this.getDescription().getVersion(),
+                      this.getDescription()
+                          .getAuthors()
+                          .toString()
+                          .replace("[", "")
+                          .replace("]", ""))));
       plugin = this;
       classLoader.getLoaders().add(this.getClassLoader());
       Thread.currentThread().setContextClassLoader(classLoader);
@@ -99,6 +129,8 @@ gradient-bottom-#AA0000-#DDDD00[
       globalConfigManager = new ConfigManager(this, "./global/global_configs.yml");
       globalConfigManager.loadConfigValues();
       config.registerConfigs();
+
+      afkManager = new AFKManager(this);
 
       Global.placeholderStorer = new PlaceholderStorer();
       Global.stringStorer = new StringStore();
@@ -130,6 +162,14 @@ gradient-bottom-#AA0000-#DDDD00[
         }
         extractFolderFromJar(folderToExtract, desti);
       }
+
+      new CommandAPICommand("afk")
+          .withAliases("goakf", "ibegone", "cya")
+          .executesPlayer(
+              executionInfo -> {
+                afkManager.handleAfkCommand(executionInfo.sender());
+              })
+          .register(this);
 
       try {
         storer = new ThemeStorer();
@@ -176,8 +216,11 @@ gradient-bottom-#AA0000-#DDDD00[
       }
 
       mechanicRegistrar.registerAll();
+      themeSelectionListener = new ThemeSelectionGuiListener(this);
 
       new PlaceholderExpansions(this).register();
+
+      afkManager.startActivityChecker();
 
       placeholderStorer.storePlaceholder(
           "vicky_utils",
@@ -300,11 +343,12 @@ gradient-bottom-#AA0000-#DDDD00[
     return customDamageHandler;
   }
 
-  public static void hookDependantPlugin(@NotNull JavaPlugin plugin) {
+  public static void hookDependantPlugin(@NotNull JavaPlugin plugin, @NotNull ClassLoader loader) {
     Bukkit.getLogger()
         .info(
             ANSIColor.colorize("New plugin hooked successfully: green[" + plugin.getName() + "]"));
     hookedPlugins.add(plugin);
+    classLoader.getLoaders().add(loader);
   }
 
   public static void unhookDependantPlugin(@NotNull JavaPlugin plugin) {
@@ -351,10 +395,20 @@ gradient-bottom-#AA0000-#DDDD00[
   /**
    * Called by dependent plugins to register their mapping classes.
    */
+  @Deprecated(forRemoval = true)
   public static void registerTemplatePackage(String jarName, String packageName) {
     pendingDBTemplates.put(packageName, jarName);
     new ContextLogger(ContextLogger.ContextType.FEATURE, "HIBERNATE-TEMPLATE")
         .printBukkit("Added template package " + ANSIColor.colorize("yellow[" + packageName + "]"));
+  }
+
+  public static void addTemplateClass(Class<? extends DatabaseTemplate> clazz) {
+    sqlManager.addMappingClass(clazz);
+  }
+
+  @SafeVarargs
+  public static void addTemplateClasses(Class<? extends DatabaseTemplate>... clazzez) {
+    sqlManager.addMappingClasses(List.of(clazzez));
   }
 
   /**
@@ -369,6 +423,7 @@ gradient-bottom-#AA0000-#DDDD00[
   /**
    * Called by dependent plugins to register their mapping class utilities like Enums, Classes and Objects.
    */
+  @Deprecated(forRemoval = true)
   public static void registerTemplateUtilityPackage(String jarName, String packageName) {
     pendingDBTemplatesUtils.put(packageName, jarName);
     new ContextLogger(ContextLogger.ContextType.FEATURE, "HIBERNATE-TEMPLATE-UTIL")
@@ -397,6 +452,10 @@ gradient-bottom-#AA0000-#DDDD00[
         e.printStackTrace();
       }
     }
+  }
+
+  public static AFKManager getAfkManager() {
+    return afkManager;
   }
 
   public static ConfigManager getGlobalCOnfigManager() {

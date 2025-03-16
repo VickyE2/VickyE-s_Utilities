@@ -32,7 +32,7 @@ import org.vicky.utilities.ContextLogger.ContextLogger;
  */
 public abstract class BaseGuiListener implements Listener {
 
-  protected final Map<Inventory, Map<Integer, ButtonAction>> buttonActions = new HashMap<>();
+  protected final Map<Inventory, Map<Integer, ButtonAction<?>>> buttonActions = new HashMap<>();
   protected final List<Consumer<InventoryClickEvent>> additionalClickHandlers = new ArrayList<>();
   protected final List<Consumer<InventoryOpenEvent>> additionalOpenHandlers = new ArrayList<>();
   protected final List<Consumer<InventoryCloseEvent>> additionalCloseHandlers = new ArrayList<>();
@@ -94,14 +94,10 @@ public abstract class BaseGuiListener implements Listener {
    */
   public void registerButton(Inventory inventory, GuiCreator.ItemConfig... itemConfigs) {
     for (GuiCreator.ItemConfig itemConfig : itemConfigs) {
-      ButtonAction action = itemConfig.getButtonAction();
+      ButtonAction<?> action = itemConfig.getButtonAction();
       logger.printBukkit(
           ANSIColor.colorize(
-              "Button registered with Action "
-                  + action.getActionType()
-                  + " and data: "
-                  + action.getActionData(),
-              ANSIColor.CYAN),
+              "Button registered with Action " + action.getActionType(), ANSIColor.CYAN),
           ContextLogger.LogType.AMBIENCE,
           false);
       Set<Integer> slotSet = parseSlots(itemConfig.getSlotRange());
@@ -192,8 +188,10 @@ public abstract class BaseGuiListener implements Listener {
     int slot = event.getSlot();
     if (buttonActions.containsKey(event.getClickedInventory()))
       if (buttonActions.get(event.getClickedInventory()).containsKey(slot)) {
-        ButtonAction action = buttonActions.get(event.getClickedInventory()).get(slot);
-        action.execute((Player) event.getWhoClicked(), plugin);
+        ButtonAction<?> action = buttonActions.get(event.getClickedInventory()).get(slot);
+        if (action.getActionType() != ButtonAction.ActionType.CHAIN)
+          action.execute((Player) event.getWhoClicked(), plugin);
+        else action.chainExecute((Player) event.getWhoClicked());
       }
   }
 

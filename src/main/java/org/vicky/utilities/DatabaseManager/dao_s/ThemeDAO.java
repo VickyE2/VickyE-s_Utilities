@@ -1,10 +1,10 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager.dao_s;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.NoResultException;
-import java.util.UUID;
+import java.util.List;
 import org.vicky.utilities.DatabaseManager.HibernateUtil;
 import org.vicky.utilities.DatabaseManager.templates.Theme;
 
@@ -25,6 +25,21 @@ public class ThemeDAO {
               .setParameter("id", id)
               .getSingleResult();
       em.close(); // Close it after usage
+      return theme;
+    } catch (NoResultException e) {
+      return null;
+    }
+  }
+
+  /**
+   * Find all Themes.
+   *
+   * @return the List of Themes
+   */
+  public List<Theme> getAll() {
+    try (EntityManager em = HibernateUtil.getEntityManager()) { // Open new EntityManager
+      List<Theme> theme = em.createQuery("SELECT t FROM Theme t", Theme.class).getResultList();
+      em.close();
       return theme;
     } catch (NoResultException e) {
       return null;

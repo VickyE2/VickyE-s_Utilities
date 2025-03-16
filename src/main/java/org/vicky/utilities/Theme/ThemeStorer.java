@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.Theme;
 
+import org.spongepowered.configurate.ConfigurationNode;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 import org.vicky.utilities.DatabaseManager.apis.ThemeAPI;
@@ -12,12 +13,13 @@ public class ThemeStorer {
 
   public ThemeStorer() {}
 
-  public void addTheme(String themeId, String themeName) {
+  public void addTheme(String themeId, String themeName, ConfigurationNode description) {
     if (!isRegisteredTheme(themeId)) {
       logger.print("Added theme: " + ANSIColor.colorize("yellow[" + themeName + "]"));
       Theme context = new Theme();
       context.setId(themeId);
       context.setName(themeName);
+      if (description != null) context.setDescription(description.getString());
       new ThemeAPI().createTheme(context);
     } else {
       logger.print("Theme " + ANSIColor.colorize("yellow[" + themeName + "] already exists"));

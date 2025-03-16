@@ -56,7 +56,7 @@ public class HexGenerator {
   }
 
   // Interpolates between two colors based on the ratio (0.0 = startColor, 1.0 = endColor)
-  private static String interpolateColor(String startColor, String endColor, double ratio) {
+  static String interpolateColor(String startColor, String endColor, double ratio) {
     int startR = Integer.parseInt(startColor.substring(1, 3), 16);
     int startG = Integer.parseInt(startColor.substring(3, 5), 16);
     int startB = Integer.parseInt(startColor.substring(5, 7), 16);

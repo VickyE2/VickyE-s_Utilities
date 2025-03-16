@@ -8,15 +8,17 @@ import dev.lone.itemsadder.api.CustomStack;
 import dev.lone.itemsadder.api.FontImages.FontImageWrapper;
 import dev.lone.itemsadder.api.FontImages.TexturedInventoryWrapper;
 import java.util.*;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.bukkit.*;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -66,17 +68,16 @@ public class GuiCreator {
    * </p>
    *
    * @param slotRange The slot range string to parse.
-   * @param width     The width (number of columns) of the GUI for boundary checking.
    * @return A set of integer slot indices.
    */
-  public static Set<Integer> parseSlots(String slotRange, int width) {
+  public static Set<Integer> parseSlots(String slotRange) {
     Set<Integer> slots = new HashSet<>();
     String[] parts = slotRange.split(",");
     for (String part : parts) {
       if (part.contains("-")) {
         String[] range = part.split("-");
         int start = Math.max(0, Integer.parseInt(range[0]) - 1);
-        int end = Math.min(width * 9, Integer.parseInt(range[1]) - 1);
+        int end = Math.min(9 * 9, Integer.parseInt(range[1]) - 1);
         for (int i = start; i <= end; i++) {
           slots.add(i);
         }
@@ -159,6 +160,10 @@ public class GuiCreator {
     if (meta != null) {
       meta.setDisplayName(itemConfig.getName());
       meta.setLore(itemConfig.getLore());
+      if (itemConfig.isEnchanted()) {
+        meta.addEnchant(Enchantment.LUCK, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+      }
       // If it's a player head, set the head owner.
       if (item.getType() == Material.PLAYER_HEAD && meta instanceof SkullMeta skullMeta) {
         if (itemConfig.getHeadOwner() == null) {
@@ -376,7 +381,7 @@ public class GuiCreator {
 
     // Populate the inventory with items based on the provided ItemConfigs.
     for (ItemConfig itemConfig : itemConfigs) {
-      Set<Integer> slotSet = parseSlots(itemConfig.getSlotRange(), width);
+      Set<Integer> slotSet = parseSlots(itemConfig.getSlotRange());
       for (int slot : slotSet) {
         if (slot < slots) {
           ItemStack item = createItem(itemConfig, player, plugin);
@@ -396,27 +401,33 @@ public class GuiCreator {
   }
 
   /**
-   * Opens a paginated GUI for the given player with custom item configurations, a starting slot, and texture support.
+   * Opens a paginated GUI for the given player.
    *
-   * @param player       The player who will see the GUI.
-   * @param itemConfigs  The list of ItemConfig objects to display.
-   * @param page         The current page number.
-   * @param itemsPerPage The number of items per page.
-   * @param title        The title of the GUI.
-   * @param startingSlot The slot index (0-based) where the items should start appearing.
-   * @param textured     Whether the GUI should be textured.
-   * @param textureKey   The key for the texture if textured is true.
-   * @param offset       The vertical offset for the texture.
+   * @param player                   The player who will see the GUI.
+   * @param height                   The number of rows in the GUI.
+   * @param spacing                  The spacing gap for navigation buttons.
+   * @param mainItems                The list of persistent ItemConfig objects (e.g., settings, exit) that are present on every page.
+   * @param pageItems                The list of page-specific ItemConfig objects (the items that change per page).
+   * @param slotRangeStr             A string specifying the allowed slots for page items (e.g., "10-12,19-21,28-30").
+   * @param page                     The current page number.
+   * @param itemsPerPage             The maximum number of page items per page.
+   * @param title                    The title of the GUI.
+   * @param maintainPersistentButtons Whether persistent main buttons should be shown.
+   * @param textured                 Whether the GUI should be textured.
+   * @param textureKey               The texture key (if textured is true).
+   * @param offset                   The vertical texture offset.
    */
   public void openPaginatedGUI(
       Player player,
       int height,
       ArrowGap spacing,
-      List<GuiCreator.ItemConfig> itemConfigs,
+      List<GuiCreator.ItemConfig> mainItems,
+      List<GuiCreator.ItemConfig> pageItems,
+      String slotRangeStr,
       int page,
       int itemsPerPage,
       String title,
-      int startingSlot,
+      boolean maintainPersistentButtons,
       boolean textured,
       String textureKey,
       int offset) {
@@ -425,44 +436,64 @@ public class GuiCreator {
     if (opt.isEmpty()) {
       throw new RuntimeException("Player that made request cannot be found on the database");
     }
-    DatabasePlayer player1 = opt.get();
-    String themeId = player1.getUserTheme();
+    DatabasePlayer dbPlayer = opt.get();
+    String themeId = dbPlayer.getUserTheme();
 
-    int totalItems = itemConfigs.size();
+    // Compute pagination info for pageItems.
+    int totalItems = pageItems.size();
     int totalPages = (int) Math.ceil((double) totalItems / itemsPerPage);
     page = Math.max(1, Math.min(page, totalPages));
-
     int startIndex = (page - 1) * itemsPerPage;
     int endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
-    // Total slots based on height (e.g., height * 9)
+    // Create an inventory with a fixed size.
     int slots = 9 * height;
     Inventory inventory = Bukkit.createInventory(new GUIHolder(), slots, title);
 
-    // Populate page items starting at the specified startingSlot.
-    int displaySlot = startingSlot;
-    for (int i = startIndex; i < endIndex; i++) {
-      GuiCreator.ItemConfig config = itemConfigs.get(i);
-      ItemStack item = createItem(config, player, plugin);
-      if (displaySlot < slots) {
-        inventory.setItem(displaySlot++, item);
+    // Place persistent main buttons if enabled.
+    if (maintainPersistentButtons) {
+      for (GuiCreator.ItemConfig config : mainItems) {
+        for (int x : parseSlots(config.getSlotRange())) {
+          if (x >= 0 && x < slots) {
+            inventory.setItem(x, createItem(config, player, plugin));
+            if (config.getButtonAction() != null) listener.registerButton(inventory, config);
+          }
+        }
       }
     }
 
-    // Calculate center slot of the bottom row.
+    // Parse the allowed slot range for page items.
+    Set<Integer> slotSet = parseSlots(slotRangeStr);
+    List<Integer> allowedSlots = new ArrayList<>(slotSet);
+    Collections.sort(allowedSlots); // sort ascending
+
+    // Populate page items into the allowed slots.
+    int displaySlotIndex = 0;
+    for (int i = startIndex;
+        i < endIndex && displaySlotIndex < allowedSlots.size();
+        i++, displaySlotIndex++) {
+      GuiCreator.ItemConfig config = pageItems.get(i);
+      ItemStack item = createItem(config, player, plugin);
+      int targetSlot = allowedSlots.get(displaySlotIndex);
+      if (targetSlot < slots) {
+        inventory.setItem(targetSlot, item);
+        if (config.getButtonAction() != null) listener.registerButton(inventory, config);
+      }
+    }
+
+    // Determine navigation button slots.
     int centerSlot = ((height - 1) * 9) + 4;
-    // Determine positions for navigation buttons based on the spacing gap.
     int prevSlot = Math.max(0, centerSlot - spacing.gap);
     int nextSlot = Math.min(slots - 1, centerSlot + spacing.gap);
 
-    // Create navigation buttons using ItemConfig and ButtonActions:
+    // Create previous page button.
     if (page > 1) {
       int finalPage = page;
       GuiCreator.ItemConfig prevConfig =
           new GuiCreator.ItemConfig(
               Material.ARROW,
               "ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ (" + (page - 1) + ")",
-              Integer.toString(prevSlot),
+              Integer.toString(prevSlot + 1),
               true,
               null,
               "vicky_themes:left_arrow_" + themeId,
@@ -473,37 +504,40 @@ public class GuiCreator {
                           player,
                           height,
                           spacing,
-                          itemConfigs,
+                          mainItems,
+                          pageItems,
+                          slotRangeStr,
                           finalPage - 1,
                           itemsPerPage,
                           title,
-                          startingSlot,
+                          maintainPersistentButtons,
                           textured,
                           textureKey,
                           offset),
                   true));
-      // Register a ButtonAction that reopens the GUI at page-1.
       inventory.setItem(prevSlot, createItem(prevConfig, player, plugin));
     } else {
       GuiCreator.ItemConfig prevConfig =
           new GuiCreator.ItemConfig(
               Material.ARROW,
-              "ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ (" + (0) + ")",
-              Integer.toString(prevSlot),
+              "ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ (0)",
+              Integer.toString(prevSlot + 1),
               true,
               null,
-              "vicky_themes:left_arrow_" + themeId + "_disabled",
+              "vicky_themes:left_arrow_" + themeId,
               List.of(ChatColor.GREEN + "ᴛʜɪs ɪs ᴛʜᴇ ғɪʀsᴛ ᴘᴀɢᴇ"),
               null);
       inventory.setItem(prevSlot, createItem(prevConfig, player, plugin));
     }
+
+    // Create next page button.
     if (page < totalPages) {
-      int finalPage1 = page;
+      int finalPage = page;
       GuiCreator.ItemConfig nextConfig =
           new GuiCreator.ItemConfig(
               Material.ARROW,
               "ɴᴇxᴛ ᴘᴀɢᴇ (" + (page + 1) + ")",
-              Integer.toString(nextSlot),
+              Integer.toString(nextSlot + 1),
               true,
               null,
               "vicky_themes:right_arrow_" + themeId,
@@ -514,35 +548,37 @@ public class GuiCreator {
                           player,
                           height,
                           spacing,
-                          itemConfigs,
-                          finalPage1 + 1,
+                          mainItems,
+                          pageItems,
+                          slotRangeStr,
+                          finalPage + 1,
                           itemsPerPage,
                           title,
-                          startingSlot,
+                          maintainPersistentButtons,
                           textured,
                           textureKey,
                           offset),
                   true));
       inventory.setItem(nextSlot, createItem(nextConfig, player, plugin));
     } else {
-      GuiCreator.ItemConfig prevConfig =
+      GuiCreator.ItemConfig nextConfig =
           new GuiCreator.ItemConfig(
               Material.ARROW,
-              "ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ (" + (page - 1) + ")",
-              Integer.toString(prevSlot),
+              "ɴᴇxᴛ ᴘᴀɢᴇ (0)",
+              Integer.toString(nextSlot + 1),
               true,
               null,
-              "vicky_themes:right_arrow_" + themeId + "_disabled",
+              "vicky_themes:right_arrow_" + themeId,
               List.of(ChatColor.GREEN + "ᴛʜɪs ɪs ᴛʜᴇ ʟᴀsᴛ ᴘᴀɢᴇ"),
               null);
-      inventory.setItem(prevSlot, createItem(prevConfig, player, plugin));
+      inventory.setItem(nextSlot, createItem(nextConfig, player, plugin));
     }
 
     // Set the inventory in the listener and open it.
     listener.addGuiInventory(inventory);
     player.openInventory(inventory);
 
-    // Apply texture if available.
+    // Apply texture if enabled.
     if (textured && textureKey != null && !textureKey.isEmpty()) {
       FontImageWrapper texture = new FontImageWrapper(textureKey);
       if (texture.exists()) {
@@ -570,20 +606,24 @@ public class GuiCreator {
   public void openAnvilGUI(
       Player player,
       String initialText,
-      ItemConfig leftItemConfig,
+      boolean textured,
+      String textureKey,
+      int offset,
+      @NotNull ItemConfig leftItemConfig,
       ItemConfig rightItemConfig,
       ItemConfig outputItemConfig,
       String title,
       boolean canClickLeft,
       boolean canClickRight,
-      BiFunction<Player, String, List<AnvilGUI.ResponseAction>> completionAction) {
+      @NotNull
+          TriFunction<Player, AnvilGUI.StateSnapshot, Integer, List<AnvilGUI.ResponseAction>>
+              completionAction,
+      @NotNull Consumer<AnvilGUI.StateSnapshot> onCLose) {
     ItemStack leftItem = null;
     ItemStack rightItem = null;
     ItemStack outputItem = null;
 
-    if (leftItemConfig != null) {
-      leftItem = createItem(leftItemConfig, player, plugin);
-    }
+    leftItem = createItem(leftItemConfig, player, plugin);
     if (rightItemConfig != null) {
       rightItem = createItem(rightItemConfig, player, plugin);
     }
@@ -597,19 +637,13 @@ public class GuiCreator {
             .plugin(plugin)
             .text(initialText)
             .title(title)
-            .onClick(
-                (slot, stateSnapshot) -> {
-                  String clickedText = stateSnapshot.getText();
-                  if (slot == AnvilGUI.Slot.OUTPUT) {
-                    return completionAction.apply(player, clickedText);
-                  } else if (slot == AnvilGUI.Slot.INPUT_LEFT) {
-                    return completionAction.apply(
-                        player, leftItemConfig != null ? leftItemConfig.getName() : clickedText);
-                  }
-                  return List.of(AnvilGUI.ResponseAction.close());
-                });
+            .preventClose()
+            .onClick((slot, stateSnapshot) -> completionAction.apply(player, stateSnapshot, slot))
+            .onClose(onCLose);
 
-    if (canClickLeft) {
+    if (canClickLeft && canClickRight) {
+      builder.interactableSlots(AnvilGUI.Slot.INPUT_LEFT, AnvilGUI.Slot.INPUT_RIGHT);
+    } else if (canClickLeft) {
       builder.interactableSlots(AnvilGUI.Slot.INPUT_LEFT);
     } else if (canClickRight) {
       builder.interactableSlots(AnvilGUI.Slot.INPUT_RIGHT);
@@ -618,14 +652,21 @@ public class GuiCreator {
     if (rightItemConfig != null) {
       builder.itemRight(rightItem);
     }
-    if (leftItemConfig != null) {
-      builder.itemLeft(leftItem);
-    }
+    builder.itemLeft(leftItem);
     if (outputItemConfig != null) {
       builder.itemOutput(outputItem);
     }
 
     builder.open(player);
+    if (textured && textureKey != null && !textureKey.isEmpty()) {
+      FontImageWrapper texture = new FontImageWrapper(textureKey);
+      if (texture.exists()) {
+        TexturedInventoryWrapper.setPlayerInventoryTexture(player, texture, title, 0, offset);
+      } else {
+        logger.printBukkit(
+            "Gui Texture: " + textureKey + " does not exist", ContextLogger.LogType.WARNING);
+      }
+    }
   }
 
   public enum ArrowGap {
@@ -706,6 +747,7 @@ public class GuiCreator {
     private String name;
     private String slotRange; // e.g., "1-10" or "1,8"
     private boolean clickable;
+    private boolean hasEnchantmentEffect = false;
 
     /**
      * Constructor for regular items using a list of lore strings.
@@ -882,6 +924,18 @@ public class GuiCreator {
       this.headOwner = headOwner;
       this.nbtData = new HashMap<>();
       this.buttonAction = buttonAction;
+    }
+
+    /**
+     * Adds Enchantment glowing effect to the item.
+     */
+    public ItemConfig enchant() {
+      this.hasEnchantmentEffect = true;
+      return this;
+    }
+
+    public boolean isEnchanted() {
+      return hasEnchantmentEffect;
     }
 
     private Map<String, Object> getNBTData() {
@@ -1273,5 +1327,32 @@ public class GuiCreator {
     public Float getValue() {
       return value;
     }
+  }
+
+  public record AllowedBoolean(Boolean bool) implements ItemConfig.AllowedNBTType<Boolean> {
+    @Override
+    public Boolean getValue() {
+      return bool;
+    }
+  }
+
+  public record AllowedList<T>(List<T> list) implements ItemConfig.AllowedNBTType<List<T>> {
+    @Override
+    public List<T> getValue() {
+      return list;
+    }
+  }
+
+  /**
+   * A functional interface for a lambda that accepts three arguments.
+   *
+   * @param <A> Type of the first argument.
+   * @param <B> Type of the second argument.
+   * @param <C> Type of the third argument.
+   * @param <R> Return type.
+   */
+  @FunctionalInterface
+  public interface TriFunction<A, B, C, R> {
+    R apply(A a, B b, C c);
   }
 }

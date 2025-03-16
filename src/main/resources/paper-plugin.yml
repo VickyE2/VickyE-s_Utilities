@@ -10,13 +10,19 @@ dependencies:
     PlaceholderAPI:
       load: AFTER
       required: true
+    CommandAPI:
+      load: AFTER
+      required: true
     MythicMobs:
       load: AFTER
       required: true
     ItemsAdder:
       load: AFTER
-      required: false
+      required: true
     LoneLibs:
+      load: AFTER
+      required: false
+    WorldGuard:
       load: AFTER
       required: false
     LuckPerms:

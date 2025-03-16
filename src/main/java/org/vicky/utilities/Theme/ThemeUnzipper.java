@@ -36,6 +36,7 @@ public class ThemeUnzipper {
   public List<String> requiredButtons = new ArrayList<>();
   private final ConfigManager guiManager;
   private final ConfigManager buttonManager;
+  private final ConfigManager iconsManager;
   public Map<String, Integer> buttonVerticalSplits = new HashMap<>();
 
   public String[] allowedImageFormats = {".png", ".jpeg", ".jpg"};
@@ -58,6 +59,11 @@ public class ThemeUnzipper {
       guiManager.loadConfigValues();
       guiManager.setConfigValue("info", "namespace", "vicky_themes", null);
 
+      this.iconsManager = new ConfigManager(plugin, false);
+      iconsManager.createPathedConfig(configFile + "/icons.yml");
+      iconsManager.loadConfigValues();
+      iconsManager.setConfigValue("info", "namespace", "vicky_themes", null);
+
       this.buttonManager = new ConfigManager(plugin, false);
       buttonManager.createPathedConfig(configFile + "/items.yml");
       buttonManager.loadConfigValues();
@@ -78,12 +84,31 @@ public class ThemeUnzipper {
               "friends_gui_message_request_panel",
               "friends_gui_request_panel",
               "party_gui_main_panel",
-              "party_gui_member_panel"));
+              "party_gui_member_panel",
+              "friends_gui_status_change_panel",
+              "friends_gui_change_color_panel"));
     }
     if (hookedPlugins.stream()
         .anyMatch(k -> k.getName().equals("VickyEs_Survival_Plus_Essentials"))) {
       requiredGuis.add("trinket_gui");
     }
+
+    requiredGuis.addAll(
+        List.of(
+            "seven_by_four",
+            "seven_by_one_lower",
+            "seven_by_one_top",
+            "seven_by_one_by_three",
+            "seven_by_one_centered",
+            "seven_by_three_lower",
+            "seven_by_three_top",
+            "seven_by_two_center",
+            "seven_by_two_lower",
+            "seven_by_two_top",
+            "five_by_six_left",
+            "five_by_six_right",
+            "full_grid",
+            "anvil"));
 
     requiredButtons =
         Arrays.asList(
@@ -187,6 +212,7 @@ public class ThemeUnzipper {
               String themeName = themeNode.node("theme_name").getString();
               String themeId = themeNode.node("theme_id").getString();
               ConfigurationNode guiFolder = themeNode.node("gui_folder");
+              ConfigurationNode description = themeNode.node("description");
               ConfigurationNode buttonsFolder = themeNode.node("buttons_folder");
               ConfigurationNode textsFolder = themeNode.node("texts_folder");
               logger.printBukkit(
@@ -388,7 +414,6 @@ public class ThemeUnzipper {
                     break;
                   }
                 }
-
                 for (String currentButton : requiredButtons) {
                   try (ZipFile zip = new ZipFile(zipPath.toFile())) {
                     fileFound = false;
@@ -853,6 +878,60 @@ public class ThemeUnzipper {
                     break;
                   }
                 }
+                try (ZipFile zip = new ZipFile(zipPath.toFile())) {
+                  Path outputIconPath =
+                      Path.of(
+                          plugin.getDataFolder().getParentFile().getAbsolutePath()
+                              + "/ItemsAdder/contents/vicky_themes/textures/icons");
+                  ZipEntry entry = zip.getEntry("icons/" + themeId + ".png");
+                  try {
+                    Files.createDirectories(outputIconPath);
+                  } catch (IOException e) {
+                    logger.printBukkit(
+                        "Failed to create directory: " + outputIconPath + " - " + e.getMessage(),
+                        true);
+                    return; // Exit if the directory can't be created
+                  }
+                  if (entry != null) {
+                    File actualIcon = new File(outputIconPath.toString(), themeId + ".png");
+                    try (InputStream inputStream = zip.getInputStream(entry)) {
+                      try (FileOutputStream fos = new FileOutputStream(actualIcon)) {
+                        byte[] buffer = new byte[1024];
+                        int bytesRead;
+                        while ((bytesRead = inputStream.read(buffer)) != -1) {
+                          fos.write(buffer, 0, bytesRead);
+                        }
+                        iconsManager.setConfigValue(
+                            "items",
+                            "icon_" + themeId + ".display_name",
+                            themeName + " Icon",
+                            null);
+                        iconsManager.setConfigValue(
+                            "items", "icon_" + themeId + ".resource.material", "PAPER", null);
+                        iconsManager.setConfigValue(
+                            "items", "icon_" + themeId + ".resource.generate", true, null);
+                        iconsManager.setListConfigValue(
+                            "items." + "icon_" + themeId + ".resource.textures",
+                            List.of("icons/" + themeId));
+                      } catch (IOException e) {
+                        logger.printBukkit("Error saving the icon: " + e.getMessage(), true);
+                        break;
+                      }
+                    } catch (IOException e) {
+                      logger.printBukkit("Error saving the icon: " + e.getMessage(), true);
+                      break;
+                    }
+                  } else {
+                    logger.printBukkit(
+                        "Theme with id "
+                            + themeId
+                            + " fails to provide an icon in icon/"
+                            + themeId
+                            + ".png",
+                        ContextLogger.LogType.AMBIENCE);
+                    break;
+                  }
+                }
                 Path directory =
                     Path.of(
                         plugin.getDataFolder().getParentFile().getAbsolutePath()
@@ -870,7 +949,7 @@ public class ThemeUnzipper {
                         + " has successfully been loaded",
                     ContextLogger.LogType.SUCCESS);
 
-                storer.addTheme(themeId, themeName);
+                storer.addTheme(themeId, themeName, description);
               } else {
                 logger.printBukkit(
                     "Theme with id " + themeId + " has already been registered",

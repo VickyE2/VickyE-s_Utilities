@@ -1,0 +1,214 @@
+package org.vicky.musicPlayer
+
+import net.kyori.adventure.bossbar.BossBar
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.TextColor
+import net.kyori.adventure.text.format.TextDecoration
+import org.bukkit.Bukkit
+import org.bukkit.entity.Player
+import org.vicky.music.MusicRegistry.genreColors
+import org.vicky.music.utils.MusicBuilder
+import org.vicky.music.utils.MusicEvent
+import org.vicky.music.utils.MusicPiece
+import org.vicky.music.utils.MusicTrack
+import org.vicky.utilities.DatabaseManager.dao_s.MusicPieceDAO
+import org.vicky.utilities.DatabaseManager.dao_s.MusicPlayerDAO
+import org.vicky.vicky_utils.plugin
+import java.util.*
+import java.util.function.Consumer
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.collections.List
+import kotlin.collections.MutableList
+import kotlin.collections.MutableMap
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.forEach
+import kotlin.collections.getOrPut
+import kotlin.collections.isNotEmpty
+import kotlin.collections.iterator
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableMapOf
+import kotlin.math.abs
+import kotlin.math.pow
+
+object MusicPlayer {
+    private val playerStates = mutableMapOf<UUID, PlayerState>()
+    // Java-style static map for reverse lookup (pitch → name)
+    private val NOTE_ORDER = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    private val OCTAVE_SHIFTS = mapOf("--" to 2, "-" to 3, "" to 4, "+" to 5, "++" to 6)
+    private val NOTE_TO_PITCH: Map<String, Float> = buildMap {
+        for ((octaveSuffix, octave) in OCTAVE_SHIFTS) {
+            for ((index, noteName) in NOTE_ORDER.withIndex()) {
+                val semitoneIndex = (octave * 12) + index
+                val halfStepsFromA4 = semitoneIndex - 57 // A4 = 57
+                val pitch = 2.0.pow(halfStepsFromA4 / 12.0).toFloat()
+                if (noteName.length > 1 || noteName.contains("#"))
+                    put(noteName[0] + octaveSuffix + noteName[1], pitch)
+                else
+                    put(noteName + octaveSuffix, pitch)
+            }
+        }
+    }
+
+    private var loggingEnabled: Boolean = false
+    fun toggleLogging(): Boolean {
+        loggingEnabled = !loggingEnabled
+        Bukkit.getLogger().info("MusicPlayer logging is now ${if (loggingEnabled) "ENABLED" else "DISABLED"}")
+        return loggingEnabled
+    }
+    private fun log(message: String) {
+        if (loggingEnabled) {
+            Bukkit.getLogger().info("[MusicPlayer] $message")
+        }
+    }
+    private fun log(player: Player, message: String) {
+        if (loggingEnabled) {
+            Bukkit.getLogger().info("[MusicPlayer] [${player.name}] $message")
+        }
+    }
+
+    data class PlayerState(
+        var track: MusicPiece,
+        var tick: Int = 0,
+        var paused: Boolean = false,
+        var queue: MutableList<MusicPiece> = mutableListOf(),
+        var bossBar: BossBar,
+        var tickEvents: MutableMap<Long, MutableList<MusicEvent>> = mutableMapOf()
+    )
+
+    fun play(player: Player, track: MusicPiece) {
+        log(player, "Started playing track '${track.pieceName}' with ${track.trackList.sumOf { it.events.size }} total events.")
+        val state = playerStates.getOrPut(player.uniqueId) {
+            val genre = track.genre?.lowercase() ?: "default"
+            val color = genreColors[genre] ?: TextColor.color(0xAAAAAA)
+
+            val status = "▶ Now Playing : ${track.pieceName}"
+            val title = Component.text("$status: ${track.pieceName}", color)
+            val progress = (0).toFloat().coerceIn(0f, 1f)
+            PlayerState(track = track, bossBar = BossBar.bossBar(title, progress, BossBar.Color.PINK, BossBar.Overlay.PROGRESS))
+        }
+        val tickEvents = mutableMapOf<Long, MutableList<MusicEvent>>()
+        track.trackList.forEach { t ->
+            t.events.forEach { e ->
+                tickEvents.getOrPut(e.timeOffset) { mutableListOf() }.add(e)
+            }
+        }
+        state.tickEvents = tickEvents
+        state.track = track
+        state.tick = 0
+        state.paused = false
+        player.showBossBar(state.bossBar)
+        playTick(player)
+    }
+
+    fun playInstrumentTracks(player: Player, instrumentTracks: List<MusicTrack>) {
+        instrumentTracks.forEach(Consumer { t: MusicTrack -> playTrack(player, t) })
+    }
+
+    /**
+     * Plays a MusicTrack for the given player.
+     *
+     * @param player the player to play the track for.
+     * @param track  the MusicTrack to play.
+     */
+    fun playTrack(player: Player, track: MusicTrack) {
+        log(player, "Playing raw track with ${track.events.size} events.")
+        val arrangedEvents: MutableMap<Long, MutableList<MusicEvent>> = HashMap()
+
+        for (event in track.events) {
+            arrangedEvents.computeIfAbsent(event.timeOffset) { ArrayList() }.add(event)
+        }
+
+        for ((tickOffset, events) in arrangedEvents) {
+            Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                for (event in events) {
+                    val soundName = resolveCustomSound(event)
+                    player.playSound(player.location, soundName, event.category, event.volume, event.pitch)
+                }
+            }, tickOffset)
+        }
+    }
+
+    private fun resolveCustomSound(event: MusicEvent): String {
+        val instrument = event.sound.name.lowercase() // e.g., "piano"
+        val pitchName = resolvePitchName(event.pitch) // e.g., "c_plus_plus"
+        val partSuffix = when (event.part) {
+            MusicBuilder.NotePart.IN -> "_1"
+            MusicBuilder.NotePart.MAIN -> "_2"
+            MusicBuilder.NotePart.OUT -> "_3"
+            else -> ""
+        }
+
+        log("Resolved sound name: vicky_music:vicky_note_${instrument}_${pitchName.lowercase()}$partSuffix")
+        return "vicky_music:vicky_note_${instrument}_${pitchName.lowercase()}$partSuffix"
+    }
+
+    private fun resolvePitchName(pitch: Float): String {
+        return NOTE_TO_PITCH
+            .entries
+            .associate { it.value to it.key } // Flip to Map<Float, String>
+            .minByOrNull { abs(it.key - pitch) } // Compare keys (the pitch floats)
+            ?.value
+            ?.replace("#", "_sharp")
+            ?.replace("-", "_minus")
+            ?.replace("+", "_plus") ?: "unknown"
+    }
+
+    fun togglePause(player: Player) {
+        playerStates[player.uniqueId]?.let {
+            it.paused = !it.paused
+            log(player, if (it.paused) "Paused at tick ${it.tick}" else "Resumed at tick ${it.tick}")
+            updateBossBar(player, it.track, it.tick, it.paused)
+            val dbMusic = MusicPlayerDAO().findById(player.uniqueId).get()
+            dbMusic.lastPiece = MusicPieceDAO().findById(it.track.key)
+            dbMusic.lastTick = it.tick
+            MusicPlayerDAO().update(dbMusic)
+        }
+    }
+
+    fun tickAll() {
+        // log("Ticking ${playerStates.size} player(s).")
+        for ((uuid, state) in playerStates) {
+            if (state.paused) continue
+            val player = Bukkit.getPlayer(uuid) ?: continue
+
+            playTick(player)
+            state.tick++
+
+            if (state.tick >= state.track.totalDuration()) {
+                if (state.queue.isNotEmpty()) {
+                    play(player, state.queue.removeFirst())
+                } else {
+                    player.hideBossBar(state.bossBar)
+                    playerStates.remove(uuid)
+                }
+            } else {
+                updateBossBar(player, state.track, state.tick, false)
+            }
+        }
+    }
+
+    private fun playTick(player: Player) {
+        val state = playerStates[player.uniqueId] ?: return
+        val events = state.tickEvents[state.tick.toLong()] ?: return
+        events.forEach { event ->
+            log(player, "volume: ${event.volume}")
+            player.playSound(player.location, resolveCustomSound(event), event.category, event.volume, 1f)
+        }
+    }
+
+
+    private fun updateBossBar(player: Player, track: MusicPiece, tick: Int, paused: Boolean) {
+        val genre = track.genre?.uppercase() ?: "default"
+        val color = genreColors[genre] ?: TextColor.color(0xe5e49d)
+        val status = if (paused) "⏸ Paused" else "▶ Now Playing"
+        val title = Component.text("$status: ", color, TextDecoration.BOLD).append(Component.text(track.pieceName, TextColor.color(track.themeColorHex)))
+        val progress = (tick.toDouble() / track.totalDuration()).toFloat().coerceIn(0f, 1f)
+        val bossBar = playerStates[player.uniqueId]?.bossBar ?: return
+
+        // Update the existing bar
+        bossBar.name(title)
+        bossBar.progress(progress)
+    }
+}

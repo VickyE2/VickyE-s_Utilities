@@ -8,158 +8,101 @@ import org.jetbrains.kotlin.gradle.targets.js.binaryen.BinaryenRootPlugin.Compan
  */
 
 plugins {
-    `java-library`
-    `maven-publish`
-    kotlin("jvm") version "2.1.10"
+    `java-library` apply true
+    `maven-publish` apply true
+    kotlin("jvm") version "2.1.10" apply true
     id("com.diffplug.spotless") version "6.19.0" apply true
 }
 
-configure<com.diffplug.gradle.spotless.SpotlessExtension> {
-    ratchetFrom("origin/master")
+allprojects {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
 
-    format("misc") {
-        target(".gitignore")
-        trimTrailingWhitespace()
-        endWithNewline()
-        indentWithTabs()
-        indentWithSpaces(4)
+allprojects {
+    val javaVersion = 21
+    group = "org.vicky.vicky_utils"
+    version = "0.0.1-BETA"
+    description = "VickyE's Utility Mod"
+
+    apply(plugin = "java")
+    apply(plugin = "kotlin")
+    apply(plugin = "java-library")
+    apply(plugin = "maven-publish")
+    apply(plugin = "com.diffplug.spotless")
+
+    configure<com.diffplug.gradle.spotless.SpotlessExtension> {
+        ratchetFrom("origin/master")
+
+        format("misc") {
+            target(".gitignore")
+            trimTrailingWhitespace()
+            endWithNewline()
+            indentWithTabs()
+            indentWithSpaces(4)
+        }
+
+        kotlin {
+            target("src/main/kotlin/**/*.kt")
+            licenseHeader("/* Licensed under Apache-2.0 \$YEAR. */")
+        }
+
+        java {
+            target("src/main/java/**/*.java")
+
+            importOrder(
+                "java", "javax", "org", "com", "com.diffplug", "", "#com.diffplug", "#"
+            )
+            removeUnusedImports()
+            formatAnnotations()
+            googleJavaFormat().apply {
+                version = "1.23.0"
+                style("GOOGLE")
+                reflowLongStrings(true)
+            }
+
+            licenseHeader("/* Licensed under Apache-2.0 \$YEAR. */")
+        }
+    }
+
+    publishing {
+        publications.create<MavenPublication>("maven") {
+            from(components["java"])
+        }
+    }
+
+    dependencies {
+        implementation(kotlin("stdlib-jdk8"))
+        api("org.reflections:reflections:0.10.2")
+    }
+
+    tasks.withType<JavaCompile> {
+        options.encoding = "UTF-8"
+    }
+
+    tasks.withType<Javadoc> {
+        options.encoding = "UTF-8"
+    }
+
+    plugins.withType<KotlinPlatformJvmPlugin> {
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            kotlinOptions {
+                jvmTarget = "$javaVersion"
+            }
+        }
     }
 
     kotlin {
-        target("src/main/kotlin/**/*.kt")
-        licenseHeader("/* Licensed under Apache-2.0 \$YEAR. */")
+        jvmToolchain(javaVersion)
     }
 
     java {
-        target("src/main/java/**/*.java")
-
-        importOrder(
-            "java", "javax", "org", "com", "com.diffplug", "", "#com.diffplug", "#"
-        )
-        removeUnusedImports()
-        formatAnnotations()
-        googleJavaFormat().apply {
-            version = "1.23.0"
-            style("GOOGLE")
-            reflowLongStrings(true)
+        sourceCompatibility = JavaVersion.toVersion(javaVersion)
+        targetCompatibility = JavaVersion.toVersion(javaVersion)
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(javaVersion))
         }
-
-        licenseHeader("/* Licensed under Apache-2.0 \$YEAR. */")
-    }
-}
-
-repositories {
-    mavenLocal()
-    maven {
-        url = uri("https://repo.papermc.io/repository/maven-public/")
-    }
-
-    maven {
-        url = uri("https://oss.sonatype.org/content/groups/public/")
-    }
-
-    maven {
-        url = uri("https://repo.extendedclip.com/content/repositories/placeholderapi/")
-    }
-
-    maven {
-        url = uri("https://mvn.lumine.io/repository/maven-public/")
-    }
-
-    maven {
-        url = uri("https://jitpack.io")
-    }
-
-    maven {
-        url = uri("https://www.matteodev.it/spigot/public/maven/")
-    }
-
-    maven {
-        url = uri("https://repo.codemc.io/repository/maven-snapshots/")
-    }
-
-    maven {
-        url = uri("https://repo.dmulloy2.net/repository/public/")
-    }
-
-    maven {
-        url = uri("https://maven.enginehub.org/repo/")
-    }
-
-    maven {
-        url = uri("https://nexus.phoenixdevt.fr/repository/maven-public/")
-    }
-
-    maven {
-        url = uri("https://repo.maven.apache.org/maven2/")
-    }
-}
-
-dependencies {
-    implementation(kotlin("stdlib-jdk8"))
-    api("org.reflections:reflections:0.10.2")
-    api("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
-    api("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
-    api("org.hibernate.orm:hibernate-core:6.4.1.Final")
-    api("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final")
-    api("org.xerial:sqlite-jdbc:3.48.0.0")
-    api("org.spongepowered:configurate-yaml:4.1.2")
-    api("org.spongepowered:configurate-jackson:4.1.2")
-    api("org.spongepowered:configurate-xml:4.1.2")
-    api("net.wesjd:anvilgui:1.10.2-SNAPSHOT")
-    api("io.github.toxicity188:BetterCommand:1.4.3")
-    api("net.objecthunter:exp4j:0.4.8")
-    runtimeOnly("org.glassfish.jaxb:jaxb-runtime:4.0.5")
-    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
-    compileOnly("me.clip:placeholderapi:2.11.5")
-    compileOnly("io.lumine:Mythic-Dist:5.6.1")
-    compileOnly("com.comphenix.protocol:ProtocolLib:5.1.0")
-    compileOnly("io.lumine:MythicLib-dist:1.6.2-SNAPSHOT")
-    compileOnly("net.Indyuce:MMOCore-API:1.12.1-SNAPSHOT")
-    compileOnly("dev.jorel:commandapi-bukkit-core:9.7.0")
-    compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.12")
-    compileOnly("com.github.LoneDev6:api-itemsadder:3.6.1")
-    compileOnly("dev.lone:LoneLibs:1.0.58")
-    compileOnly("net.luckperms:api:5.4")
-    compileOnly("io.github.toxicity188:BetterHud-standard-api:1.12")
-    compileOnly("io.github.toxicity188:BetterHud-bukkit-api:1.12")
-}
-
-val javaVersion = 21
-group = "org.vicky.vicky_utils"
-version = "0.0.1-BETA"
-description = "v-utls"
-
-publishing {
-    publications.create<MavenPublication>("maven") {
-        from(components["java"])
-    }
-}
-
-tasks.withType<JavaCompile> {
-    options.encoding = "UTF-8"
-}
-
-tasks.withType<Javadoc> {
-    options.encoding = "UTF-8"
-}
-
-plugins.withType<KotlinPlatformJvmPlugin> {
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        kotlinOptions {
-            jvmTarget = "$javaVersion"
-        }
-    }
-}
-
-kotlin {
-    jvmToolchain(javaVersion)
-}
-
-java {
-    sourceCompatibility = JavaVersion.toVersion(javaVersion)
-    targetCompatibility = JavaVersion.toVersion(javaVersion)
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(javaVersion))
     }
 }

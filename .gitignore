@@ -112,3 +112,5 @@ buildNumber.properties
 # Common working directory
 run/
 /paper-1_20_4/
+/.gradle/
+/.kotlin/

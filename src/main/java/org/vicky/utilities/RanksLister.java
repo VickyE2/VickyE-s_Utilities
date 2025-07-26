@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024-2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
 import java.util.*;

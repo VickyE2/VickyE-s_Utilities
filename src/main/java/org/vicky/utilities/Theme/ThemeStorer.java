@@ -8,7 +8,7 @@ import org.vicky.utilities.DatabaseManager.apis.ThemeAPI;
 import org.vicky.utilities.DatabaseManager.templates.Theme;
 
 public class ThemeStorer {
-  private ContextLogger logger =
+  private final ContextLogger logger =
       new ContextLogger(ContextLogger.ContextType.FEATURE, "THEMES-STORER");
 
   public ThemeStorer() {}
@@ -33,7 +33,7 @@ public class ThemeStorer {
   public String getThemeID(String themeName) {
     ThemeAPI service = new ThemeAPI();
     if (service.doesExistByName(themeName)) {
-      return service.getThemeByName(themeName).getId().toString();
+      return service.getThemeByName(themeName).getId();
     }
     return null;
   }

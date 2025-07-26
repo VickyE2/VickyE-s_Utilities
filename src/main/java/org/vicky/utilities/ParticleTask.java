@@ -62,40 +62,40 @@ public class ParticleTask extends BukkitRunnable {
   /**
    * Constructs a new ParticleTask.
    *
-   * @param startTime             The start time (in milliseconds) for the particle effect
-   *                              (used to calculate elapsed time and animation angle).
-   * @param arrow                 The Arrow entity around which the particles are spawned.
-   * @param radiusH               The horizontal radius for the head particles.
-   * @param radiusM               The horizontal radius for the middle particles.
-   * @param heightStep            The vertical increment between particle layers.
-   * @param headColor             The color used for head particles (for redstone or dust options).
-   * @param transitionColorStart  The starting color for transition particles.
-   * @param transitionColorEnd    The ending color for transition particles.
-   * @param headCount             The number of head particles to spawn.
-   * @param middleCount           The number of middle particles to spawn.
-   * @param spreadXH              The horizontal spread for head particles along X.
-   * @param spreadYH              The vertical spread for head particles along Y.
-   * @param spreadZH              The horizontal spread for head particles along Z.
-   * @param spreadXM              The horizontal spread for middle particles along X.
-   * @param spreadYM              The vertical spread for middle particles along Y.
-   * @param spreadZM              The horizontal spread for middle particles along Z.
-   * @param speedH                The speed parameter for head particles.
-   * @param speedM                The speed parameter for middle particles.
-   * @param lagBehind             A delay factor for positioning middle particles relative to the arrow.
-   * @param backwardVelocity      A velocity component moving backward from the arrow.
-   * @param sizeH                 The size of head particles.
-   * @param sizeM                 The size of middle particles.
-   * @param particleH             The Particle type used for head particles.
-   * @param particleM             The Particle type used for middle particles.
-   * @param effectTypeH           The effect type for head particles (determines shape, e.g., LINE, HELIX, etc.).
-   * @param effectTypeM           The effect type for middle particles.
-   * @param rFreq                 The frequency modifier for oscillating effects (defaulted to 0.5 if 0).
-   * @param pFreq                 The frequency modifier for pulse effects (defaulted to 0.2 if 0).
-   * @param angleStep             The step size for angle increments (defaulted to 1.0 if 0).
-   * @param spacingMode           The spacing mode for effects that require specific spacing.
-   * @param circleNumber          The number of circles used in certain effect types.
-   * @param yaw                   The initial yaw angle for particle rotation.
-   * @param pitch                 The initial pitch angle for particle rotation.
+   * @param startTime            The start time (in milliseconds) for the particle effect
+   *                             (used to calculate elapsed time and animation angle).
+   * @param arrow                The Arrow entity around which the particles are spawned.
+   * @param radiusH              The horizontal radius for the head particles.
+   * @param radiusM              The horizontal radius for the middle particles.
+   * @param heightStep           The vertical increment between particle layers.
+   * @param headColor            The color used for head particles (for redstone or dust options).
+   * @param transitionColorStart The starting color for transition particles.
+   * @param transitionColorEnd   The ending color for transition particles.
+   * @param headCount            The number of head particles to spawn.
+   * @param middleCount          The number of middle particles to spawn.
+   * @param spreadXH             The horizontal spread for head particles along X.
+   * @param spreadYH             The vertical spread for head particles along Y.
+   * @param spreadZH             The horizontal spread for head particles along Z.
+   * @param spreadXM             The horizontal spread for middle particles along X.
+   * @param spreadYM             The vertical spread for middle particles along Y.
+   * @param spreadZM             The horizontal spread for middle particles along Z.
+   * @param speedH               The speed parameter for head particles.
+   * @param speedM               The speed parameter for middle particles.
+   * @param lagBehind            A delay factor for positioning middle particles relative to the arrow.
+   * @param backwardVelocity     A velocity component moving backward from the arrow.
+   * @param sizeH                The size of head particles.
+   * @param sizeM                The size of middle particles.
+   * @param particleH            The Particle type used for head particles.
+   * @param particleM            The Particle type used for middle particles.
+   * @param effectTypeH          The effect type for head particles (determines shape, e.g., LINE, HELIX, etc.).
+   * @param effectTypeM          The effect type for middle particles.
+   * @param rFreq                The frequency modifier for oscillating effects (defaulted to 0.5 if 0).
+   * @param pFreq                The frequency modifier for pulse effects (defaulted to 0.2 if 0).
+   * @param angleStep            The step size for angle increments (defaulted to 1.0 if 0).
+   * @param spacingMode          The spacing mode for effects that require specific spacing.
+   * @param circleNumber         The number of circles used in certain effect types.
+   * @param yaw                  The initial yaw angle for particle rotation.
+   * @param pitch                The initial pitch angle for particle rotation.
    */
   public ParticleTask(
       long startTime,
@@ -168,7 +168,8 @@ public class ParticleTask extends BukkitRunnable {
   }
 
   // The following quaternion rotation methods have been commented out.
-  // They represent an alternative approach using quaternion rotation, which can be implemented in the future.
+  // They represent an alternative approach using quaternion rotation, which can be implemented in
+  // the future.
   /*
   public void alignParticlesToArrow(Location[] positions, Arrow arrow) {
       Vector direction = arrow.getLocation().getDirection().normalize();
@@ -197,7 +198,7 @@ public class ParticleTask extends BukkitRunnable {
       return new Vector(result.getX(), result.getY(), result.getZ());
   }
 
-  
+
    * Rotates a particle location around the arrow's location based on the arrow's velocity and rotation.
    * <p>
    * This method calculates a new location by first computing a relative position vector between
@@ -266,31 +267,43 @@ public class ParticleTask extends BukkitRunnable {
         headPositions = ParticleTypeEffect.LINE(loc.clone(), radiusH, headCount);
         break;
       case HELIX:
-        headPositions = ParticleTypeEffect.HELIX(loc.clone(), radiusH, heightStep, angle, headCount);
+        headPositions =
+            ParticleTypeEffect.HELIX(loc.clone(), radiusH, heightStep, angle, headCount);
         break;
       case WAVY_LINE:
-        headPositions = ParticleTypeEffect.WAVY_LINE(loc.clone(), radiusH, heightStep, angle, headCount);
+        headPositions =
+            ParticleTypeEffect.WAVY_LINE(loc.clone(), radiusH, heightStep, angle, headCount);
         break;
       case BURST_SPIRAL:
-        headPositions = ParticleTypeEffect.BURST_SPIRAL(loc.clone(), radiusH, heightStep, angle, headCount);
+        headPositions =
+            ParticleTypeEffect.BURST_SPIRAL(loc.clone(), radiusH, heightStep, angle, headCount);
         break;
       case CONVERGING_LINES:
-        headPositions = ParticleTypeEffect.CONVERGING_LINES(loc.clone(), radiusH, heightStep, angle, headCount);
+        headPositions =
+            ParticleTypeEffect.CONVERGING_LINES(loc.clone(), radiusH, heightStep, angle, headCount);
         break;
       case RIPPLES:
-        headPositions = ParticleTypeEffect.RIPPLES(loc.clone(), radiusH, angleStep, angle, headCount, spacingMode, circleNumber);
+        headPositions =
+            ParticleTypeEffect.RIPPLES(
+                loc.clone(), radiusH, angleStep, angle, headCount, spacingMode, circleNumber);
         break;
       case FALLING_LEAVES:
-        headPositions = ParticleTypeEffect.FALLING_LEAVES(loc.clone(), radiusH, heightStep, angle, headCount);
+        headPositions =
+            ParticleTypeEffect.FALLING_LEAVES(loc.clone(), radiusH, heightStep, angle, headCount);
         break;
       case EXPLODING_STARS:
-        headPositions = ParticleTypeEffect.EXPLODING_STARS(loc.clone(), radiusH, heightStep, angle, headCount);
+        headPositions =
+            ParticleTypeEffect.EXPLODING_STARS(loc.clone(), radiusH, heightStep, angle, headCount);
         break;
       case PULSE_WAVES:
-        headPositions = ParticleTypeEffect.PULSE_WAVES(loc.clone(), radiusH, heightStep, angle, headCount, pFreq);
+        headPositions =
+            ParticleTypeEffect.PULSE_WAVES(
+                loc.clone(), radiusH, heightStep, angle, headCount, pFreq);
         break;
       case OSCILLATING_RINGS:
-        headPositions = ParticleTypeEffect.OSCILLATING_RINGS(loc.clone(), radiusH, heightStep, angle, headCount, rFreq);
+        headPositions =
+            ParticleTypeEffect.OSCILLATING_RINGS(
+                loc.clone(), radiusH, heightStep, angle, headCount, rFreq);
         break;
       default:
         throw new IllegalStateException("Unexpected effect type: " + effectTypeH);
@@ -299,34 +312,96 @@ public class ParticleTask extends BukkitRunnable {
     // Determine middle particle positions based on the middle effect type
     switch (effectTypeM) {
       case LINE:
-        middlePositions = ParticleTypeEffect.LINE(loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)), radiusM, middleCount);
+        middlePositions =
+            ParticleTypeEffect.LINE(
+                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                radiusM,
+                middleCount);
         break;
       case HELIX:
-        middlePositions = ParticleTypeEffect.HELIX(loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)), radiusM, heightStep, angle, middleCount);
+        middlePositions =
+            ParticleTypeEffect.HELIX(
+                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                radiusM,
+                heightStep,
+                angle,
+                middleCount);
         break;
       case WAVY_LINE:
-        middlePositions = ParticleTypeEffect.WAVY_LINE(loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)), radiusM, heightStep, angle, middleCount);
+        middlePositions =
+            ParticleTypeEffect.WAVY_LINE(
+                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                radiusM,
+                heightStep,
+                angle,
+                middleCount);
         break;
       case BURST_SPIRAL:
-        middlePositions = ParticleTypeEffect.BURST_SPIRAL(loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)), radiusM, heightStep, angle, middleCount);
+        middlePositions =
+            ParticleTypeEffect.BURST_SPIRAL(
+                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                radiusM,
+                heightStep,
+                angle,
+                middleCount);
         break;
       case CONVERGING_LINES:
-        middlePositions = ParticleTypeEffect.CONVERGING_LINES(loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)), radiusM, heightStep, angle, middleCount);
+        middlePositions =
+            ParticleTypeEffect.CONVERGING_LINES(
+                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                radiusM,
+                heightStep,
+                angle,
+                middleCount);
         break;
       case RIPPLES:
-        middlePositions = ParticleTypeEffect.RIPPLES(loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)), radiusM, angleStep, angle, middleCount, spacingMode, circleNumber);
+        middlePositions =
+            ParticleTypeEffect.RIPPLES(
+                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                radiusM,
+                angleStep,
+                angle,
+                middleCount,
+                spacingMode,
+                circleNumber);
         break;
       case FALLING_LEAVES:
-        middlePositions = ParticleTypeEffect.FALLING_LEAVES(loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)), radiusM, heightStep, angle, middleCount);
+        middlePositions =
+            ParticleTypeEffect.FALLING_LEAVES(
+                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                radiusM,
+                heightStep,
+                angle,
+                middleCount);
         break;
       case EXPLODING_STARS:
-        middlePositions = ParticleTypeEffect.EXPLODING_STARS(loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)), radiusM, heightStep, angle, middleCount);
+        middlePositions =
+            ParticleTypeEffect.EXPLODING_STARS(
+                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                radiusM,
+                heightStep,
+                angle,
+                middleCount);
         break;
       case PULSE_WAVES:
-        middlePositions = ParticleTypeEffect.PULSE_WAVES(loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)), radiusM, heightStep, angle, middleCount, pFreq);
+        middlePositions =
+            ParticleTypeEffect.PULSE_WAVES(
+                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                radiusM,
+                heightStep,
+                angle,
+                middleCount,
+                pFreq);
         break;
       case OSCILLATING_RINGS:
-        middlePositions = ParticleTypeEffect.OSCILLATING_RINGS(loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)), radiusM, heightStep, angle, middleCount, rFreq);
+        middlePositions =
+            ParticleTypeEffect.OSCILLATING_RINGS(
+                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                radiusM,
+                heightStep,
+                angle,
+                middleCount,
+                rFreq);
         break;
       default:
         throw new IllegalStateException("Unexpected effect type: " + effectTypeM);
@@ -337,75 +412,88 @@ public class ParticleTask extends BukkitRunnable {
 
     // Adjust locations for particles for head and middle effects
     Location redstoneLocation = loc.clone();
-    Location dustLocation = loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
+    Location dustLocation =
+        loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
 
     // Spawn head particles based on the particle type
     if (this.particleH == Particle.REDSTONE) {
       for (Location pos : rotheadPositions) {
         Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        redstoneLocation.getWorld().spawnParticle(
-            particleH,
-            rotatedPos,
-            1,
-            spreadXH,
-            spreadYH,
-            spreadZH,
-            speedH,
-            new Particle.DustOptions(headColor, sizeH));
+        redstoneLocation
+            .getWorld()
+            .spawnParticle(
+                particleH,
+                rotatedPos,
+                1,
+                spreadXH,
+                spreadYH,
+                spreadZH,
+                speedH,
+                new Particle.DustOptions(headColor, sizeH));
       }
     } else if (particleH == Particle.DUST_COLOR_TRANSITION) {
       for (Location pos : rotheadPositions) {
         Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        redstoneLocation.getWorld().spawnParticle(
-            particleH,
-            rotatedPos,
-            1,
-            spreadXH,
-            spreadYH,
-            spreadZH,
-            speedH,
-            new Particle.DustTransition(transitionColorStart, transitionColorEnd, sizeH));
+        redstoneLocation
+            .getWorld()
+            .spawnParticle(
+                particleH,
+                rotatedPos,
+                1,
+                spreadXH,
+                spreadYH,
+                spreadZH,
+                speedH,
+                new Particle.DustTransition(transitionColorStart, transitionColorEnd, sizeH));
       }
     } else {
       for (Location pos : rotheadPositions) {
         Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        loc.getWorld().spawnParticle(particleH, rotatedPos, 1, spreadXH, spreadYH, spreadZH, speedH, sizeH);
+        loc.getWorld()
+            .spawnParticle(particleH, rotatedPos, 1, spreadXH, spreadYH, spreadZH, speedH, sizeH);
       }
     }
 
     // Spawn middle particles based on the particle type
     if (particleM == Particle.DUST_COLOR_TRANSITION) {
-      dustLocation = dustLocation.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
+      dustLocation =
+          dustLocation.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
       for (Location pos : rotmidPositions) {
         Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        dustLocation.getWorld().spawnParticle(
-            particleM,
-            rotatedPos,
-            1,
-            spreadXM,
-            spreadYM,
-            spreadZM,
-            speedM,
-            new Particle.DustTransition(transitionColorStart, transitionColorEnd, sizeM));
+        dustLocation
+            .getWorld()
+            .spawnParticle(
+                particleM,
+                rotatedPos,
+                1,
+                spreadXM,
+                spreadYM,
+                spreadZM,
+                speedM,
+                new Particle.DustTransition(transitionColorStart, transitionColorEnd, sizeM));
       }
     } else if (particleM == Particle.REDSTONE) {
       for (Location pos : rotmidPositions) {
         Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        dustLocation.getWorld().spawnParticle(
-            particleM,
-            rotatedPos,
-            1,
-            spreadXM,
-            spreadYM,
-            spreadZM,
-            speedM,
-            new Particle.DustOptions(headColor, sizeM));
+        dustLocation
+            .getWorld()
+            .spawnParticle(
+                particleM,
+                rotatedPos,
+                1,
+                spreadXM,
+                spreadYM,
+                spreadZM,
+                speedM,
+                new Particle.DustOptions(headColor, sizeM));
       }
     } else {
       for (Location pos : rotmidPositions) {
-        Location BParticleLocation = loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
+        Location BParticleLocation =
+            loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
         Location rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        BParticleLocation.getWorld().spawnParticle(particleM, rotatedPos, 1, spreadXM, spreadYM, spreadZM, speedM, sizeM);
+        BParticleLocation.getWorld()
+            .spawnParticle(particleM, rotatedPos, 1, spreadXM, spreadYM, spreadZM, speedM, sizeM);
       }
     }
   }

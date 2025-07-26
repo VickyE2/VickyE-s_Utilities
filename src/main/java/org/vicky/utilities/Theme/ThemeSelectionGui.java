@@ -25,7 +25,7 @@ public class ThemeSelectionGui extends BaseGui {
   /**
    * Constructs a ThemeSelectionGui with a specified plugin and a custom GUI listener.
    *
-   * @param plugin   the JavaPlugin instance for the plugin
+   * @param plugin the JavaPlugin instance for the plugin
    */
   public ThemeSelectionGui(JavaPlugin plugin) {
     super(plugin, themeSelectionListener);

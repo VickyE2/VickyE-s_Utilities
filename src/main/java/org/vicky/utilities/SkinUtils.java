@@ -13,6 +13,7 @@ public class SkinUtils {
 
   /**
    * Retrieves the skin texture URL for a given player UUID.
+   *
    * @param uuid The UUID of the player.
    * @return The URL of the player's skin texture.
    */

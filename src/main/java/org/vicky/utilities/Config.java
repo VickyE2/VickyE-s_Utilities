@@ -7,7 +7,7 @@ import java.util.Map;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.global.Global;
-import org.vicky.guiparent.GuiCreator;
+import org.vicky.utilities.PermittedObjects.AllowedItemStack;
 
 public class Config {
   public static final Map<String, Object> configs = new HashMap<>();
@@ -23,9 +23,9 @@ public class Config {
   }
 
   /**
-   * {@link org.vicky.guiparent.GuiCreator.AllowedItemStack} isn't allowed...
+   * {@link AllowedItemStack} isn't allowed...
    */
-  public <T> void addConfig(@NotNull String key, GuiCreator.ItemConfig.AllowedNBTType<T> value) {
+  public <T> void addConfig(@NotNull String key, PermittedObject<T> value) {
     configs.put(key, value.getValue());
   }
 

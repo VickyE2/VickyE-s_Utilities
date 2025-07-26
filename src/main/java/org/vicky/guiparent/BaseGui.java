@@ -1,8 +1,15 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.guiparent;
 
+import static org.vicky.guiparent.GuiCreator.createItem;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.vicky.listeners.BaseGuiListener;
 
@@ -14,9 +21,19 @@ import org.vicky.listeners.BaseGuiListener;
  * </p>
  */
 public abstract class BaseGui {
+
+  public enum GuiType {
+    PAGED,
+    NORMAL,
+    ANVIL
+  }
+
   protected final JavaPlugin plugin;
+  private GuiType guiType;
   protected final GuiCreator guiManager;
   protected BaseGuiListener listener; // Make the listener flexible
+  private final Map<UUID, Inventory> current = new HashMap<>();
+  private final List<GuiCreator.ItemConfig> registered = new ArrayList<>();
 
   /**
    * Constructs a BaseGui with a specified plugin and a custom GUI listener.
@@ -27,17 +44,32 @@ public abstract class BaseGui {
    *
    * @param plugin   the JavaPlugin instance for the plugin
    * @param listener the custom GUI listener; may be null to use a default listener
+   * @param type the type of gui this class tends to open
    */
-  public BaseGui(JavaPlugin plugin, BaseGuiListener listener) {
+  public BaseGui(JavaPlugin plugin, BaseGuiListener listener, GuiType type) {
     this.plugin = plugin;
     this.listener =
         listener != null
             ? listener
             : new DefaultGuiListener(plugin); // Use provided listener or default one
     this.guiManager = new GuiCreator(plugin, listener);
+    this.guiManager.setOwner(this);
+    guiType = type;
 
     // Register the listener for GUI actions
     plugin.getServer().getPluginManager().registerEvents(this.listener, plugin);
+  }
+
+  public BaseGui(JavaPlugin plugin, BaseGuiListener listener) {
+    this(plugin, listener, GuiType.NORMAL);
+  }
+
+  void addInventory(UUID key, Inventory inv) {
+    this.current.put(key, inv);
+  }
+
+  protected Inventory getInventory(UUID key) {
+    return current.get(key);
   }
 
   /**
@@ -80,5 +112,46 @@ public abstract class BaseGui {
     if (this.listener != null) HandlerList.unregisterAll(this.listener);
     this.listener = listener;
     plugin.getServer().getPluginManager().registerEvents(this.listener, plugin);
+  }
+
+  protected void registerItem(GuiCreator.ItemConfig config) {
+    this.registered.add(config);
+  }
+
+  protected void registerItems(GuiCreator.ItemConfig... config) {
+    this.registered.addAll(Arrays.asList(config));
+  }
+
+  protected void registerItems(List<GuiCreator.ItemConfig> config) {
+    this.registered.addAll(config);
+  }
+
+  protected CompletableFuture<Inventory> buildInventory(Player player) {
+    CompletableFuture<Inventory> futureInventory = new CompletableFuture<>();
+    Inventory inventory = Bukkit.createInventory(new GuiCreator.GUIHolder(), 54, "");
+
+    // Run the inventory population in a separate thread
+    Bukkit.getScheduler()
+        .runTaskAsynchronously(
+            plugin,
+            () -> {
+              for (var itemConfig : registered) {
+                Set<Integer> slotSet = GuiCreator.parseSlots(itemConfig.getSlotRange());
+                for (int slot : slotSet) {
+                  if (slot < 54) {
+                    ItemStack item = createItem(itemConfig, player, plugin);
+                    inventory.setItem(slot, item);
+                  }
+                }
+              }
+              // Complete the future with the populated inventory
+              futureInventory.complete(inventory);
+            });
+
+    return futureInventory; // Return the CompletableFuture
+  }
+
+  public List<GuiCreator.ItemConfig> getRegistered() {
+    return registered;
   }
 }

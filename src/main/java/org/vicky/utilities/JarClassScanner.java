@@ -3,11 +3,7 @@ package org.vicky.utilities;
 
 import java.io.File;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 import org.reflections.util.ConfigurationBuilder;
@@ -26,15 +22,16 @@ public class JarClassScanner {
   // Also, track all class loaders used (for aggregation later)
   private final List<ClassLoader> classLoaders = new ArrayList<>();
 
+  public JarClassScanner() {}
+
   public List<ClassLoader> getClassLoaders() {
     return classLoaders;
   }
 
-  public JarClassScanner() {}
-
   /**
    * Returns classes from a given JAR, scanning the specified package.
    * If the JAR was already scanned, it reuses the existing ChildFirstURLClassLoader.
+   *
    * @param jarFileName The {@link java.util.jar.JarFile contextJar} to scan
    * @param packageName The {@link String packageName} to scan for classes in the {@link java.util.jar.JarFile contextJar}
    * @param parentClass The {@link Class class} required to extend or implement to be reflected
@@ -114,6 +111,7 @@ public class JarClassScanner {
 
   /**
    * Overloaded version if you want to scan based solely on the parent class.
+   *
    * @param jarFileName The {@link java.util.jar.JarFile contextJar} to scan
    * @param parentClass The {@link Class class} required to extend or implement to be reflected
    * @return A {@link List} of Classes that extend or implement the {@link Class ParentClass}

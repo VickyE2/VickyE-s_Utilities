@@ -1,6 +1,9 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.guiparent;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import dev.lone.LoneLibs.nbt.nbtapi.NBT;
 import dev.lone.LoneLibs.nbt.nbtapi.NBTCompound;
 import dev.lone.LoneLibs.nbt.nbtapi.NBTItem;
@@ -25,12 +28,18 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionData;
+import org.bukkit.potion.PotionEffect;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.vicky.guiparent.subGui.PagedGui;
 import org.vicky.listeners.BaseGuiListener;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 import org.vicky.utilities.DatabaseManager.dao_s.DatabasePlayerDAO;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
+import org.vicky.utilities.Denoations.UnstableRecommended;
+import org.vicky.utilities.PermittedObject;
+import org.vicky.utilities.TriFunction;
 
 /**
  * GuiCreator is a utility class responsible for creating and opening both GUI inventories
@@ -46,6 +55,7 @@ public class GuiCreator {
       new ContextLogger(ContextLogger.ContextType.SYSTEM, "GUI");
   private final BaseGuiListener listener;
   private final JavaPlugin plugin;
+  private BaseGui baseGui;
   // Flag indicating if a textured GUI can be created.
   boolean canBeMade = false;
 
@@ -393,29 +403,36 @@ public class GuiCreator {
 
     // Open the inventory and apply texture if available.
     listener.addGuiInventory(inventory);
-    player.openInventory(inventory);
-    if (canBeMade) {
-      FontImageWrapper texture = new FontImageWrapper(textureKey);
-      TexturedInventoryWrapper.setPlayerInventoryTexture(player, texture, title, 0, offset);
-    }
+    Bukkit.getScheduler()
+        .scheduleSyncDelayedTask(
+            plugin,
+            () -> {
+              baseGui.addInventory(player.getUniqueId(), inventory);
+              player.openInventory(inventory);
+              if (canBeMade) {
+                FontImageWrapper texture = new FontImageWrapper(textureKey);
+                TexturedInventoryWrapper.setPlayerInventoryTexture(
+                    player, texture, title, 0, offset);
+              }
+            });
   }
 
   /**
-   * Opens a paginated GUI for the given player.
+   * Opens a paginated GUI for the given player. fluent in this case is false
    *
-   * @param player                   The player who will see the GUI.
-   * @param height                   The number of rows in the GUI.
-   * @param spacing                  The spacing gap for navigation buttons.
-   * @param mainItems                The list of persistent ItemConfig objects (e.g., settings, exit) that are present on every page.
-   * @param pageItems                The list of page-specific ItemConfig objects (the items that change per page).
-   * @param slotRangeStr             A string specifying the allowed slots for page items (e.g., "10-12,19-21,28-30").
-   * @param page                     The current page number.
-   * @param itemsPerPage             The maximum number of page items per page.
-   * @param title                    The title of the GUI.
+   * @param player                    The player who will see the GUI.
+   * @param height                    The number of rows in the GUI.
+   * @param spacing                   The spacing gap for navigation buttons.
+   * @param mainItems                 The list of persistent ItemConfig objects (e.g., settings, exit) that are present on every page.
+   * @param pageItems                 The list of page-specific ItemConfig objects (the items that change per page).
+   * @param slotRangeStr              A string specifying the allowed slots for page items (e.g., "10-12,19-21,28-30").
+   * @param page                      The current page number.
+   * @param itemsPerPage              The maximum number of page items per page.
+   * @param title                     The title of the GUI.
    * @param maintainPersistentButtons Whether persistent main buttons should be shown.
-   * @param textured                 Whether the GUI should be textured.
-   * @param textureKey               The texture key (if textured is true).
-   * @param offset                   The vertical texture offset.
+   * @param textured                  Whether the GUI should be textured.
+   * @param textureKey                The texture key (if textured is true).
+   * @param offset                    The vertical texture offset.
    */
   public void openPaginatedGUI(
       Player player,
@@ -431,6 +448,56 @@ public class GuiCreator {
       boolean textured,
       String textureKey,
       int offset) {
+    openPaginatedGUI(
+        player,
+        height,
+        spacing,
+        mainItems,
+        pageItems,
+        slotRangeStr,
+        page,
+        itemsPerPage,
+        title,
+        maintainPersistentButtons,
+        textured,
+        textureKey,
+        offset,
+        false);
+  }
+
+  /**
+   * Opens a paginated GUI for the given player.
+   *
+   * @param player                    The player who will see the GUI.
+   * @param height                    The number of rows in the GUI.
+   * @param spacing                   The spacing gap for navigation buttons.
+   * @param mainItems                 The list of persistent ItemConfig objects (e.g., settings, exit) that are present on every page.
+   * @param pageItems                 The list of page-specific ItemConfig objects (the items that change per page).
+   * @param slotRangeStr              A string specifying the allowed slots for page items (e.g., "10-12,19-21,28-30").
+   * @param page                      The current page number.
+   * @param itemsPerPage              The maximum number of page items per page.
+   * @param title                     The title of the GUI.
+   * @param maintainPersistentButtons Whether persistent main buttons should be shown.
+   * @param textured                  Whether the GUI should be textured.
+   * @param textureKey                The texture key (if textured is true).
+   * @param offset                    The vertical texture offset.
+   * @param fluent                    Weather or not to reuse the same gui and not reopen the gui for the player. <b>Undergoing serious development and tweaking :O</b>
+   */
+  public void openPaginatedGUI(
+      Player player,
+      int height,
+      ArrowGap spacing,
+      List<GuiCreator.ItemConfig> mainItems,
+      List<GuiCreator.ItemConfig> pageItems,
+      String slotRangeStr,
+      int page,
+      int itemsPerPage,
+      String title,
+      boolean maintainPersistentButtons,
+      boolean textured,
+      String textureKey,
+      int offset,
+      @UnstableRecommended(reason = "Undergoing serious development and tweaking") boolean fluent) {
 
     Optional<DatabasePlayer> opt = new DatabasePlayerDAO().findById(player.getUniqueId());
     if (opt.isEmpty()) {
@@ -439,19 +506,52 @@ public class GuiCreator {
     DatabasePlayer dbPlayer = opt.get();
     String themeId = dbPlayer.getUserTheme();
 
-    // Compute pagination info for pageItems.
-    int totalItems = pageItems.size();
+    List<GuiCreator.ItemConfig> items;
+    int totalItems;
+    int startIndex;
+    int endIndex;
+
+    // same here
+    if (baseGui instanceof PagedGui pagedGui) {
+      items = pagedGui.getItems(); // Fetch fresh items
+      totalItems = items.size();
+    } else {
+      items = pageItems; // fallback / passed-in list
+      totalItems = items.size();
+      int totalPages = (int) Math.ceil((double) totalItems / itemsPerPage);
+      page = Math.max(1, Math.min(page, totalPages));
+    }
+    startIndex = (page - 1) * itemsPerPage;
+    endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+    items = items.subList(startIndex, endIndex); // only slice after computing endIndex
     int totalPages = (int) Math.ceil((double) totalItems / itemsPerPage);
-    page = Math.max(1, Math.min(page, totalPages));
-    int startIndex = (page - 1) * itemsPerPage;
-    int endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+    boolean reuseInventory =
+        fluent
+            && baseGui.getInventory(player.getUniqueId()) != null
+            && player
+                .getOpenInventory()
+                .getTopInventory()
+                .equals(baseGui.getInventory(player.getUniqueId()));
 
     // Create an inventory with a fixed size.
     int slots = 9 * height;
-    Inventory inventory = Bukkit.createInventory(new GUIHolder(), slots, title);
+    Inventory inventory;
+    if (reuseInventory) {
+      inventory = baseGui.getInventory(player.getUniqueId());
+      Set<Integer> slotsToClear = parseSlots(slotRangeStr);
+      listener.removeButtons(
+          inventory, slotsToClear.stream().mapToInt(Integer::intValue).toArray());
+      for (int slot : slotsToClear) {
+        inventory.setItem(slot, null); // Clear old content
+      }
+    } else {
+      inventory = Bukkit.createInventory(new GUIHolder(), slots, title);
+    }
 
     // Place persistent main buttons if enabled.
     if (maintainPersistentButtons) {
+      // plugin.getLogger().info("MPB-B: " + Arrays.toString(inventory.getContents()));
       for (GuiCreator.ItemConfig config : mainItems) {
         for (int x : parseSlots(config.getSlotRange())) {
           if (x >= 0 && x < slots) {
@@ -460,6 +560,7 @@ public class GuiCreator {
           }
         }
       }
+      // plugin.getLogger().info("MPB-A" + Arrays.toString(inventory.getContents()));
     }
 
     // Parse the allowed slot range for page items.
@@ -468,16 +569,17 @@ public class GuiCreator {
     Collections.sort(allowedSlots); // sort ascending
 
     // Populate page items into the allowed slots.
-    int displaySlotIndex = 0;
-    for (int i = startIndex;
-        i < endIndex && displaySlotIndex < allowedSlots.size();
-        i++, displaySlotIndex++) {
-      GuiCreator.ItemConfig config = pageItems.get(i);
+    for (int i = 0; i < items.size() && i < allowedSlots.size(); i++) {
+      GuiCreator.ItemConfig config = items.get(i);
       ItemStack item = createItem(config, player, plugin);
-      int targetSlot = allowedSlots.get(displaySlotIndex);
+      int targetSlot = allowedSlots.get(i);
+
       if (targetSlot < slots) {
         inventory.setItem(targetSlot, item);
-        if (config.getButtonAction() != null) listener.registerButton(inventory, config);
+        config.setSlotRange(Integer.toString(targetSlot + 1));
+        if (config.getButtonAction() != null) {
+          listener.registerButton(inventory, config);
+        }
       }
     }
 
@@ -501,7 +603,7 @@ public class GuiCreator {
               ButtonAction.ofRunCode(
                   p ->
                       openPaginatedGUI(
-                          player,
+                          p,
                           height,
                           spacing,
                           mainItems,
@@ -513,14 +615,16 @@ public class GuiCreator {
                           maintainPersistentButtons,
                           textured,
                           textureKey,
-                          offset),
+                          offset,
+                          fluent),
                   true));
       inventory.setItem(prevSlot, createItem(prevConfig, player, plugin));
+      listener.registerButton(inventory, prevConfig);
     } else {
       GuiCreator.ItemConfig prevConfig =
           new GuiCreator.ItemConfig(
               Material.ARROW,
-              "ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ (0)",
+              "ɴᴏ ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ",
               Integer.toString(prevSlot + 1),
               true,
               null,
@@ -529,7 +633,6 @@ public class GuiCreator {
               null);
       inventory.setItem(prevSlot, createItem(prevConfig, player, plugin));
     }
-
     // Create next page button.
     if (page < totalPages) {
       int finalPage = page;
@@ -545,7 +648,7 @@ public class GuiCreator {
               ButtonAction.ofRunCode(
                   p ->
                       openPaginatedGUI(
-                          player,
+                          p,
                           height,
                           spacing,
                           mainItems,
@@ -557,9 +660,11 @@ public class GuiCreator {
                           maintainPersistentButtons,
                           textured,
                           textureKey,
-                          offset),
+                          offset,
+                          fluent),
                   true));
       inventory.setItem(nextSlot, createItem(nextConfig, player, plugin));
+      listener.registerButton(inventory, nextConfig);
     } else {
       GuiCreator.ItemConfig nextConfig =
           new GuiCreator.ItemConfig(
@@ -574,20 +679,262 @@ public class GuiCreator {
       inventory.setItem(nextSlot, createItem(nextConfig, player, plugin));
     }
 
-    // Set the inventory in the listener and open it.
-    listener.addGuiInventory(inventory);
-    player.openInventory(inventory);
+    Bukkit.getScheduler()
+        .scheduleSyncDelayedTask(
+            plugin,
+            () -> {
+              if (!reuseInventory
+                  || !player.getOpenInventory().getTopInventory().equals(inventory)) {
+                player.openInventory(inventory);
+                baseGui.addInventory(player.getUniqueId(), inventory);
+                listener.addGuiInventory(inventory);
+              }
 
-    // Apply texture if enabled.
-    if (textured && textureKey != null && !textureKey.isEmpty()) {
-      FontImageWrapper texture = new FontImageWrapper(textureKey);
-      if (texture.exists()) {
-        TexturedInventoryWrapper.setPlayerInventoryTexture(player, texture, title, 0, offset);
-      } else {
-        logger.printBukkit(
-            "Gui Texture: " + textureKey + " does not exist", ContextLogger.LogType.WARNING);
+              if (textured && textureKey != null && !textureKey.isEmpty()) {
+                FontImageWrapper texture = new FontImageWrapper(textureKey);
+                if (texture.exists()) {
+                  TexturedInventoryWrapper.setPlayerInventoryTexture(
+                      player, texture, title, 0, offset);
+                } else {
+                  logger.printBukkit(
+                      "Gui Texture: " + textureKey + " does not exist",
+                      ContextLogger.LogType.WARNING);
+                }
+              }
+            });
+  }
+
+  static boolean compareInventories(Inventory inv1, Inventory inv2) {
+    if (inv1.getSize() != inv2.getSize()) {
+      return false;
+    }
+    for (int i = 0; i <= inv1.getSize(); i++) {
+      if (!Objects.requireNonNull(inv1.getItem(i)).isSimilar(inv2.getItem(i))) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Opens a paginated GUI where each page displays a number of ItemConfigClasses.
+   * Each ItemConfigClass contains a mapping of elements (either an ItemConfig or an ItemConfigGroup)
+   * to specific slot positions within the page.
+   * <p>
+   * If the number of ItemConfigClasses exceeds itemsPerPage, subsequent pages are created.
+   * If any element in an ItemConfigClass would be placed outside the inventory bounds,
+   * a GuiSpaceExceededException is thrown.
+   * </p>
+   *
+   * @param player                    the player who will see the GUI.
+   * @param height                    the number of rows in the GUI.
+   * @param spacing                   the spacing gap for navigation buttons.
+   * @param mainItems                 the list of persistent ItemConfig objects (present on every page).
+   * @param classes                   the list of ItemConfigClass objects (each representing a page element group).
+   * @param itemsPerPage              the maximum number of ItemConfigClasses to show per page.
+   * @param title                     the title of the GUI.
+   * @param maintainPersistentButtons whether persistent main buttons are to be shown.
+   * @param textured                  whether the GUI should be textured.
+   * @param textureKey                the texture key if textured.
+   * @param offset                    the vertical texture offset.
+   */
+  public void openPaginatedGUI(
+      Player player,
+      int height,
+      int page,
+      ArrowGap spacing,
+      List<ItemConfig> mainItems,
+      List<ItemConfigClass> classes,
+      int itemsPerPage,
+      String title,
+      boolean maintainPersistentButtons,
+      boolean textured,
+      String textureKey,
+      int offset) {
+
+    Optional<DatabasePlayer> opt = new DatabasePlayerDAO().findById(player.getUniqueId());
+    if (opt.isEmpty()) {
+      throw new RuntimeException("Player that made request cannot be found on the database");
+    }
+    DatabasePlayer dbPlayer = opt.get();
+    String themeId = dbPlayer.getUserTheme();
+
+    // Compute total pages based on the number of ItemConfigClasses and itemsPerPage.
+    int totalClasses = classes.size();
+    int totalPages = (int) Math.ceil((double) totalClasses / itemsPerPage);
+
+    // Partition the classes for the current page.
+    int startIdx = (page - 1) * itemsPerPage;
+    int endIdx = Math.min(startIdx + itemsPerPage, totalClasses);
+    List<ItemConfigClass> pageClasses =
+        !classes.isEmpty() ? classes.subList(startIdx, endIdx) : new ArrayList<>();
+
+    // Create an inventory.
+    int slots = 9 * height;
+    Inventory inventory = Bukkit.createInventory(new GUIHolder(), slots, title);
+
+    // Place persistent main buttons.
+    if (maintainPersistentButtons) {
+      for (ItemConfig config : mainItems) {
+        for (int slot : parseSlots(config.getSlotRange())) {
+          if (slot >= 0 && slot < slots) {
+            inventory.setItem(slot, createItem(config, player, plugin));
+            if (config.buttonAction != null) listener.registerButton(inventory, config);
+          }
+        }
       }
     }
+
+    // Iterate over each ItemConfigClass along with its vertical index.
+    for (int classIndex = 0; classIndex < pageClasses.size(); classIndex++) {
+      ItemConfigClass icc = pageClasses.get(classIndex);
+      // For each element in this class, arrange it in the inventory
+      int finalClassIndex = classIndex;
+      icc.getElements()
+          .forEach(
+              (baseSlot, element) -> {
+                // Calculate the starting slot by adding a vertical offset based on the class index.
+                int initialSlot = baseSlot + finalClassIndex * 9;
+                // Find the next available slot (to the right) from the initial slot.
+                int targetSlot = findNextAvailableSlot(inventory, initialSlot, slots);
+                if (targetSlot < 0 || targetSlot >= slots) {
+                  throw new GuiSpaceExceededException(
+                      "No available slot starting at " + initialSlot + " for element " + element);
+                }
+                // Now, place the element.
+                if (element instanceof ItemConfig config) {
+                  inventory.setItem(targetSlot, createItem(config, player, plugin));
+                  if (config.getButtonAction() != null) {
+                    listener.registerButton(inventory, config);
+                  }
+                } else if (element instanceof ItemConfigGroup group) {
+                  List<ItemConfig> groupItems = group.items();
+                  if (group.orientation() == ItemConfigGroup.Orientation.HORIZONTAL) {
+                    // For horizontal groups, place each item to the right of the starting slot.
+                    for (int i = 0; i < groupItems.size(); i++) {
+                      int baseGroupSlot = targetSlot + i;
+                      int finalSlot = findNextAvailableSlot(inventory, baseGroupSlot, slots);
+                      if (finalSlot < 0 || finalSlot >= slots) {
+                        throw new GuiSpaceExceededException(
+                            "Group horizontal item exceeds inventory size at slot "
+                                + baseGroupSlot);
+                      }
+                      inventory.setItem(finalSlot, createItem(groupItems.get(i), player, plugin));
+                      if (groupItems.get(i).getButtonAction() != null) {
+                        listener.registerButton(inventory, groupItems.get(i));
+                      }
+                    }
+                  } else {
+                    // VERTICAL
+                    // For vertical groups, each subsequent item is placed 9 slots below.
+                    for (int i = 0; i < groupItems.size(); i++) {
+                      int baseGroupSlot = targetSlot + i * 9;
+                      int finalSlot = findNextAvailableSlot(inventory, baseGroupSlot, slots);
+                      if (finalSlot < 0 || finalSlot >= slots) {
+                        throw new GuiSpaceExceededException(
+                            "Group vertical item exceeds inventory size at slot " + baseGroupSlot);
+                      }
+                      inventory.setItem(finalSlot, createItem(groupItems.get(i), player, plugin));
+                      if (groupItems.get(i).getButtonAction() != null) {
+                        listener.registerButton(inventory, groupItems.get(i));
+                      }
+                    }
+                  }
+                }
+              });
+    }
+
+    // Determine navigation button slots.
+    int centerSlot = ((height - 1) * 9) + 4;
+    int prevSlot = Math.max(0, centerSlot - spacing.gap);
+    int nextSlot = Math.min(slots - 1, centerSlot + spacing.gap);
+
+    // Create previous page button.
+    // Create previous page button.
+    if (page > 1) {
+      GuiCreator.ItemConfig prevConfig =
+          new GuiCreator.ItemConfig(
+              Material.ARROW,
+              "ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ (" + (page - 1) + ")",
+              Integer.toString(prevSlot + 1),
+              true,
+              null,
+              "vicky_themes:left_arrow_" + themeId,
+              List.of(ChatColor.GREEN + "ᴄʟɪᴄᴋ ᴛᴏ ɢᴏ ᴛᴏ ᴘʀᴇᴠɪᴏᴜs ᴘᴀɢᴇ"),
+              ButtonAction.ofRunCode(
+                  p ->
+                      openPaginatedGUI(
+                          p,
+                          height,
+                          page + 1,
+                          spacing,
+                          mainItems,
+                          classes,
+                          itemsPerPage,
+                          title,
+                          maintainPersistentButtons,
+                          textured,
+                          textureKey,
+                          offset),
+                  true));
+      inventory.setItem(prevSlot, createItem(prevConfig, player, plugin));
+      listener.registerButton(inventory, prevConfig);
+    } else {
+      // No previous page: fill with air.
+      inventory.setItem(prevSlot, createItem(GuiCreator.ItemConfig.ofAir(), player, plugin));
+    }
+
+    // Create next page button.
+    if (page < totalPages) {
+      GuiCreator.ItemConfig nextConfig =
+          new GuiCreator.ItemConfig(
+              Material.ARROW,
+              "ɴᴇxᴛ ᴘᴀɢᴇ (" + (page + 1) + ")",
+              Integer.toString(nextSlot + 1),
+              true,
+              null,
+              "vicky_themes:right_arrow_" + themeId,
+              List.of(ChatColor.GREEN + "ᴄʟɪᴄᴋ ᴛᴏ ɢᴏ ᴛᴏ ɴᴇxᴛ ᴘᴀɢᴇ"),
+              ButtonAction.ofRunCode(
+                  p ->
+                      openPaginatedGUI(
+                          p,
+                          height,
+                          page - 1,
+                          spacing,
+                          mainItems,
+                          classes,
+                          itemsPerPage,
+                          title,
+                          maintainPersistentButtons,
+                          textured,
+                          textureKey,
+                          offset),
+                  true));
+      inventory.setItem(nextSlot, createItem(nextConfig, player, plugin));
+      listener.registerButton(inventory, nextConfig);
+    } else {
+      inventory.setItem(nextSlot, createItem(GuiCreator.ItemConfig.ofAir(), player, plugin));
+    }
+
+    // Set the inventory in the listener and open it.
+    listener.addGuiInventory(inventory);
+    Bukkit.getScheduler()
+        .scheduleSyncDelayedTask(
+            plugin,
+            () -> {
+              baseGui.addInventory(player.getUniqueId(), inventory);
+              player.openInventory(inventory);
+              if (textured && textureKey != null && !textureKey.isEmpty()) {
+                FontImageWrapper texture = new FontImageWrapper(textureKey);
+                if (texture.exists()) {
+                  TexturedInventoryWrapper.setPlayerInventoryTexture(
+                      player, texture, title, 0, offset);
+                } else {
+                  logger.printBukkit(
+                      "Gui Texture: " + textureKey + " does not exist",
+                      ContextLogger.LogType.WARNING);
+                }
+              }
+            });
   }
 
   /**
@@ -637,6 +984,7 @@ public class GuiCreator {
             .plugin(plugin)
             .text(initialText)
             .title(title)
+            .disableGeyserCompat()
             .preventClose()
             .onClick((slot, stateSnapshot) -> completionAction.apply(player, stateSnapshot, slot))
             .onClose(onCLose);
@@ -657,16 +1005,49 @@ public class GuiCreator {
       builder.itemOutput(outputItem);
     }
 
-    builder.open(player);
-    if (textured && textureKey != null && !textureKey.isEmpty()) {
-      FontImageWrapper texture = new FontImageWrapper(textureKey);
-      if (texture.exists()) {
-        TexturedInventoryWrapper.setPlayerInventoryTexture(player, texture, title, 0, offset);
-      } else {
-        logger.printBukkit(
-            "Gui Texture: " + textureKey + " does not exist", ContextLogger.LogType.WARNING);
-      }
+    Bukkit.getScheduler()
+        .scheduleSyncDelayedTask(
+            plugin,
+            () -> {
+              builder.open(player);
+              if (textured && textureKey != null && !textureKey.isEmpty()) {
+                Bukkit.getScheduler()
+                    .runTaskLater(
+                        plugin,
+                        () -> {
+                          FontImageWrapper texture = new FontImageWrapper(textureKey);
+                          if (texture.exists()) {
+                            TexturedInventoryWrapper.setPlayerInventoryTexture(
+                                player, texture, title, 0, offset);
+                          } else {
+                            logger.printBukkit(
+                                "Gui Texture: " + textureKey + " does not exist",
+                                ContextLogger.LogType.WARNING);
+                          }
+                        },
+                        1L);
+              }
+            });
+  }
+
+  /**
+   * Finds the next available (null) slot in the inventory starting from a given index.
+   *
+   * @param inventory the inventory to check
+   * @param startSlot the slot index to start checking from
+   * @param maxSlots  the maximum number of slots (inventory size)
+   * @return the first available slot index, or -1 if none found
+   */
+  private int findNextAvailableSlot(Inventory inventory, int startSlot, int maxSlots) {
+    int slot = startSlot;
+    while (slot < maxSlots && inventory.getItem(slot) != null) {
+      slot++;
     }
+    return slot < maxSlots ? slot : -1;
+  }
+
+  public void setOwner(BaseGui baseGui) {
+    this.baseGui = baseGui;
   }
 
   public enum ArrowGap {
@@ -678,27 +1059,6 @@ public class GuiCreator {
 
     ArrowGap(int gap) {
       this.gap = gap;
-    }
-  }
-
-  /**
-   * GUIHolder is a simple InventoryHolder implementation used for creating GUI inventories.
-   * <p>
-   * In this implementation, getInventory() returns null as it is not used.
-   * </p>
-   */
-  private static class GUIHolder implements InventoryHolder {
-    /**
-     * Returns the inventory associated with this holder.
-     * <p>
-     * Not implemented for this holder; returns null.
-     * </p>
-     *
-     * @return null
-     */
-    @Override
-    public Inventory getInventory() {
-      return null; // Not implemented
     }
   }
 
@@ -729,6 +1089,27 @@ public class GuiCreator {
   }
 
   /**
+   * GUIHolder is a simple InventoryHolder implementation used for creating GUI inventories.
+   * <p>
+   * In this implementation, getInventory() returns null as it is not used.
+   * </p>
+   */
+  public static class GUIHolder implements InventoryHolder {
+    /**
+     * Returns the inventory associated with this holder.
+     * <p>
+     * Not implemented for this holder; returns null.
+     * </p>
+     *
+     * @return null
+     */
+    @Override
+    public Inventory getInventory() {
+      return null; // Not implemented
+    }
+  }
+
+  /**
    * ItemConfig encapsulates configuration details for an item in a GUI, including material, name, slot range,
    * custom model data, lore, and an optional ItemsAdder item name or head owner.
    * <p>
@@ -743,6 +1124,9 @@ public class GuiCreator {
     private final OfflinePlayer headOwner; // Head owner for player head items (optional)
     private final Map<String, Object> nbtData; // Custom NBT data
     private final ButtonAction buttonAction; // Custom NBT data
+    private final PotionData basePotionData;
+    private final List<PotionEffect> customPotionEffects;
+    private final Color potionColor;
     @Nullable private final Rarity rarity; // Custom NBT data
     private String name;
     private String slotRange; // e.g., "1-10" or "1,8"
@@ -782,6 +1166,9 @@ public class GuiCreator {
       this.headOwner = null; // Default for non-head items
       this.nbtData = nbtData != null ? nbtData : new HashMap<>();
       this.buttonAction = buttonAction;
+      this.basePotionData = null;
+      this.potionColor = null;
+      this.customPotionEffects = null;
     }
 
     /**
@@ -819,6 +1206,9 @@ public class GuiCreator {
       this.headOwner = null; // Default for non-head items
       this.nbtData = nbtData != null ? nbtData : new HashMap<>();
       this.buttonAction = buttonAction;
+      this.basePotionData = null;
+      this.potionColor = null;
+      this.customPotionEffects = null;
     }
 
     /**
@@ -852,6 +1242,9 @@ public class GuiCreator {
       this.headOwner = null; // Default for non-head items
       this.nbtData = new HashMap<>();
       this.buttonAction = buttonAction;
+      this.basePotionData = null;
+      this.potionColor = null;
+      this.customPotionEffects = null;
     }
 
     /**
@@ -889,6 +1282,9 @@ public class GuiCreator {
       this.headOwner = headOwner;
       this.nbtData = nbtData != null ? nbtData : new HashMap<>();
       this.buttonAction = buttonAction;
+      this.basePotionData = null;
+      this.potionColor = null;
+      this.customPotionEffects = null;
     }
 
     /**
@@ -924,6 +1320,93 @@ public class GuiCreator {
       this.headOwner = headOwner;
       this.nbtData = new HashMap<>();
       this.buttonAction = buttonAction;
+      this.basePotionData = null;
+      this.potionColor = null;
+      this.customPotionEffects = null;
+    }
+
+    public ItemConfig(
+        @Nullable Material material,
+        @NotNull String name,
+        @Nullable String slotRange,
+        boolean clickable,
+        @Nullable Integer customModelData,
+        @Nullable String itemsAdderName,
+        @NotNull List<String> lore,
+        @NotNull OfflinePlayer headOwner,
+        @Nullable ButtonAction buttonAction,
+        @Nullable PotionData potionData,
+        @Nullable List<PotionEffect> potionEffects,
+        @Nullable Color potionColor,
+        @Nullable Rarity rarity) {
+      this.material = material;
+      this.name = name;
+      this.rarity = rarity;
+      this.slotRange = slotRange;
+      this.clickable = clickable;
+      this.customModelData = customModelData;
+      this.itemsAdderName = itemsAdderName;
+      this.lore = lore;
+      this.headOwner = headOwner;
+      this.nbtData = new HashMap<>();
+      this.buttonAction = buttonAction;
+      this.basePotionData = potionData;
+      this.potionColor = potionColor;
+      this.customPotionEffects = potionEffects;
+    }
+
+    /**
+     * Returns an ItemConfig representing an "air" item.
+     * This can be used to fill a slot with nothing (i.e. a blank placeholder).
+     *
+     * @return an ItemConfig that creates an ItemStack of Material.AIR.
+     */
+    public static ItemConfig ofAir() {
+      return new ItemConfig(
+          Material.AIR, // Material is AIR
+          "", // Empty display name
+          "", // No slot range
+          false, // Not clickable
+          null, // No custom model data
+          null, // No ItemsAdder name
+          new ArrayList<>(), // Empty lore
+          null // No button action (and no head owner, since it's not a head)
+          );
+    }
+
+    public static ItemConfig fromJson(JsonObject json, JavaPlugin plugin) {
+      Material material = Material.getMaterial(json.get("material").getAsString());
+      String name = json.get("name").getAsString();
+      String slotRange = json.get("slot").getAsString();
+      Integer customModelData = null;
+      if (json.has("customModelData")) customModelData = json.get("customModelData").getAsInt();
+      String itemsAdderName = null;
+      if (json.has("itemsAdderName")) itemsAdderName = json.get("itemsAdderName").getAsString();
+      ButtonAction buttonAction = null;
+      if (json.has("buttonAction")) {
+        JsonObject actionObj = json.getAsJsonObject("buttonAction");
+        buttonAction = ButtonAction.fromJson(actionObj, plugin);
+      }
+      List<String> lore = new ArrayList<>();
+
+      if (json.has("lore")) {
+        JsonArray loreArray = json.getAsJsonArray("lore");
+        for (JsonElement line : loreArray) {
+          lore.add(line.getAsString());
+        }
+      }
+
+      return new ItemConfig(
+          material,
+          name,
+          slotRange,
+          buttonAction != null,
+          customModelData,
+          itemsAdderName,
+          lore,
+          null,
+          null,
+          buttonAction);
     }
 
     /**
@@ -949,7 +1432,7 @@ public class GuiCreator {
      * @param <T> The type of the value (restricted to UUID, Integer, Enum, Double, String, Float or ItemStack).
      * @return The modified ItemStack with the added NBT data.
      */
-    public <T> ItemConfig addNbtData(String key, AllowedNBTType<T> valueWrapper) {
+    public <T> ItemConfig addNbtData(String key, PermittedObject<T> valueWrapper) {
       T value = valueWrapper.getValue();
 
       switch (value) {
@@ -986,13 +1469,13 @@ public class GuiCreator {
       return name;
     }
 
+    public void setName(String name) {
+      this.name = name;
+    }
+
     @Nullable
     public Rarity getRarity() {
       return rarity;
-    }
-
-    public void setName(String name) {
-      this.name = name;
     }
 
     public ButtonAction getButtonAction() {
@@ -1068,13 +1551,6 @@ public class GuiCreator {
      */
     public OfflinePlayer getHeadOwner() {
       return headOwner;
-    }
-
-    /**
-     * Marker interface to enforce allowed types at compile-time.
-     */
-    public interface AllowedNBTType<T> {
-      T getValue();
     }
   }
 
@@ -1275,84 +1751,232 @@ public class GuiCreator {
     }
   }
 
-  public record AllowedUUID(UUID value) implements GuiCreator.ItemConfig.AllowedNBTType<UUID> {
-    @Override
-    public UUID getValue() {
-      return value;
-    }
-  }
+  /**
+   * ItemConfigGroup encapsulates a group of {@link ItemConfig} objects that are arranged together
+   * in either a vertical or horizontal layout. All items in the group share the same button action.
+   *
+   * @param commonAction If non-null, this action is applied to every item in the group.
+   */
+  public record ItemConfigGroup(
+      GuiCreator.ItemConfigGroup.Orientation orientation,
+      List<ItemConfig> items,
+      ButtonAction<?> commonAction) {
 
-  public record AllowedInteger(Integer value)
-      implements GuiCreator.ItemConfig.AllowedNBTType<Integer> {
-    @Override
-    public Integer getValue() {
-      return value;
+    /**
+     * Constructs an ItemConfigGroup.
+     *
+     * @param orientation  the orientation (VERTICAL or HORIZONTAL) of the group.
+     * @param items        the list of ItemConfigs in this group.
+     * @param commonAction the common ButtonAction to assign to all items (may be null).
+     */
+    public ItemConfigGroup(
+        Orientation orientation, List<ItemConfig> items, ButtonAction<?> commonAction) {
+      this.orientation = Objects.requireNonNull(orientation, "Orientation cannot be null");
+      this.items = Objects.requireNonNull(items, "Items list cannot be null");
+      this.commonAction = commonAction;
     }
-  }
 
-  public record AllowedEnum<E extends Enum<E>>(E value)
-      implements GuiCreator.ItemConfig.AllowedNBTType<Enum<E>> {
+    /**
+     * Returns the orientation of the group.
+     *
+     * @return the orientation.
+     */
     @Override
-    public Enum<E> getValue() {
-      return value;
+    public Orientation orientation() {
+      return orientation;
     }
-  }
 
-  public record AllowedDouble(Double value)
-      implements GuiCreator.ItemConfig.AllowedNBTType<Double> {
+    /**
+     * Returns the list of ItemConfigs in this group.
+     *
+     * @return the list of items.
+     */
     @Override
-    public Double getValue() {
-      return value;
+    public List<ItemConfig> items() {
+      return items;
     }
-  }
 
-  public record AllowedString(String value)
-      implements GuiCreator.ItemConfig.AllowedNBTType<String> {
+    /**
+     * Returns the common ButtonAction for this group.
+     *
+     * @return the common ButtonAction, or null if none.
+     */
     @Override
-    public String getValue() {
-      return value;
+    public ButtonAction<?> commonAction() {
+      return commonAction;
     }
-  }
 
-  public record AllowedItemStack(ItemStack value)
-      implements GuiCreator.ItemConfig.AllowedNBTType<ItemStack> {
-    @Override
-    public ItemStack getValue() {
-      return value;
-    }
-  }
-
-  public record AllowedFloat(Float value) implements GuiCreator.ItemConfig.AllowedNBTType<Float> {
-    @Override
-    public Float getValue() {
-      return value;
-    }
-  }
-
-  public record AllowedBoolean(Boolean bool) implements ItemConfig.AllowedNBTType<Boolean> {
-    @Override
-    public Boolean getValue() {
-      return bool;
-    }
-  }
-
-  public record AllowedList<T>(List<T> list) implements ItemConfig.AllowedNBTType<List<T>> {
-    @Override
-    public List<T> getValue() {
-      return list;
+    /**
+     * Represents the orientation of the group.
+     */
+    public enum Orientation {
+      VERTICAL,
+      HORIZONTAL
     }
   }
 
   /**
-   * A functional interface for a lambda that accepts three arguments.
-   *
-   * @param <A> Type of the first argument.
-   * @param <B> Type of the second argument.
-   * @param <C> Type of the third argument.
-   * @param <R> Return type.
+   * ItemConfigClass represents a collection of item groups (and optionally individual ItemConfigs)
+   * that are intended to be displayed on a single GUI page.
+   * The {@code orderIndex} determines the order in which these classes appear (lower numbers first).
    */
-  @FunctionalInterface
-  public interface TriFunction<A, B, C, R> {
-    R apply(A a, B b, C c);
+  public record ItemConfigClass(int orderIndex, Map<Integer, Object> elements) {
+    /**
+     * Constructs an ItemConfigClass.
+     *
+     * @param orderIndex the order index (lower numbers appear first).
+     * @param elements   the Configurable Elements to be in the class
+     */
+    public ItemConfigClass(int orderIndex, Map<Integer, Object> elements) {
+      // Validate that all values are of the allowed types.
+      elements
+          .values()
+          .forEach(
+              e -> {
+                if (!(e instanceof GuiCreator.ItemConfig || e instanceof ItemConfigGroup)) {
+                  throw new IllegalArgumentException(
+                      "Element must be either an ItemConfig or an ItemConfigGroup");
+                }
+              });
+      this.elements =
+          new TreeMap<>(Objects.requireNonNull(elements, "Elements map cannot be null"));
+      this.orderIndex = orderIndex;
+    }
+
+    /**
+     * Returns the order index.
+     *
+     * @return the order index.
+     */
+    @Override
+    public int orderIndex() {
+      return orderIndex;
+    }
+
+    /**
+     * Returns the map of elements.
+     *
+     * @return a sorted map of slot position to element.
+     */
+    public Map<Integer, Object> getElements() {
+      return elements;
+    }
+  }
+
+  public static class ItemConfigBuilder {
+    private Material material = Material.STONE;
+    private String name = "";
+    private Rarity rarity = null;
+    private String slotRange = null;
+    private boolean clickable = false;
+    private Integer customModelData = null;
+    private String itemsAdderName = null;
+    private List<String> lore = new ArrayList<>();
+    private OfflinePlayer headOwner = null;
+    private Map<String, Object> nbtData = new HashMap<>();
+    private ButtonAction buttonAction = null;
+    private boolean hasEnchantmentEffect = false;
+
+    // Potion stuff
+    private PotionData basePotionData = null;
+    private List<PotionEffect> customPotionEffects = new ArrayList<>();
+    private Color potionColor = null;
+
+    public ItemConfigBuilder setMaterial(Material material) {
+      this.material = material;
+      return this;
+    }
+
+    public ItemConfigBuilder setName(String name) {
+      this.name = name;
+      return this;
+    }
+
+    public ItemConfigBuilder setRarity(Rarity rarity) {
+      this.rarity = rarity;
+      return this;
+    }
+
+    public ItemConfigBuilder setSlotRange(String slotRange) {
+      this.slotRange = slotRange;
+      return this;
+    }
+
+    public ItemConfigBuilder setClickable(boolean clickable) {
+      this.clickable = clickable;
+      return this;
+    }
+
+    public ItemConfigBuilder setCustomModelData(Integer customModelData) {
+      this.customModelData = customModelData;
+      return this;
+    }
+
+    public ItemConfigBuilder setItemsAdderName(String itemsAdderName) {
+      this.itemsAdderName = itemsAdderName;
+      return this;
+    }
+
+    public ItemConfigBuilder setLore(List<String> lore) {
+      this.lore = lore;
+      return this;
+    }
+
+    public ItemConfigBuilder setHeadOwner(OfflinePlayer headOwner) {
+      this.headOwner = headOwner;
+      return this;
+    }
+
+    public ItemConfigBuilder setNbtData(Map<String, Object> nbtData) {
+      this.nbtData = nbtData;
+      return this;
+    }
+
+    public ItemConfigBuilder addNbtData(String key, Object value) {
+      this.nbtData.put(key, value);
+      return this;
+    }
+
+    public ItemConfigBuilder setButtonAction(ButtonAction buttonAction) {
+      this.buttonAction = buttonAction;
+      return this;
+    }
+
+    public ItemConfigBuilder setEnchanted(boolean enchanted) {
+      this.hasEnchantmentEffect = enchanted;
+      return this;
+    }
+
+    public ItemConfigBuilder setBasePotionData(PotionData potionData) {
+      this.basePotionData = potionData;
+      return this;
+    }
+
+    public ItemConfigBuilder addCustomPotionEffect(PotionEffect effect) {
+      this.customPotionEffects.add(effect);
+      return this;
+    }
+
+    public ItemConfigBuilder setPotionColor(Color color) {
+      this.potionColor = color;
+      return this;
+    }
+
+    public ItemConfig build() {
+      return new ItemConfig(
+          material,
+          name,
+          slotRange,
+          clickable,
+          customModelData,
+          itemsAdderName,
+          lore,
+          headOwner,
+          buttonAction,
+          basePotionData,
+          customPotionEffects,
+          potionColor,
+          rarity);
+    }
   }
 }

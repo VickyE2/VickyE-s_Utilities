@@ -6,7 +6,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.nio.file.*;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -20,9 +21,9 @@ import org.spongepowered.configurate.xml.XmlConfigurationLoader;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class XmlConfigManager {
+  private final JavaPlugin plugin;
   public XmlConfigurationLoader loader;
   public AttributedConfigurationNode rootNode;
-  private final JavaPlugin plugin;
   public ContextLogger logger = new ContextLogger(ContextLogger.ContextType.SYSTEM, "CONFIG-XML");
   public ConfigurationOptions options;
 
@@ -68,6 +69,37 @@ public class XmlConfigManager {
     } else {
       loadConfigValues();
     }
+    new Thread(
+            () -> {
+              try {
+                WatchService watcher = FileSystems.getDefault().newWatchService();
+                Path configDir = plugin.getDataFolder().toPath();
+                configDir.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
+
+                while (true) {
+                  WatchKey key = watcher.take();
+                  for (WatchEvent<?> event : key.pollEvents()) {
+                    if (event.context().toString().equalsIgnoreCase(path)) {
+                      plugin
+                          .getServer()
+                          .getScheduler()
+                          .runTask(
+                              plugin,
+                              () -> {
+                                reloadAndUpdateStatics();
+                                logger.printBukkit(
+                                    "Config auto-reloaded due to file change.",
+                                    ContextLogger.LogType.BASIC);
+                              });
+                    }
+                  }
+                  key.reset();
+                }
+              } catch (IOException | InterruptedException e) {
+                logger.printBukkit("Error setting up config file watcher: " + e.getMessage(), true);
+              }
+            })
+        .start();
   }
 
   public void createConfig(String path, String defualtKey) {
@@ -101,7 +133,9 @@ public class XmlConfigManager {
         configFile.createNewFile();
         Files.write(
             configFile.toPath(),
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>".getBytes(StandardCharsets.UTF_8));
+            Arrays.asList(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+                "<" + defualtKey + "></" + defualtKey + ">"));
         logger.printBukkit("Created new xml file: " + path);
         loadConfigValues();
       } catch (IOException e) {
@@ -282,5 +316,9 @@ public class XmlConfigManager {
           "Failed to add config: " + Key + " with value: " + value, ContextLogger.LogType.WARNING);
     }
     saveConfig(); // Save changes to the config file
+  }
+
+  public void reloadAndUpdateStatics() {
+    loadConfigValues(); // reload file from disk
   }
 }

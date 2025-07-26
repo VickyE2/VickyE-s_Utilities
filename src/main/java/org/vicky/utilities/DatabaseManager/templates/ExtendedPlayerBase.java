@@ -18,16 +18,16 @@ public abstract class ExtendedPlayerBase implements DatabaseTemplate {
     return databasePlayer;
   }
 
-  public void setId(String id) {
-    this.id = id;
+  public void setDatabasePlayer(DatabasePlayer databasePlayer) {
+    this.databasePlayer = databasePlayer;
+    this.setId(databasePlayer.getId().toString());
   }
 
   public String getId() {
     return id;
   }
 
-  public void setDatabasePlayer(DatabasePlayer databasePlayer) {
-    this.databasePlayer = databasePlayer;
-    this.setId(databasePlayer.getId().toString());
+  public void setId(String id) {
+    this.id = id;
   }
 }

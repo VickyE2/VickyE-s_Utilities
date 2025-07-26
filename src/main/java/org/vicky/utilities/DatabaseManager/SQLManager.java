@@ -3,7 +3,10 @@ package org.vicky.utilities.DatabaseManager;
 
 import static org.vicky.global.Global.classLoader;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -20,17 +23,51 @@ import org.vicky.vicky_utils;
 
 public class SQLManager {
   public static RandomStringGenerator generator = RandomStringGenerator.getInstance();
-  private String jdbcUrl;
   private final String username;
   private final String password;
-  private DatabaseCreator database;
   private final String dialect;
   private final boolean showSql;
   private final boolean formatSql;
   private final String ddlAuto;
   private final List<Class<?>> mappingClasses;
+  private final ContextLogger logger =
+      new ContextLogger(ContextLogger.ContextType.HIBERNATE, "MANAGER");
+  private String jdbcUrl;
+  private DatabaseCreator database;
   private SessionFactory sessionFactory;
-  private ContextLogger logger = new ContextLogger(ContextLogger.ContextType.HIBERNATE, "MANAGER");
+
+  public SQLManager(
+      String username,
+      String password,
+      String dialect,
+      boolean showSql,
+      boolean formatSql,
+      String ddlAuto,
+      List<Class<?>> mappingClasses) {
+    Properties dbCredentials = loadCredentials();
+    this.username = dbCredentials.getOrDefault("username", username).toString();
+    this.password = dbCredentials.getOrDefault("password", password).toString();
+    dbCredentials.setProperty("username", this.username);
+    dbCredentials.setProperty("password", this.password);
+    try {
+      File credentials = new File("./plugins/Vicky-s_Utilities/configs/db_credentials.properties");
+      credentials.getParentFile().mkdirs();
+      if (!credentials.exists()) {
+        credentials.createNewFile();
+      }
+      FileWriter writer = new FileWriter(credentials);
+      dbCredentials.store(writer, "");
+    } catch (IOException e) {
+      logger.printBukkit("Failed to save credentials: " + e.getMessage(), true);
+    }
+    this.saveCredentials(this.username, this.password);
+    this.dialect = dialect;
+    this.showSql = showSql;
+    this.formatSql = formatSql;
+    this.ddlAuto = ddlAuto;
+    this.mappingClasses =
+        mappingClasses != null ? new ArrayList<>(mappingClasses) : new ArrayList<>();
+  }
 
   public void addMappingClass(Class<?> clazz) {
     ClassLoader originalCL = Thread.currentThread().getContextClassLoader();
@@ -70,39 +107,6 @@ public class SQLManager {
     }
 
     return properties;
-  }
-
-  public SQLManager(
-      String username,
-      String password,
-      String dialect,
-      boolean showSql,
-      boolean formatSql,
-      String ddlAuto,
-      List<Class<?>> mappingClasses) {
-    Properties dbCredentials = loadCredentials();
-    this.username = dbCredentials.getOrDefault("username", username).toString();
-    this.password = dbCredentials.getOrDefault("password", password).toString();
-    dbCredentials.setProperty("username", this.username);
-    dbCredentials.setProperty("password", this.password);
-    try {
-      File credentials = new File("./plugins/Vicky-s_Utilities/configs/db_credentials.properties");
-      credentials.getParentFile().mkdirs();
-      if (!credentials.exists()) {
-        credentials.createNewFile();
-      }
-      FileWriter writer = new FileWriter(credentials);
-      dbCredentials.store(writer, "");
-    } catch (IOException e) {
-      logger.printBukkit("Failed to save credentials: " + e.getMessage(), true);
-    }
-    this.saveCredentials(this.username, this.password);
-    this.dialect = dialect;
-    this.showSql = showSql;
-    this.formatSql = formatSql;
-    this.ddlAuto = ddlAuto;
-    this.mappingClasses =
-        mappingClasses != null ? new ArrayList<>(mappingClasses) : new ArrayList<>();
   }
 
   public void configureSessionFactory() {

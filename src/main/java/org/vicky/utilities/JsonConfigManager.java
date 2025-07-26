@@ -19,9 +19,9 @@ import org.spongepowered.configurate.serialize.SerializationException;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class JsonConfigManager {
+  private final JavaPlugin plugin;
   public ConfigurationLoader<? extends ConfigurationNode> loader;
   public ConfigurationNode rootNode;
-  private final JavaPlugin plugin;
   public ContextLogger logger = new ContextLogger(ContextLogger.ContextType.SYSTEM, "CONFIG-JSON");
   public ConfigurationOptions options;
 

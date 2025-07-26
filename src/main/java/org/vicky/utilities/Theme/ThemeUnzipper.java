@@ -30,16 +30,16 @@ import org.vicky.utilities.ContextLogger.ContextLogger;
  */
 public class ThemeUnzipper {
   private final JavaPlugin plugin;
-  ContextLogger logger = new ContextLogger(ContextLogger.ContextType.FEATURE, "THEME-UNZIPPER");
-
-  public List<String> requiredGuis = new ArrayList<>();
-  public List<String> requiredButtons = new ArrayList<>();
   private final ConfigManager guiManager;
   private final ConfigManager buttonManager;
   private final ConfigManager iconsManager;
+  public final List<String> requiredGuis = new ArrayList<>();
+  public final List<String> requiredButtons = new ArrayList<>();
+  public final List<String> requiredAnimatedImages = new ArrayList<>();
   public Map<String, Integer> buttonVerticalSplits = new HashMap<>();
+  private final String[] allowedImageFormats = {".png", ".jpeg", ".jpg"};
 
-  public String[] allowedImageFormats = {".png", ".jpeg", ".jpg"};
+  ContextLogger logger = new ContextLogger(ContextLogger.ContextType.FEATURE, "THEME-UNZIPPER");
 
   public ThemeUnzipper(JavaPlugin plugin) {
     this.plugin = plugin;
@@ -73,7 +73,25 @@ public class ThemeUnzipper {
     }
   }
 
+  public static List<Path> getAllZipFiles(String directoryPath) throws IOException {
+    Path dirPath = Paths.get(directoryPath);
+
+    // Ensure the directory exists
+    if (!Files.exists(dirPath) || !Files.isDirectory(dirPath)) {
+      throw new IllegalArgumentException("Invalid directory path: " + directoryPath);
+    }
+
+    // Collect all ZIP files in the directory
+    return Files.walk(dirPath)
+        .filter(path -> path.toString().toLowerCase().endsWith(".zip"))
+        .collect(Collectors.toList());
+  }
+
   public void setRequiredImages() {
+    requiredAnimatedImages.clear();
+    requiredButtons.clear();
+    requiredGuis.clear();
+
     if (hookedPlugins.stream().anyMatch(k -> k.getName().equals("VickyEs-Party_and_Friends"))) {
       requiredGuis.addAll(
           List.of(
@@ -86,7 +104,8 @@ public class ThemeUnzipper {
               "party_gui_main_panel",
               "party_gui_member_panel",
               "friends_gui_status_change_panel",
-              "friends_gui_change_color_panel"));
+              "friends_gui_change_color_panel",
+              "friends_gui_settings_panel"));
     }
     if (hookedPlugins.stream()
         .anyMatch(k -> k.getName().equals("VickyEs_Survival_Plus_Essentials"))) {
@@ -110,7 +129,7 @@ public class ThemeUnzipper {
             "full_grid",
             "anvil"));
 
-    requiredButtons =
+    requiredButtons.addAll(
         Arrays.asList(
             "accept_button_long",
             "accept_button_small",
@@ -141,7 +160,9 @@ public class ThemeUnzipper {
             "slider_3",
             "sort",
             "trashcan_button",
-            "chat_box");
+            "chat_box"));
+
+    requiredAnimatedImages.add("loading_gif");
 
     buttonVerticalSplits.put("accept_button_long", 3);
     buttonVerticalSplits.put("accept_button_small", 0);
@@ -173,15 +194,16 @@ public class ThemeUnzipper {
     buttonVerticalSplits.put("slider_3", 0);
     buttonVerticalSplits.put("sort", 0);
     buttonVerticalSplits.put("trashcan_button", 0);
+    buttonVerticalSplits.put("loading_gif", 0);
   }
 
   /**
    * This method scans through all zip archives in the themes folder of the plugins data folder,
    * stores them to a global {@link ThemeStorer storer} and then persists instances of them into a global {@link org.vicky.utilities.DatabaseManager.templates.Theme DatabaseEntity}
+   *
    * @throws IOException In cases of not being able to access the file or make changes to it. This exception is thrown
    */
   public void downloadThemes() throws IOException {
-
     setRequiredImages();
     Path themesPath = Paths.get(plugin.getDataFolder().getAbsolutePath(), "themes");
     List<Path> zipFiles = getAllZipFiles(themesPath.toString());
@@ -204,36 +226,51 @@ public class ThemeUnzipper {
           }
         }
         manager.loadConfigFromZip(zipPath, "themes.yml");
-
         try {
           ConfigurationNode themesNode = manager.rootNode.node("themes");
           if (!themesNode.virtual()) {
             for (ConfigurationNode themeNode : themesNode.childrenMap().values()) {
+              final Map<String, Integer> heightDiffMap = new HashMap<>();
               String themeName = themeNode.node("theme_name").getString();
               String themeId = themeNode.node("theme_id").getString();
               ConfigurationNode guiFolder = themeNode.node("gui_folder");
               ConfigurationNode description = themeNode.node("description");
               ConfigurationNode buttonsFolder = themeNode.node("buttons_folder");
               ConfigurationNode textsFolder = themeNode.node("texts_folder");
+              ConfigurationNode animatedFolder = themeNode.node("guis_folder");
+              ConfigurationNode heightDiffsNode = themeNode.node("height_diffs");
+              if (!heightDiffsNode.virtual()) {
+                for (Map.Entry<Object, ? extends ConfigurationNode> entry :
+                    heightDiffsNode.childrenMap().entrySet()) {
+                  String key = String.valueOf(entry.getKey());
+                  int value = entry.getValue().getInt(0);
+                  heightDiffMap.put(key, value);
+                }
+              }
               logger.printBukkit(
                   "Loading theme with id: " + themeId, ContextLogger.LogType.PENDING);
               if (!storer.isRegisteredTheme(themeId)) {
-
                 if (guiFolder.virtual() || guiFolder.isNull()) {
                   logger.printBukkit(
                       "The theme with id: " + themeId + " fails to provide a gui_folder field",
                       true);
                   break;
                 }
-                if (buttonsFolder.virtual() || guiFolder.isNull()) {
+                if (buttonsFolder.virtual() || buttonsFolder.isNull()) {
                   logger.printBukkit(
                       "The theme with id: " + themeId + " fails to provide a buttons_folder field",
                       true);
                   break;
                 }
-                if (textsFolder.virtual() || guiFolder.isNull()) {
+                if (textsFolder.virtual() || textsFolder.isNull()) {
                   logger.printBukkit(
                       "The theme with id: " + themeId + " fails to provide a texts_folder field",
+                      true);
+                  break;
+                }
+                if (animatedFolder.virtual() || animatedFolder.isNull()) {
+                  logger.printBukkit(
+                      "The theme with id: " + themeId + " fails to provide a gifs_folder field",
                       true);
                   break;
                 }
@@ -267,7 +304,6 @@ public class ThemeUnzipper {
                         // Save the image to the output folder
                         try (InputStream inputStream = zip.getInputStream(entry);
                             FileOutputStream fos = new FileOutputStream(outputFile)) {
-
                           byte[] buffer = new byte[1024];
                           int bytesRead;
                           while ((bytesRead = inputStream.read(buffer)) != -1) {
@@ -279,17 +315,6 @@ public class ThemeUnzipper {
 
                           break;
                         }
-                        int heightdiff = getHeightdiff(currentGui);
-
-                        Path imagePath =
-                            Path.of(outputFile.getPath()); // Replace with your image path
-
-                        // Load the image
-                        Image image = Toolkit.getDefaultToolkit().getImage(imagePath.toString());
-
-                        // Create a MediaTracker to track the loading of the image
-                        MediaTracker tracker = new MediaTracker(new Canvas());
-                        tracker.addImage(image, 0);
 
                         guiManager.setConfigValue(
                             "font_images",
@@ -304,7 +329,7 @@ public class ThemeUnzipper {
                         guiManager.setConfigValue(
                             "font_images",
                             currentGui + "_" + themeId + ".y_position",
-                            heightdiff,
+                            heightDiffMap.getOrDefault(currentGui, 0),
                             null);
 
                         break;
@@ -355,8 +380,6 @@ public class ThemeUnzipper {
                               break;
                             }
 
-                            int heightdiff = getHeightdiff(currentGui);
-
                             Path imagePath =
                                 Path.of(outputFile.getPath()); // Replace with your image path
 
@@ -381,7 +404,7 @@ public class ThemeUnzipper {
                             guiManager.setConfigValue(
                                 "font_images",
                                 currentGui + "_" + themeId + ".y_position",
-                                heightdiff,
+                                heightDiffMap.getOrDefault(currentGui, 0),
                                 null);
 
                             logger.printBukkit("file_now_found: " + filenowFound);
@@ -434,9 +457,7 @@ public class ThemeUnzipper {
                         fileFound = true;
                         filenowFound = true;
                         try {
-                          Files.createDirectories(
-                              outputFolderPath); // This will create all necessary parent
-                          // directories
+                          Files.createDirectories(outputFolderPath);
                         } catch (IOException e) {
                           logger.printBukkit(
                               "Failed to create directory: "
@@ -444,7 +465,7 @@ public class ThemeUnzipper {
                                   + " - "
                                   + e.getMessage(),
                               true);
-                          return; // Exit if the directory can't be created
+                          return;
                         }
 
                         File outputFile = new File(outputFolderPath.toString(), outputImage);
@@ -465,9 +486,8 @@ public class ThemeUnzipper {
                           // Save the image to the output folder
                           File unsplitoutputFile =
                               new File(outputFolderPath.toString(), unsplitoutputImage);
-                          try (InputStream inputStream = zip.getInputStream(entry);
-                              FileOutputStream fos = new FileOutputStream(unsplitoutputFile)) {
-
+                          try (FileOutputStream fos = new FileOutputStream(unsplitoutputFile);
+                              InputStream inputStream = zip.getInputStream(entry)) {
                             byte[] buffer = new byte[1024];
                             int bytesRead;
                             while ((bytesRead = inputStream.read(buffer)) != -1) {
@@ -672,7 +692,7 @@ public class ThemeUnzipper {
                             } catch (IOException e) {
                               logger.printBukkit(
                                   "Failed to create directory: "
-                                      + outputFolderPath.toString()
+                                      + outputFolderPath
                                       + " - "
                                       + e.getMessage(),
                                   true);
@@ -684,7 +704,7 @@ public class ThemeUnzipper {
                                 new File(outputFolderPath.toString(), imagefile);
                             parentDir = outputFile.getParentFile();
                             if (!parentDir.exists()) {
-                              if (parentDir.mkdirs()) {
+                              if (!parentDir.mkdirs()) {
                                 logger.printBukkit(
                                     "Failed to create directories: " + parentDir.getAbsolutePath(),
                                     true);
@@ -878,6 +898,68 @@ public class ThemeUnzipper {
                     break;
                   }
                 }
+                for (String animated : requiredAnimatedImages) {
+                  try (ZipFile zip = new ZipFile(zipPath.toFile())) {
+                    Path animatedFolderPath =
+                        Path.of(
+                            plugin.getDataFolder().getParentFile().getAbsolutePath()
+                                + "/ItemsAdder/contents/vicky_themes/textures/animated/"
+                                + themeId);
+                    for (String format : allowedImageFormats) {
+                      String animatedFileString =
+                          animatedFolder.getString() + "/" + animated + "_" + themeId + format;
+                      String animatedMcmetaFileString =
+                          animatedFolder.getString() + "/" + animated + "_" + themeId + format;
+                      String imageFile = animated + "_" + themeId + format;
+                      String imageFileMcmeta = imageFile + ".mcmeta";
+                      ZipEntry animatedEntry = zip.getEntry(animatedFileString);
+                      ZipEntry animatedMcmetaEntry = zip.getEntry(animatedMcmetaFileString);
+                      if (animatedEntry != null && !animatedEntry.isDirectory()) {
+                        File animatedFile = new File(animatedFolderPath.toString(), imageFile);
+                        File animatedMcmetaFile =
+                            new File(animatedFolderPath.toString(), imageFileMcmeta);
+                        if (animatedMcmetaEntry == null) {
+                          logger.printBukkit(
+                              ANSIColor.colorize(
+                                  "yellow[Warning handling file "
+                                      + animated
+                                      + ": No mcmeta for animated image file found... ]"),
+                              ContextLogger.LogType.WARNING);
+                        } else {
+                          InputStream animatedStream = zip.getInputStream(animatedEntry);
+                          try (FileOutputStream as = new FileOutputStream(animatedFile)) {
+                            byte[] buffer = new byte[1024];
+                            int bytesRead;
+                            while ((bytesRead = animatedStream.read(buffer)) != -1) {
+                              as.write(buffer, 0, bytesRead);
+                            }
+                          } catch (IOException e) {
+                            logger.printBukkit(
+                                ANSIColor.colorize(
+                                    "yellow[Error saving the animated image: "
+                                        + e.getMessage()
+                                        + "]"));
+                          }
+                          InputStream animatedMcmetaStream =
+                              zip.getInputStream(animatedMcmetaEntry);
+                          try (FileOutputStream ams = new FileOutputStream(animatedMcmetaFile)) {
+                            byte[] buffer = new byte[1024];
+                            int bytesRead;
+                            while ((bytesRead = animatedMcmetaStream.read(buffer)) != -1) {
+                              ams.write(buffer, 0, bytesRead);
+                            }
+                          } catch (IOException e) {
+                            logger.printBukkit(
+                                ANSIColor.colorize(
+                                    "yellow[Error saving the animated image: "
+                                        + e.getMessage()
+                                        + "]"));
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
                 try (ZipFile zip = new ZipFile(zipPath.toFile())) {
                   Path outputIconPath =
                       Path.of(
@@ -942,13 +1024,11 @@ public class ThemeUnzipper {
                     .sorted(Comparator.reverseOrder())
                     .map(Path::toFile)
                     .forEach(File::delete);
-
                 logger.printBukkit(
                     "Theme with id "
                         + ANSIColor.colorize(themeId, ANSIColor.YELLOW_BOLD)
                         + " has successfully been loaded",
                     ContextLogger.LogType.SUCCESS);
-
                 storer.addTheme(themeId, themeName, description);
               } else {
                 logger.printBukkit(
@@ -1028,51 +1108,5 @@ public class ThemeUnzipper {
       e.printStackTrace();
     }
     return images;
-  }
-
-  private static int getHeightdiff(String currentGui) {
-    int heightdiff = 0;
-    if (Objects.equals(currentGui, "friends_gui_change_status_panel")) {
-      heightdiff = 22; //
-    }
-    if (Objects.equals(currentGui, "friends_gui_f_profile_panel")) {
-      heightdiff = 22;
-    }
-    if (Objects.equals(currentGui, "friends_gui_main_panel")) {
-      heightdiff = 22;
-    }
-    if (Objects.equals(currentGui, "friends_gui_message_panel")) {
-      heightdiff = 22; //
-    }
-    if (Objects.equals(currentGui, "friends_gui_message_request_panel")) {
-      heightdiff = 22;
-    }
-    if (Objects.equals(currentGui, "friends_gui_request_panel")) {
-      heightdiff = 22;
-    }
-    if (Objects.equals(currentGui, "party_gui_main_panel")) {
-      heightdiff = 22;
-    }
-    if (Objects.equals(currentGui, "party_gui_member_panel")) {
-      heightdiff = 22;
-    }
-    if (Objects.equals(currentGui, "trinket_gui")) {
-      heightdiff = 8;
-    }
-    return heightdiff;
-  }
-
-  public static List<Path> getAllZipFiles(String directoryPath) throws IOException {
-    Path dirPath = Paths.get(directoryPath);
-
-    // Ensure the directory exists
-    if (!Files.exists(dirPath) || !Files.isDirectory(dirPath)) {
-      throw new IllegalArgumentException("Invalid directory path: " + directoryPath);
-    }
-
-    // Collect all ZIP files in the directory
-    return Files.walk(dirPath)
-        .filter(path -> path.toString().toLowerCase().endsWith(".zip"))
-        .collect(Collectors.toList());
   }
 }

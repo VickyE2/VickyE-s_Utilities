@@ -7,6 +7,7 @@ import static org.vicky.global.Global.stringStorer;
 import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.vicky.ecosystem.server.CommunicatorServer;
 import org.vicky.vicky_utils;
 
 public class MainLogger {
@@ -40,6 +41,7 @@ public class MainLogger {
                   + " functionality. Loaded either ways");
     }
     plugin.getLogger().info(vicky_utils.getHookedDependantPlugins());
+    plugin.getLogger().info(CommunicatorServer.getInstance().getAllRegistered());
   }
 
   public void getPlaceholders() {

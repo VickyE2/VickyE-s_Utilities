@@ -13,7 +13,7 @@ public class DatabaseCreator {
   private static String password = "";
   private static String databaseName = "";
   private final String jdbcUrl;
-  private ContextLogger logger = new ContextLogger(ContextLogger.ContextType.HIBERNATE, "DB");
+  private final ContextLogger logger = new ContextLogger(ContextLogger.ContextType.HIBERNATE, "DB");
 
   private DatabaseCreator(DatabaseBuilder builder) {
     name = builder.name;

@@ -16,7 +16,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import javax.annotation.Nullable;
 import net.Indyuce.mmocore.api.player.PlayerData;
 import net.Indyuce.mmocore.player.CombatHandler;
 import net.kyori.adventure.text.Component;
@@ -37,6 +36,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.afk.event.PlayerAFKEvent;
+import org.vicky.afk.event.PlayerAFKKickEvent;
 import org.vicky.afk.event.PlayerBTKEvent;
 import org.vicky.utilities.BukkitHex;
 
@@ -91,7 +91,7 @@ public class AFKManager implements Listener {
   /**
    * Constructs an AFKManager with the specified thresholds.
    *
-   * @param plugin              The plugin instance.
+   * @param plugin The plugin instance.
    */
   public AFKManager(Plugin plugin) {
     this.plugin = plugin;
@@ -115,8 +115,8 @@ public class AFKManager implements Listener {
    */
   public boolean updateActivity(@NotNull Player player) {
     if (player.isInsideVehicle()
-        || player.isSwimming()
-        || player.getLocation().getBlock().getType().equals(Material.WATER)) {
+        || (player.getLocation().getBlock().getType().equals(Material.WATER)
+            && !player.isSwimming())) {
       return false;
     }
     String uuid = player.getUniqueId().toString();
@@ -233,14 +233,27 @@ public class AFKManager implements Listener {
               Bukkit.getScheduler()
                   .runTask(
                       plugin,
-                      () ->
+                      () -> {
+                        PlayerAFKKickEvent event = new PlayerAFKKickEvent(player);
+                        Bukkit.getPluginManager().callEvent(event);
+                        if (!event.isCancelled()) {
                           player.kick(
                               Component.text(
                                   globalConfigManager.getStringValue("defaults.AFKKickMessage")
                                           != null
                                       ? globalConfigManager.getStringValue(
                                           "defaults.AFKKickMessage")
-                                      : "You were kicked for being afk")));
+                                      : "You were kicked for being afk",
+                                  TextColor.color(225, 130, 0),
+                                  TextDecoration.ITALIC));
+                          afkPlayers.remove(uuid);
+                          lastActivity.remove(uuid);
+                        } else {
+                          String newUuid = player.getUniqueId().toString();
+                          long newNow = System.currentTimeMillis();
+                          lastActivity.put(newUuid, newNow);
+                        }
+                      });
           }
         }
       }
@@ -253,7 +266,7 @@ public class AFKManager implements Listener {
    * @param player The player to check.
    * @return True if the player is marked as AFK; false otherwise.
    */
-  public boolean isAfk(@Nullable Player player) {
+  public boolean isAfk(@NotNull Player player) {
     return afkPlayers.contains(player.getUniqueId().toString());
   }
 
@@ -302,7 +315,7 @@ public class AFKManager implements Listener {
       e.getPlayer()
           .sendMessage(
               Component.text(
-                  "⨀  " + afkMessages.get(randomIndex),
+                  "⁜  " + afkMessages.get(randomIndex),
                   TextColor.color(0, 200, 0),
                   TextDecoration.ITALIC));
     }

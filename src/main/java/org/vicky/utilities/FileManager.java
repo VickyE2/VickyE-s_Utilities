@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024-2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
 import java.io.File;
@@ -15,7 +15,8 @@ import org.vicky.utilities.ContextLogger.ContextLogger;
 public class FileManager {
 
   private final JavaPlugin plugin;
-  private ContextLogger logger = new ContextLogger(ContextLogger.ContextType.SYSTEM, "EXTRACTOR");
+  private final ContextLogger logger =
+      new ContextLogger(ContextLogger.ContextType.SYSTEM, "EXTRACTOR");
 
   public FileManager(JavaPlugin plugin) {
     this.plugin = plugin;
@@ -62,7 +63,7 @@ public class FileManager {
    * Extracts a file from the JAR into the destination directory.
    * It ensures the entire directory structure is created.
    *
-   * @param destRoot The destination root folder (e.g., ItemsAdder directory).
+   * @param destRoot  The destination root folder (e.g., ItemsAdder directory).
    * @param entryName The name of the file in the JAR to extract.
    * @throws IOException If an I/O error occurs.
    */

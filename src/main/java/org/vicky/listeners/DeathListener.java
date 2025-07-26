@@ -1,81 +1,52 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.listeners;
 
-import static org.vicky.utilities.DeathMessages.getMessages;
+import static org.vicky.vicky_utils.plugin;
 
-import java.util.*;
-
+import java.util.List;
+import net.kyori.adventure.text.Component;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.metadata.MetadataValue;
-import org.jetbrains.annotations.NotNull;
-import org.vicky.effectsSystem.CustomEffect;
+import org.vicky.deathMessage.DeathMessageBuilder;
+import org.vicky.effectsSystem.EffectRegistry;
+import org.vicky.effectsSystem.StatusEffect;
+import org.vicky.handlers.CustomDamageHandler;
 
 public class DeathListener implements Listener {
-
-  // Map to hold all custom effects by their name (e.g., "bleeding", "burning")
-  private final Map<String, CustomEffect> customEffects;
-
-  // Constructor to register custom effects
-  public DeathListener(Map<String, CustomEffect> customEffects) {
-    this.customEffects = customEffects;
-  }
+  public DeathListener() {}
 
   @EventHandler
-  public void onEntityDeath(EntityDeathEvent event) {
+  public void onPlayerDeath(PlayerDeathEvent event) {
     LivingEntity entity = event.getEntity();
     LivingEntity killer = entity.getKiller();
 
     // Check if the entity has the custom damage metadata
-    if (entity.hasMetadata("customDamageCause") && entity instanceof Player) {
-      for (MetadataValue value : entity.getMetadata("customDamageCause")) {
-        String customCause = value.asString();
+    if (entity.hasMetadata(CustomDamageHandler.metadataKey)) {
+      for (MetadataValue value : entity.getMetadata(CustomDamageHandler.metadataKey)) {
+        if (value.getOwningPlugin() == plugin) {
+          List<String> customCauseKey = (List<String>) value.value();
 
-        // Get the messages for the custom cause from DeathMessages
-        Map<String, Boolean> messages = getMessages(customCause);
+          String playerName = entity.getName();
+          String killerName = (killer != null) ? killer.getName() : null;
+          DeathMessageBuilder builder = new DeathMessageBuilder(playerName).setKiller(killerName);
+          for (String key : customCauseKey) {
+            builder.addCauseKey(key);
+          }
+          Component deathMessage = builder.build();
 
-        if (!messages.isEmpty()) {
-          String deathMessage;
-          int messageIndex;
-          List<String> possibleMessages = getPossibleMessages(killer, messages);
-          messageIndex = new Random().nextInt(possibleMessages.size());
-            deathMessage = possibleMessages.get(messageIndex);
-            event
-                    .getEntity()
-                    .getServer()
-                    .broadcastMessage(deathMessage.replace("{player}", entity.getName()).replace("{killer}", killer.getName()));
+          event.deathMessage(deathMessage);
+          break;
         }
-        break;
       }
     }
-    for (Map.Entry<String, CustomEffect> entry : customEffects.entrySet()) {
-      CustomEffect effect = entry.getValue();
+    for (StatusEffect effect :
+        EffectRegistry.getInstance(EffectRegistry.class).getRegisteredEntities()) {
       if (effect.isEntityAffected(entity)) {
-        effect.stopEffect(entity); // Stop the effect when the entity dies
+        effect.stopEffect(entity);
       }
     }
-  }
-
-  @NotNull
-  private static List<String> getPossibleMessages(LivingEntity killer, Map<String, Boolean> messages) {
-    List<String> possibleMessages = new ArrayList<>();
-    if (killer != null) {
-      for (Map.Entry<String, Boolean> message : messages.entrySet()) {
-        if (message.getValue()) {
-          possibleMessages.add(message.getKey());
-        }
-      }
-    }
-    else {
-      for (Map.Entry<String, Boolean> message : messages.entrySet()) {
-        if (!message.getValue()) {
-            possibleMessages.add(message.getKey());
-        }
-      }
-    }
-    return possibleMessages;
   }
 }

@@ -7,7 +7,8 @@ import org.hibernate.resource.jdbc.spi.StatementInspector;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class CustomStatementInspector implements StatementInspector {
-  private ContextLogger logger = new ContextLogger(ContextLogger.ContextType.HIBERNATE, "LOG");
+  private final ContextLogger logger =
+      new ContextLogger(ContextLogger.ContextType.HIBERNATE, "LOG");
 
   @Override
   public String inspect(String sql) {

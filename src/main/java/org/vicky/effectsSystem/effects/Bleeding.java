@@ -1,92 +1,53 @@
-/* Licensed under Apache-2.0 2024-2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.effectsSystem.effects;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import org.bukkit.Bukkit;
+import static org.vicky.global.Global.customDamageHandler;
+
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.vicky.effectsSystem.CustomEffect;
-import org.vicky.effectsSystem.EffectType;
-import org.vicky.vicky_utils;
+import org.vicky.effectsSystem.StatusEffect;
+import org.vicky.effectsSystem.enums.EffectType;
 
-public class Bleeding implements CustomEffect {
-
-  private final Plugin plugin;
-  private final Map<UUID, Integer> bleedingEntities = new HashMap<>();
-  private final EffectType effectType = EffectType.HARMFUL;
-
+public class Bleeding extends StatusEffect {
   public Bleeding(Plugin plugin) {
-    this.plugin = plugin;
+    super(plugin, plugin.getResource("icons/bleeding.png"), 20);
   }
 
   @Override
-  public void applyEffect(LivingEntity entity, int durationInSeconds, int level) {
-    if (bleedingEntities.containsKey(entity.getUniqueId())) {
-      return;
-    }
-
-    entity.setMetadata("isBleeding_v", new FixedMetadataValue(plugin, true));
-    // Add the entity to the bleeding list
-    bleedingEntities.put(entity.getUniqueId(), durationInSeconds);
-
-    // Schedule a repeating task to deal damage over time
-    new BukkitRunnable() {
-      int remainingDuration = durationInSeconds;
-
-      @Override
-      public void run() {
-        if (remainingDuration <= 0 || !bleedingEntities.containsKey(entity.getUniqueId())) {
-          stopEffect(entity); // Stop the bleeding
-          this.cancel(); // Stop the task
-          return;
-        }
-
-        if (!entity.isDead() && entity.isValid()) {
-          // Apply potion effect and custom damage
-          entity.addPotionEffect(
-              new PotionEffect(PotionEffectType.WEAKNESS, 20, level, true, false, false));
-          applyCustomBleedingDamage(entity, level);
-        }
-
-        remainingDuration--;
-      }
-    }.runTaskTimer(plugin, 0L, 20L); // 20L is 1 second (20 ticks)
-  }
-
-  @Override
-  public void stopEffect(LivingEntity entity) {
-    if (bleedingEntities.containsKey(entity.getUniqueId())) {
-      entity.removeMetadata("isBleeding_v", plugin);
-      bleedingEntities.remove(entity.getUniqueId());
-      entity.sendMessage("Your bleeding has stopped.");
-    }
-  }
-
-  @Override
-  public boolean isEntityAffected(LivingEntity entity) {
-    return bleedingEntities.containsKey(entity.getUniqueId());
+  public String getKey() {
+    return "vicky_utils_bleeding";
   }
 
   @Override
   public EffectType getEffectType() {
-    return effectType;
+    return EffectType.HARMFUL;
   }
 
-  private void applyCustomBleedingDamage(LivingEntity entity, int level) {
-    vicky_utils pluginUtils = (vicky_utils) Bukkit.getPluginManager().getPlugin(plugin.getName());
-    double customDamage = calculateBleedingDamage(level);
+  /**
+   * This is what should happen per tick of the event
+   *
+   * @param entity           The entity in context to apply the effect to
+   * @param remainingSeconds The duration left in case of time-based effects
+   * @param level            The strength of the effect being applied
+   */
+  @Override
+  protected void onTick(LivingEntity entity, double remainingSeconds, int level) {
+    entity.addPotionEffect(
+        new PotionEffect(PotionEffectType.WEAKNESS, 20, level, true, false, false));
+    applyCustomBleedingDamage(entity, level);
+  }
 
-    assert pluginUtils != null;
-    pluginUtils.getCustomDamageHandler().applyCustomDamage(entity, customDamage, "bleeding");
+  @Override
+  public void stopEffect(LivingEntity entity) {}
+
+  private void applyCustomBleedingDamage(LivingEntity entity, int level) {
+    double damage = calculateBleedingDamage(level);
+    customDamageHandler.applyCustomDamage(entity, damage, getKey());
   }
 
   private double calculateBleedingDamage(int level) {
-    return -34 * Math.exp(-0.5 * (level * Math.cos(34.1) + level * Math.sin(39))) + 34;
+    return Math.exp(0.5 * (level * Math.cos(1.4) + level * Math.sin(59)));
   }
 }

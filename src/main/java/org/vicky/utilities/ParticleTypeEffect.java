@@ -6,24 +6,6 @@ import org.bukkit.util.Vector;
 
 public class ParticleTypeEffect {
 
-  public enum ParticleTypeEffects {
-    LINE,
-    HELIX,
-    WAVY_LINE,
-    BURST_SPIRAL,
-    CONVERGING_LINES,
-    RIPPLES,
-    FALLING_LEAVES,
-    EXPLODING_STARS,
-    PULSE_WAVES,
-    OSCILLATING_RINGS
-  }
-
-  public enum SpacingMode {
-    LINEAR,
-    EXPONENTIAL
-  }
-
   public static Location[] LINE(Location origin, double radius, int particleCount) {
     Location[] positions = new Location[particleCount];
     for (int i = 0; i < particleCount; i++) {
@@ -115,10 +97,6 @@ public class ParticleTypeEffect {
     return positions;
   }
 
-  // Reuse the same rotateVectorToDirection function from the helix effect
-
-  // Function to rotate a vector to align with a given direction
-
   public static Location[] WAVY_LINE(
       Location origin, double radius, double heightStep, double angle, int particleCount) {
     Location[] positions = new Location[particleCount];
@@ -164,6 +142,10 @@ public class ParticleTypeEffect {
     }
     return positions;
   }
+
+  // Reuse the same rotateVectorToDirection function from the helix effect
+
+  // Function to rotate a vector to align with a given direction
 
   public static Location[] CONVERGING_LINES(
       Location origin, double radius, double heightStep, double angle, int particleCount) {
@@ -306,5 +288,23 @@ public class ParticleTypeEffect {
     return v.multiply(cosTheta)
         .add(axis.crossProduct(v).multiply(sinTheta))
         .add(axis.multiply(axis.dot(v) * (1 - cosTheta)));
+  }
+
+  public enum ParticleTypeEffects {
+    LINE,
+    HELIX,
+    WAVY_LINE,
+    BURST_SPIRAL,
+    CONVERGING_LINES,
+    RIPPLES,
+    FALLING_LEAVES,
+    EXPLODING_STARS,
+    PULSE_WAVES,
+    OSCILLATING_RINGS
+  }
+
+  public enum SpacingMode {
+    LINEAR,
+    EXPONENTIAL
   }
 }

@@ -18,6 +18,10 @@ public class CustomDamageEvent extends Event {
     this.customCause = customCause;
   }
 
+  public static HandlerList getHandlerList() {
+    return HANDLERS;
+  }
+
   public Entity getEntity() {
     return entity;
   }
@@ -32,10 +36,6 @@ public class CustomDamageEvent extends Event {
 
   @Override
   public HandlerList getHandlers() {
-    return HANDLERS;
-  }
-
-  public static HandlerList getHandlerList() {
     return HANDLERS;
   }
 }

@@ -2,7 +2,7 @@
 package org.vicky.utilities;
 
 import java.io.*;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -13,6 +13,7 @@ import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.ConfigurationOptions;
 import org.spongepowered.configurate.loader.ConfigurationLoader;
+import org.spongepowered.configurate.objectmapping.ObjectMapper;
 import org.spongepowered.configurate.serialize.SerializationException;
 import org.spongepowered.configurate.yaml.NodeStyle;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
@@ -26,6 +27,7 @@ public class ConfigManager {
   public ContextLogger logger = new ContextLogger(ContextLogger.ContextType.SYSTEM, "CONFIG-YML");
   public ConfigurationOptions options;
   public boolean shouldLog = true;
+  final ObjectMapper.Factory factory = ObjectMapper.factoryBuilder().build();
 
   // Constructor 1: With a specified path
   public ConfigManager(JavaPlugin plugin, String path) {
@@ -54,7 +56,7 @@ public class ConfigManager {
     File configFile = new File(plugin.getDataFolder(), path);
 
     options =
-        YamlConfigurationLoader.builder().indent(2).nodeStyle(NodeStyle.BLOCK).defaultOptions();
+        YamlConfigurationLoader.builder().indent(2).nodeStyle(NodeStyle.BLOCK).defaultOptions().serializers(builder -> builder.registerAnnotatedObjects(factory));
 
     loader =
         YamlConfigurationLoader.builder()
@@ -78,13 +80,45 @@ public class ConfigManager {
     } else {
       loadConfigValues();
     }
+    new Thread(
+            () -> {
+              try {
+                WatchService watcher = FileSystems.getDefault().newWatchService();
+                Path configDir = plugin.getDataFolder().toPath();
+                configDir.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
+
+                while (true) {
+                  WatchKey key = watcher.take();
+                  for (WatchEvent<?> event : key.pollEvents()) {
+                    if (event.context().toString().equalsIgnoreCase(path)) {
+                      plugin
+                          .getServer()
+                          .getScheduler()
+                          .runTask(
+                              plugin,
+                              () -> {
+                                reloadAndUpdateStatics();
+                                logger.printBukkit(
+                                    "Config auto-reloaded due to file change.",
+                                    ContextLogger.LogType.BASIC);
+                              });
+                    }
+                  }
+                  key.reset();
+                }
+              } catch (IOException | InterruptedException e) {
+                logger.printBukkit("Error setting up config file watcher: " + e.getMessage(), true);
+                e.printStackTrace();
+              }
+            })
+        .start();
   }
 
   public void createPathedConfig(String pat) {
     File configFile = new File(pat);
 
     options =
-        YamlConfigurationLoader.builder().indent(2).nodeStyle(NodeStyle.BLOCK).defaultOptions();
+        YamlConfigurationLoader.builder().indent(2).nodeStyle(NodeStyle.BLOCK).defaultOptions().serializers(builder -> builder.registerAnnotatedObjects(factory));
 
     loader =
         YamlConfigurationLoader.builder()
@@ -113,7 +147,7 @@ public class ConfigManager {
   public void loadConfig(String path, String file) {
     File configFile = new File(path, file);
 
-    options = YamlConfigurationLoader.builder().defaultOptions();
+    options = YamlConfigurationLoader.builder().defaultOptions().serializers(builder -> builder.registerAnnotatedObjects(factory));
 
     loader = YamlConfigurationLoader.builder().path(configFile.toPath()).build();
 
@@ -305,5 +339,10 @@ public class ConfigManager {
       logger.printBukkit("Failed to add config: " + key, ContextLogger.LogType.WARNING);
     }
     saveConfig(); // Save changes to the config file
+  }
+
+  public void reloadAndUpdateStatics() {
+    loadConfigValues(); // reload file from disk
+    org.vicky.betterHUD.vickyUtilsCompat.Statics.INSTANCE.reloadFromConfig(this);
   }
 }

@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager;
 
 import org.hibernate.Session;
@@ -6,7 +6,7 @@ import org.hibernate.Transaction;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class HibernateDatabaseManager {
-  private static ContextLogger logger =
+  private static final ContextLogger logger =
       new ContextLogger(ContextLogger.ContextType.HIBERNATE, "UTIL");
 
   public <T> void saveEntity(T entity) {

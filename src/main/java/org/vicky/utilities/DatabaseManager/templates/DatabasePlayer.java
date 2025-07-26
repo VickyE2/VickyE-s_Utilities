@@ -2,7 +2,7 @@
 package org.vicky.utilities.DatabaseManager.templates;
 
 import jakarta.persistence.*;
-import java.util.*;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import org.vicky.utilities.DatabaseTemplate;
 import org.vicky.utilities.RanksLister;
@@ -29,6 +29,7 @@ import org.vicky.utilities.RanksLister;
  *  query.setParameter("playerId", "some-player-id");
  *  ExtendedPlayerTypeA extensions = query.getSingleResult();
  * }</pre>
+ *
  * @author VickyE2
  */
 @Entity
@@ -78,11 +79,11 @@ public class DatabasePlayer implements DatabaseTemplate {
     this.isFirstTime = firstTime;
   }
 
-  public void setUserTheme(String userTheme) {
-    this.userTheme = userTheme;
-  }
-
   public String getUserTheme() {
     return userTheme;
+  }
+
+  public void setUserTheme(String userTheme) {
+    this.userTheme = userTheme;
   }
 }

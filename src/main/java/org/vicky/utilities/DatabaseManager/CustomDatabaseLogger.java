@@ -19,7 +19,8 @@ public class CustomDatabaseLogger
         PersistEventListener,
         MergeEventListener {
 
-  private ContextLogger logger = new ContextLogger(ContextLogger.ContextType.HIBERNATE, "LOG");
+  private final ContextLogger logger =
+      new ContextLogger(ContextLogger.ContextType.HIBERNATE, "LOG");
 
   @Override
   public void onPostInsert(PostInsertEvent event) {
@@ -133,19 +134,20 @@ public class CustomDatabaseLogger
       idField.setAccessible(true);
       entityId = idField.get(entity).toString();
     } catch (NoSuchFieldException | IllegalAccessException e) {
-      logger.printBukkit(
-          "Unable to retrieve ID for entity: "
-              + entityName
-              + ". It probably extends a class that has the parameter...",
-          ContextLogger.LogType.WARNING);
+      if (globalConfigManager == null || globalConfigManager.getBooleanValue("Debug"))
+        logger.printBukkit(
+            "Unable to retrieve ID for entity: "
+                + entityName
+                + ". It probably extends a class that has the parameter...",
+            ContextLogger.LogType.WARNING);
     }
 
     String format =
         String.format(
             "%s ~ %s having Id -> %s%s",
             operation, entityName, entityId, details != null ? " Details: " + details : "");
-    if (globalConfigManager == null) logger.printBukkit(format);
-    else if (globalConfigManager.getBooleanValue("Debug")) logger.printBukkit(format);
+    if (globalConfigManager == null || globalConfigManager.getBooleanValue("Debug"))
+      logger.printBukkit(format);
   }
 
   @Override

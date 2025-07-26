@@ -111,3 +111,6 @@ buildNumber.properties
 
 # Common working directory
 run/
+/src/main/java/org/vicky/NonCodeRelatesFiles/SoundGenerator/data/
+/src/main/java/org/vicky/NonCodeRelatesFiles/SoundGenerator/output/soundgen/
+/src/main/java/org/vicky/NonCodeRelatesFiles/

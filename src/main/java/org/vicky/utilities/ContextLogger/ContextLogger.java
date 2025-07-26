@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.ContextLogger;
 
 import org.bukkit.Bukkit;
@@ -55,9 +55,12 @@ public class ContextLogger {
    */
   public void print(String message, boolean isError) {
     String contextTag =
-            "[" + ANSIColor.colorize((isError ? "red" : "cyan") + "[" + context + "-" + contextName + "]") + "] ";
+        "["
+            + ANSIColor.colorize(
+                (isError ? "red" : "cyan") + "[" + context + "-" + contextName + "]")
+            + "] ";
     String finalContext =
-            contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
+        contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
     plugin.getLogger().info(finalContext);
   }
 
@@ -68,7 +71,7 @@ public class ContextLogger {
    */
   public void print(String message) {
     String contextTag =
-            "[" + ANSIColor.colorize("cyan[" + context + "-" + contextName + "]") + "] ";
+        "[" + ANSIColor.colorize("cyan[" + context + "-" + contextName + "]") + "] ";
     String finalContext = contextTag + message;
     plugin.getLogger().info(finalContext);
   }
@@ -82,7 +85,7 @@ public class ContextLogger {
    */
   public void print(String message, LogType type) {
     String contextTag =
-            "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
     plugin.getLogger().info(finalContext);
   }
@@ -97,9 +100,10 @@ public class ContextLogger {
    */
   public void print(String message, LogType type, LogPostType effect) {
     String contextTag =
-            "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext =
-            contextTag + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
+        contextTag
+            + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
     plugin.getLogger().info(finalContext);
   }
 
@@ -113,7 +117,7 @@ public class ContextLogger {
    */
   public void print(String message, LogType type, boolean shouldAffectMessage) {
     String contextTag =
-            "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext;
     if (shouldAffectMessage) {
       finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
@@ -134,11 +138,12 @@ public class ContextLogger {
    */
   public void print(String message, LogType type, LogPostType effect, boolean shouldAffectMessage) {
     String contextTag =
-            "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext;
     if (shouldAffectMessage) {
       finalContext =
-              contextTag + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
+          contextTag
+              + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
     } else {
       finalContext = contextTag + ANSIColor.colorize(effect.effect + "[" + message + "]");
     }
@@ -154,9 +159,12 @@ public class ContextLogger {
    */
   public void printBukkit(String message, boolean isError) {
     String contextTag =
-            "[" + ANSIColor.colorize((isError ? "red" : "cyan") + "[" + context + "-" + contextName + "]") + "] ";
+        "["
+            + ANSIColor.colorize(
+                (isError ? "red" : "cyan") + "[" + context + "-" + contextName + "]")
+            + "] ";
     String finalContext =
-            contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
+        contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
     Bukkit.getLogger().info(finalContext);
   }
 
@@ -167,7 +175,7 @@ public class ContextLogger {
    */
   public void printBukkit(String message) {
     String contextTag =
-            "[" + ANSIColor.colorize("cyan[" + context + "-" + contextName + "]") + "] ";
+        "[" + ANSIColor.colorize("cyan[" + context + "-" + contextName + "]") + "] ";
     String finalContext = contextTag + message;
     Bukkit.getLogger().info(finalContext);
   }
@@ -181,7 +189,7 @@ public class ContextLogger {
    */
   public void printBukkit(String message, LogType type) {
     String contextTag =
-            "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
     Bukkit.getLogger().info(finalContext);
   }
@@ -196,9 +204,10 @@ public class ContextLogger {
    */
   public void printBukkit(String message, LogType type, LogPostType effect) {
     String contextTag =
-            "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext =
-            contextTag + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
+        contextTag
+            + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
     Bukkit.getLogger().info(finalContext);
   }
 
@@ -212,7 +221,7 @@ public class ContextLogger {
    */
   public void printBukkit(String message, LogType type, boolean shouldAffectMessage) {
     String contextTag =
-            "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext;
     if (shouldAffectMessage) {
       finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
@@ -231,13 +240,15 @@ public class ContextLogger {
    * @param effect              The post-formatting effect to apply (e.g., bold, italic, underline).
    * @param shouldAffectMessage If true, the message is additionally formatted with the log type's color; otherwise, only the effect is applied.
    */
-  public void printBukkit(String message, LogType type, LogPostType effect, boolean shouldAffectMessage) {
+  public void printBukkit(
+      String message, LogType type, LogPostType effect, boolean shouldAffectMessage) {
     String contextTag =
-            "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext;
     if (shouldAffectMessage) {
       finalContext =
-              contextTag + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
+          contextTag
+              + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
     } else {
       finalContext = contextTag + ANSIColor.colorize(effect.effect + "[" + message + "]");
     }
@@ -279,7 +290,16 @@ public class ContextLogger {
     /**
      * Hibernate-related logging context.
      */
-    HIBERNATE
+    HIBERNATE,
+    /**
+     * Ecosystem-related logging context.
+     */
+    COMMUNICATION,
+
+    /**
+     * Storage-related logging context.
+     */
+    REGISTRY
   }
 
   /**

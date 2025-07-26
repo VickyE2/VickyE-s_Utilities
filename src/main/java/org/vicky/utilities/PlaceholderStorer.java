@@ -11,9 +11,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class PlaceholderStorer {
 
-  // Inner class to store placeholder and description
-  public record PlaceholderInfo(String placeholder, String description) {}
-
   // Map to store placeholders by plugin name
   private final Map<String, List<PlaceholderInfo>> placeholders = new HashMap<>();
 
@@ -106,4 +103,7 @@ public class PlaceholderStorer {
       }
     }
   }
+
+  // Inner class to store placeholder and description
+  public record PlaceholderInfo(String placeholder, String description) {}
 }

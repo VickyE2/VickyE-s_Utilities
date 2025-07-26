@@ -11,9 +11,9 @@ import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class HibernateUtil {
-  public static SessionFactory sessionFactory = null;
-  private static ContextLogger logger =
+  private static final ContextLogger logger =
       new ContextLogger(ContextLogger.ContextType.HIBERNATE, "UTIL");
+  public static SessionFactory sessionFactory = null;
   private static EntityManagerFactory ENTITY_MANAGER_FACTORY;
 
   public static void initialise(SQLManager manager) {

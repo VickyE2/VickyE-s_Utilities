@@ -1,0 +1,53 @@
+info:
+  namespace: vicky_utls
+items:
+  # buttons for gui
+  old_scroll:
+    display_name: Green Arrow Right
+    resource:
+      material: PAPER
+      generate: true
+      textures:
+        - glyphs/old_scroll
+  green_arrow_right:
+    display_name: Green Arrow Right
+    resource:
+      material: GREEN_STAINED_GLASS_PANE
+      generate: true
+      textures:
+        - glyphs/green_arrow_right
+  green_arrow_left:
+    display_name: Green Arrow Left
+    resource:
+      material: GREEN_STAINED_GLASS_PANE
+      generate: true
+      textures:
+        - glyphs/green_arrow_left
+  red_failed_x:
+    display_name: Red Failed
+    resource:
+      material: RED_STAINED_GLASS_PANE
+      generate: true
+      textures:
+        - glyphs/fail_red_x
+  green_add_button:
+    display_name: Green Add Button
+    resource:
+      material: GREEN_STAINED_GLASS_PANE
+      generate: true
+      textures:
+        - glyphs/add_button_green
+  red_sub_button:
+    display_name: Red Sub Button
+    resource:
+      material: RED_STAINED_GLASS_PANE
+      generate: true
+      textures:
+        - glyphs/sub_button_red
+  green_swap_button:
+    display_name: Green Swap Button
+    resource:
+      material: GREEN_STAINED_GLASS_PANE
+      generate: true
+      textures:
+        - glyphs/swap_button

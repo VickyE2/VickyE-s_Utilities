@@ -1,17 +1,17 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.listeners;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import static org.vicky.global.Global.globalConfigManager;
+
+import java.util.*;
 import java.util.function.Consumer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.*;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -31,26 +31,44 @@ import org.vicky.utilities.ContextLogger.ContextLogger;
  * </p>
  */
 public abstract class BaseGuiListener implements Listener {
+  private static final Map<Class<? extends BaseGuiListener>, BaseGuiListener> INSTANCES =
+      new HashMap<>();
 
+  protected final JavaPlugin plugin;
+
+  protected static long CLICK_DELAY = 200;
   protected final Map<Inventory, Map<Integer, ButtonAction<?>>> buttonActions = new HashMap<>();
   protected final List<Consumer<InventoryClickEvent>> additionalClickHandlers = new ArrayList<>();
   protected final List<Consumer<InventoryOpenEvent>> additionalOpenHandlers = new ArrayList<>();
   protected final List<Consumer<InventoryCloseEvent>> additionalCloseHandlers = new ArrayList<>();
   protected final List<Consumer<InventoryDragEvent>> additionalDragHandlers = new ArrayList<>();
-  protected long lastClickTime = 0;
   protected final ContextLogger logger =
       new ContextLogger(ContextLogger.ContextType.SYSTEM, "GUI-LISTENER");
-  protected static long CLICK_DELAY = 200;
   protected final List<Inventory> guiInventories = new ArrayList<>();
-  protected final JavaPlugin plugin;
+  protected long lastClickTime = 0;
 
   /**
    * Constructs a BaseGuiListener with the specified JavaPlugin instance.
    *
    * @param plugin the plugin instance
    */
-  public BaseGuiListener(JavaPlugin plugin) {
+  protected BaseGuiListener(JavaPlugin plugin) {
     this.plugin = plugin;
+    registerSingletonInstance();
+  }
+
+  @SuppressWarnings("unchecked")
+  private void registerSingletonInstance() {
+    Class<? extends BaseGuiListener> clazz = this.getClass();
+    if (INSTANCES.containsKey(clazz)) {
+      throw new IllegalStateException(clazz.getSimpleName() + " is already instantiated!");
+    }
+    INSTANCES.put(clazz, this);
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T extends BaseGuiListener> T getListenerInstance(Class<T> type) {
+    return (T) INSTANCES.get(type);
   }
 
   /**
@@ -74,13 +92,13 @@ public abstract class BaseGuiListener implements Listener {
     for (String part : parts) {
       if (part.contains("-")) {
         String[] range = part.split("-");
-        int start = Math.max(0, Integer.parseInt(range[0]) - 1); // 0-based index
-        int end = Math.min(9 * 9 - 1, Integer.parseInt(range[1]) - 1);
+        int start = Math.max(0, Integer.parseInt(range[0]) - 1);
+        int end = Math.min(9 * 9, Integer.parseInt(range[1]) - 1);
         for (int i = start; i <= end; i++) {
           slots.add(i);
         }
       } else {
-        int slot = Integer.parseInt(part) - 1; // Convert to 0-based index
+        int slot = Integer.parseInt(part) - 1;
         slots.add(slot);
       }
     }
@@ -92,14 +110,15 @@ public abstract class BaseGuiListener implements Listener {
    *
    * @param itemConfigs one or more ItemConfig objects specifying the slot ranges
    */
-  public void registerButton(Inventory inventory, GuiCreator.ItemConfig... itemConfigs) {
+  public final void registerButton(Inventory inventory, GuiCreator.ItemConfig... itemConfigs) {
     for (GuiCreator.ItemConfig itemConfig : itemConfigs) {
       ButtonAction<?> action = itemConfig.getButtonAction();
-      logger.printBukkit(
-          ANSIColor.colorize(
-              "Button registered with Action " + action.getActionType(), ANSIColor.CYAN),
-          ContextLogger.LogType.AMBIENCE,
-          false);
+      if (globalConfigManager == null || globalConfigManager.getBooleanValue("Debug"))
+        logger.printBukkit(
+            ANSIColor.colorize(
+                "Button registered with Action " + action.getActionType(), ANSIColor.CYAN),
+            ContextLogger.LogType.AMBIENCE,
+            false);
       Set<Integer> slotSet = parseSlots(itemConfig.getSlotRange());
       for (int slot : slotSet) {
         buttonActions.computeIfAbsent(inventory, k -> new HashMap<>()).put(slot, action);
@@ -265,5 +284,24 @@ public abstract class BaseGuiListener implements Listener {
           ANSIColor.colorize("Inventory has removed: " + inventory, ANSIColor.CYAN),
           ContextLogger.LogType.AMBIENCE);
     }
+  }
+
+  public ButtonAction<?> removeButton(Inventory inventory, int i) {
+    if (guiInventories.contains(inventory)) {
+      return buttonActions.get(inventory).remove(i);
+    }
+    return null;
+  }
+
+  public ButtonAction[] removeButtons(Inventory inventory, int... iz) {
+    if (guiInventories.contains(inventory)) {
+      Set<ButtonAction> actions = new HashSet<>();
+      for (int i : iz) {
+        var action = buttonActions.get(inventory).remove(i);
+        actions.add(action);
+      }
+      return actions.toArray(ButtonAction[]::new);
+    }
+    return null;
   }
 }

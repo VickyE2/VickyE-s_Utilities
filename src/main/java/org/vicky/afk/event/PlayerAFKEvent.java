@@ -16,16 +16,16 @@ public class PlayerAFKEvent extends Event {
     this.player = player;
   }
 
+  public static HandlerList getHandlerList() {
+    return handlers;
+  }
+
   public Player getPlayer() {
     return player;
   }
 
   @Override
   public HandlerList getHandlers() {
-    return handlers;
-  }
-
-  public static HandlerList getHandlerList() {
     return handlers;
   }
 }

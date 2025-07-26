@@ -55,6 +55,34 @@ public class ANSIColor {
   public static final String STRIKETHROUGH = "\033[9m";
 
   private static final Map<String, String> COLOR_MAP = new HashMap<>();
+  // Regex pattern to match color markers like red[...] or purple[...]
+  private static final Pattern COLOR_PATTERN =
+      Pattern.compile("((?!#)[A-Za-z_]+|#[A-Fa-f0-9]{6})\\[([^\\]]+)\\]");
+  // Updated pattern: optional segment length after "rainbow"
+  // Format: rainbow[-<length>]-color1-color2-...-colorN[Text]
+  // Examples:
+  // "rainbow-5-red-blue[HelloWorld]" => segments of 5 characters.
+  // "rainbow-red-blue[Hello World]" => defaults to processing word by word.
+  private static final Pattern RAINBOW_PATTERN =
+      Pattern.compile(
+          "^rainbow(?:-(\\d+))?((?:-(?:[A-Za-z0-9_]+|#[A-Fa-f0-9]{6}))+)\\[([^\\]]+)\\]$");
+  // Combined regex: matches either "rainbow-red-blue-..."
+  // or a simple marker like "red" (letters and underscores)
+  private static final Pattern MIXED_COLOR_PATTERN =
+      Pattern.compile(
+          // Rainbow marker: group(1)=rainbow marker, group(2)=text inside brackets
+          "(rainbow(?:-(?:[A-Za-z0-9_]+|#[A-Fa-f0-9]{6}))+)"
+              + "\\[([^\\]]+)\\]"
+              + "|"
+              +
+              // Gradient marker: group(3)=gradient marker, group(4)=text inside brackets
+              "(gradient(?:-(?:\\d+deg))?(?:-[a-zA-Z]+)?-(?:#[A-Fa-f0-9]{6}(?:-#[A-Fa-f0-9]{6})+))"
+              + "\\[([^\\]]+)\\]"
+              + "|"
+              +
+              // Simple color marker: group(5)=simple marker, group(6)=text inside brackets
+              "((?!#)[A-Za-z_]+|#[A-Fa-f0-9]{6})"
+              + "\\[([^\\]]+)\\]");
 
   static {
     COLOR_MAP.put("black", BLACK);
@@ -92,26 +120,6 @@ public class ANSIColor {
     COLOR_MAP.put("strikethrough", STRIKETHROUGH);
   }
 
-  // Regex pattern to match color markers like red[...] or purple[...]
-  private static final Pattern COLOR_PATTERN = Pattern.compile("([a-zA-Z_]+)\\[([^\\]]+)\\]");
-
-  // Updated pattern: optional segment length after "rainbow"
-  // Format: rainbow[-<length>]-color1-color2-...-colorN[Text]
-  // Examples:
-  // "rainbow-5-red-blue[HelloWorld]" => segments of 5 characters.
-  // "rainbow-red-blue[Hello World]" => defaults to processing word by word.
-  private static final Pattern RAINBOW_PATTERN =
-      Pattern.compile("^rainbow(?:-(\\d+))?((?:-[a-zA-Z0-9_]+)+)\\[([^\\]]+)\\]$");
-
-  // Combined regex: matches either "rainbow-red-blue-..."
-  // or a simple marker like "red" (letters and underscores)
-  private static final Pattern MIXED_COLOR_PATTERN =
-      Pattern.compile(
-          "((?:rainbow(?:-[a-zA-Z0-9_]+)+)|"
-              + "(?:gradient(?:-(?:[a-zA-Z]+))?-(?:#[A-Fa-f0-9]{6})-(?:#[A-Fa-f0-9]{6})|"
-              + "gradient-\\d+deg-[a-zA-Z]+-(?:#[A-Fa-f0-9]{6}(?:-#[A-Fa-f0-9]{6})+))|"
-              + "(?:[a-zA-Z_]+|#[A-Fa-f0-9]{6}))\\[([^\\]]+)\\]");
-
   /**
    * This is the list of default colors available:
    * <ul>
@@ -122,12 +130,12 @@ public class ANSIColor {
    * <li><b>Styles:</b> bold, bold_italic, italic, strikethrough, underline</li>
    * </ul>
    * <br>
-   * @deprecated
-   * This method is rather too rigid and dosent support multi colors on a single string without splitting it. I might remove this method later.....might...
-   * <p>Use {@link #colorize(String)}</p>
+   *
    * @param message This is the string the ansi color is to be applied to
-   * @param color The specific ansi color to apply
+   * @param color   The specific ansi color to apply
    * @return Returns an ansi enriched text
+   * @deprecated This method is rather too rigid and dosent support multi colors on a single string without splitting it. I might remove this method later.....might...
+   * <p>Use {@link #colorize(String)}</p>
    */
   @Deprecated
   public static String colorize(String message, String color) {
@@ -146,31 +154,27 @@ public class ANSIColor {
    * To use this you could go:
    * <p style="padding-left: 20px;"><em><b>{@code ('color[style[...message...]] color[...message...] ...')}</b></em></p>
    * <p>styles should come inside the color.</p>
+   *
    * @param message This is the string containing all the regex-color-message
    * @return Returns an ansi enriched text
    */
   public static String colorize(String message) {
+    if (message == null) {
+      return "";
+    }
     while (true) {
       Matcher matcher = COLOR_PATTERN.matcher(message);
-
       if (!matcher.find()) {
-        // Break the loop if no matches are found
         break;
       }
-
-      String color = matcher.group(1).toLowerCase(); // Extract color/style name
-      String text = matcher.group(2); // Extract text within the brackets
-
-      // Recursively process the inner text
-      String processedText = colorize(text);
-
-      // Look up the ANSI code for the color/style, or default to RESET if unknown
-      String colorCode = COLOR_MAP.getOrDefault(color, RESET);
-
-      // Replace the matched segment with the processed content
+      String color = matcher.group(1).toLowerCase();
+      String text = matcher.group(2);
+      // Recursive processing of inner text (guard against null)
+      String processedText = colorize(text != null ? text : "");
+      String colorCode =
+          color.contains("#") ? ansiFromHex(color) : COLOR_MAP.getOrDefault(color, RESET);
       message = matcher.replaceFirst(Matcher.quoteReplacement(colorCode + processedText + RESET));
     }
-
     return message;
   }
 
@@ -199,7 +203,10 @@ public class ANSIColor {
     String[] colorNames = colorPart.substring(1).split("-");
     List<String> colorCodes = new ArrayList<>();
     for (String name : colorNames) {
-      String code = COLOR_MAP.getOrDefault(name.toLowerCase(), RESET);
+      String code =
+          name.contains("#")
+              ? ansiFromHex(name)
+              : COLOR_MAP.getOrDefault(name.toLowerCase(), RESET);
       colorCodes.add(code);
     }
 
@@ -225,73 +232,57 @@ public class ANSIColor {
   }
 
   /**
-   * Processes a string that may contain standard color markers, rainbow markers, or gradient markers.
-   *
-   * Supports:
-   *   - "red[Hello]"
-   *   - "rainbow-blue-green[World]"
-   *   - "gradient-#FF0000-#00FF00[Gradient Text]" or "gradient-center-#FF0000-#00FF00[Gradient Text]"
-   *
-   * @param message The input string with markers.
-   * @return The ANSI-enriched string.
-   */
-  /**
    * Processes a string that may contain simple color markers, rainbow markers, or gradient markers,
    * and returns the string with ANSI color codes applied.
-   *
+   * <p>
    * Supported formats:
-   *   - Simple color: "red[Hello]" or "#AA0000[Hello]"
-   *   - Rainbow: "rainbow-5-red-blue[World]"
-   *   - Gradient:
-   *       * Basic: "gradient-#FF0000-#00FF00[Gradient Text]" (default alignment "left")
-   *       * With alignment: "gradient-center-#FF0000-#00FF00[Gradient Text]"
-   *       * Manual multi-line: "gradient-45deg-top-#FF0000-#00FF00-#0000FF[Line1\nLine2\nLine3]"
+   * - Simple color: "red[Hello]" or "#AA0000[Hello]"
+   * - Rainbow: "rainbow-5-red-blue[World]"
+   * - Gradient:
+   * * Basic: "gradient-#FF0000-#00FF00[Gradient Text]" (default alignment "left")
+   * * With alignment: "gradient-center-#FF0000-#00FF00[Gradient Text]"
+   * * Manual multi-line: "gradient-45deg-top-#FF0000-#00FF00-#0000FF[Line1\nLine2\nLine3]"
    *
    * @param message The input string with markers.
    * @return The string with ANSI color codes applied.
    */
   public static String colorizeMixed(String message) {
-    // Use our combined pattern (which should capture the marker in group(1) and text in group(2))
     Matcher matcher = MIXED_COLOR_PATTERN.matcher(message);
+    StringBuffer sb = new StringBuffer();
     while (matcher.find()) {
-      String fullMarker = matcher.group(0);
-      String marker = matcher.group(1);
-      String text = matcher.group(2);
       String replacement;
-      marker = marker.toLowerCase();
-      if (marker.startsWith("rainbow")) {
-        replacement = rainbowColorize(fullMarker);
-      } else if (marker.startsWith("gradient")) {
-        // Use our updated gradientColorize method which handles both basic and manual (angle-based)
-        // markers.
-        replacement = gradientColorize(fullMarker);
-      } else {
-        String colorCode = COLOR_MAP.getOrDefault(marker, RESET);
-        replacement = colorCode + colorize(text) + RESET;
+      // Check rainbow marker (group 1 is non-null)
+      if (matcher.group(1) != null) {
+        replacement = rainbowColorize(matcher.group(0));
       }
-      message = matcher.replaceFirst(Matcher.quoteReplacement(replacement));
-      matcher = MIXED_COLOR_PATTERN.matcher(message);
+      // Else check gradient marker (group 3 is non-null)
+      else if (matcher.group(3) != null) {
+        replacement = gradientColorize(matcher.group(0));
+      }
+      // Else, it's a simple color marker (group 5)
+      else if (matcher.group(5) != null) {
+        String marker = matcher.group(5).toLowerCase();
+        String text = matcher.group(6);
+        String colorCode =
+            marker.startsWith("#") ? ansiFromHex(marker) : COLOR_MAP.getOrDefault(marker, RESET);
+        replacement = colorCode + colorize(text) + RESET;
+      } else {
+        replacement = matcher.group(0);
+      }
+      matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
     }
-    return message;
+    matcher.appendTail(sb);
+    return sb.toString();
   }
 
   /**
    * This removes all ansi codes from a text. Usually useful for log saving.
+   *
    * @param input The string to be cleaned of ansi codes
    * @return This returns the inputted string with no ansi codes for log-saving functionalities
    */
   public static String removeAnsiCodes(String input) {
     return input.replaceAll("\u001B\\[[;\\d]*m", "");
-  }
-
-  /**
-   * Adds a new color to the color map with the corresponding ANSI code.
-   *
-   * @param colorName The name of the new color (e.g., "orange").
-   * @param ansiCode  The ANSI escape sequence for the color (e.g., "\u001B[38;5;214m").
-   */
-  public void addCustomColor(String colorName, String ansiCode) {
-    COLOR_MAP.put(colorName.toLowerCase(), ansiCode);
   }
 
   /**
@@ -326,8 +317,8 @@ public class ANSIColor {
    * Interpolates between two hex colors based on the given ratio.
    *
    * @param startColor the start hex color (e.g. "#FF0000")
-   * @param endColor the end hex color (e.g. "#0000FF")
-   * @param ratio a value between 0.0 (startColor) and 1.0 (endColor)
+   * @param endColor   the end hex color (e.g. "#0000FF")
+   * @param ratio      a value between 0.0 (startColor) and 1.0 (endColor)
    * @return the interpolated hex color string
    */
   private static String interpolateColor(String startColor, String endColor, double ratio) {
@@ -349,9 +340,9 @@ public class ANSIColor {
   /**
    * Applies a gradient effect to text based on a gradient marker.
    * Supported formats:
-   *   gradient-#FF0000-#00FF00[Text] (default alignment "left")
-   *   gradient-center-#FF0000-#00FF00[Text]
-   *   gradient-45deg-top-#FF0000-#00FF00-#0000FF[Line1\nLine2\nLine3]
+   * gradient-#FF0000-#00FF00[Text] (default alignment "left")
+   * gradient-center-#FF0000-#00FF00[Text]
+   * gradient-45deg-top-#FF0000-#00FF00-#0000FF[Line1\nLine2\nLine3]
    *
    * @param message The full gradient marker string.
    * @return The string with a gradient applied.
@@ -371,7 +362,7 @@ public class ANSIColor {
       String text = message.substring(openBracket + 1, message.lastIndexOf(']'));
       String[] parts = marker.split("-");
       if (parts.length < 3) return message;
-      String alignment = "left"; // default alignment
+      String alignment = parts[0]; // default alignment
       String startColor = parts[1];
       String endColor = parts[2];
       if (text.contains("\n")) {
@@ -405,7 +396,7 @@ public class ANSIColor {
     // Expected marker format: gradient-[angle]deg-[direction]-#RRGGBB(-#RRGGBB)*[Text]
     Pattern pattern =
         Pattern.compile(
-            "^gradient-(\\d+)deg-([a-zA-Z]+)-((?:#[A-Fa-f0-9]{6}(?:-#[A-Fa-f0-9]{6})*))\\[([^\\]]*)\\]$");
+            "^gradient-(\\d+)deg-([a-zA-Z]+)-((?:#[A-Fa-f0-9]{6}(?:-#[A-Fa-f0-9]{6})*))\\[([^\\]]+)\\]$");
     Matcher matcher = pattern.matcher(marker);
     if (!matcher.matches()) {
       return marker; // Unchanged if it doesn't match expected format.
@@ -582,5 +573,15 @@ public class ANSIColor {
       }
     }
     return sb.toString();
+  }
+
+  /**
+   * Adds a new color to the color map with the corresponding ANSI code.
+   *
+   * @param colorName The name of the new color (e.g., "orange").
+   * @param ansiCode  The ANSI escape sequence for the color (e.g., "\u001B[38;5;214m").
+   */
+  public void addCustomColor(String colorName, String ansiCode) {
+    COLOR_MAP.put(colorName.toLowerCase(), ansiCode);
   }
 }

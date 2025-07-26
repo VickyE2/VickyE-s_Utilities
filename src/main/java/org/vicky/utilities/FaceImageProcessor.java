@@ -1,7 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
-import java.awt.Graphics2D;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -19,10 +19,10 @@ public class FaceImageProcessor {
    * Retrieves the player's face from the skin, crops it, resizes it if needed,
    * and saves it as a .puuid file.
    *
-   * @param skinURL  The URL of the player's skin texture.
-   * @param uuid     The player's UUID, used for saving the image file.
-   * @param width    The width to resize the image to (optional).
-   * @param height   The height to resize the image to (optional).
+   * @param skinURL The URL of the player's skin texture.
+   * @param uuid    The player's UUID, used for saving the image file.
+   * @param width   The width to resize the image to (optional).
+   * @param height  The height to resize the image to (optional).
    * @throws IOException if any error occurs during processing.
    */
   public void processAndSavePlayerFace(String skinURL, UUID uuid, int width, int height)
@@ -35,8 +35,7 @@ public class FaceImageProcessor {
           .getLogger()
           .info(
               ANSIColor.colorize(
-                  "Face image already exists as .puuid for UUID: " + uuid.toString(),
-                  ANSIColor.YELLOW));
+                  "Face image already exists as .puuid for UUID: " + uuid, ANSIColor.YELLOW));
       return;
     }
 
@@ -56,7 +55,7 @@ public class FaceImageProcessor {
     vicky_utils
         .plugin
         .getLogger()
-        .info(ANSIColor.colorize("Face image saved for UUID: " + uuid.toString(), ANSIColor.GREEN));
+        .info(ANSIColor.colorize("Face image saved for UUID: " + uuid, ANSIColor.GREEN));
   }
 
   /**
@@ -89,14 +88,11 @@ public class FaceImageProcessor {
           .plugin
           .getLogger()
           .warning(
-              ANSIColor.colorize(
-                  "No .puuid file found for UUID: " + uuid.toString(), ANSIColor.RED_BOLD));
+              ANSIColor.colorize("No .puuid file found for UUID: " + uuid, ANSIColor.RED_BOLD));
       vicky_utils
           .plugin
           .getLogger()
-          .info(
-              ANSIColor.colorize(
-                  "creating puuid file for UUID: " + uuid.toString(), ANSIColor.GREEN));
+          .info(ANSIColor.colorize("creating puuid file for UUID: " + uuid, ANSIColor.GREEN));
       processAndSavePlayerFace(SkinUtils.getPlayerSkinURL(uuid), uuid, -1, -1);
       try {
         // Wait for 5 seconds (5000 milliseconds) before converting the file
@@ -113,8 +109,8 @@ public class FaceImageProcessor {
     BufferedImage faceImage = ImageIO.read(puuidFile);
 
     // Save it as a .png file
-    File pngFile = new File(facesFolder, uuid.toString() + ".png");
+    File pngFile = new File(facesFolder, uuid + ".png");
     ImageIO.write(faceImage, "png", pngFile);
-    System.out.println("Converted .puuid to .png for UUID: " + uuid.toString());
+    System.out.println("Converted .puuid to .png for UUID: " + uuid);
   }
 }

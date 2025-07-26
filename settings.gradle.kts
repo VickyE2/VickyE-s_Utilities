@@ -5,7 +5,7 @@
  */
 
 rootProject.name = "v-utls"
-include("paper-1_20_4", "forge-1_20_4")
+include("shared")
 
 pluginManagement {
     repositories {
@@ -13,3 +13,4 @@ pluginManagement {
         maven("https://repo.papermc.io/repository/maven-public/")
     }
 }
+include("shared")

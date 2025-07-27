@@ -9,6 +9,11 @@ public class Location3D extends Vec3 {
         this.pitch = pitch;
     }
 
+    public Location3D(double x, double y, double z) {
+        super(x, y, z);
+        this.yaw = 0; this.pitch = 0;
+    }
+
     public Location3D clone() {
         return new Location3D(x, y, z, yaw, pitch);
     }

@@ -27,11 +27,11 @@ public interface PlatformPlugin {
         return get().getScheduler();
     }
 
-    static RankService rankService() {
+    static PlatformRankService rankService() {
         return get().getRankService();
     }
 
-    static ParticleProvider particleProvider() {
+    static PlatformParticleProvider particleProvider() {
         return get().getParticleProvider();
     }
 
@@ -49,6 +49,14 @@ public interface PlatformPlugin {
 
     static PlatformConfig config() {
         return get().getConfig();
+    }
+
+    static PlatformEntityFactory entityFactory() {
+        return get().getPlatformEntityFactory();
+    }
+
+    static PlatformLocationAdapter locationAdapter() {
+        return get().getPlatformLocationAdapter();
     }
 
     static void registerTemplateUtilityPackage(String jarName, String packageName) {
@@ -77,11 +85,13 @@ public interface PlatformPlugin {
 
     PlatformLogger getLogger();
     PlatformScheduler getScheduler();
-    RankService getRankService();
-    ParticleProvider getParticleProvider();
+    PlatformRankService getRankService();
+    PlatformParticleProvider getParticleProvider();
     PlatformChatFormatter getChatFormatter();
     PlatformConfig getConfig();
     PlatformBossBarFactory getPlatformBossBarFactory();
+    PlatformEntityFactory getPlatformEntityFactory();
+    PlatformLocationAdapter getPlatformLocationAdapter();
     File getDataFolder();
     Optional<PlatformPlayer> getPlatformPlayer(UUID uuid);
 
@@ -90,6 +100,6 @@ public interface PlatformPlugin {
     class Holder {
         private static final Map<String, String> pendingDBTemplates = new HashMap<>();
         private static final Map<String, String> pendingDBTemplatesUtils = new HashMap<>();
-        private static PlatformPlugin INSTANCE;
+        private static volatile PlatformPlugin INSTANCE;
     }
 }

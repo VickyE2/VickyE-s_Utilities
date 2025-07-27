@@ -1,14 +1,13 @@
 package org.vicky.utilities;
 
 import org.vicky.platform.PlatformPlugin;
-import org.vicky.platform.RankService;
+import org.vicky.platform.PlatformRankService;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 public class RanksLister {
-  private final RankService service;
+  private final PlatformRankService service;
 
   public RanksLister() {
     this.service = PlatformPlugin.rankService();

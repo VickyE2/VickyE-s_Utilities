@@ -6,7 +6,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.OptionalInt;
 
-public interface RankService {
+public interface PlatformRankService {
     CompletableFuture<List<String>> getPlayerGroups(UUID uuid);
     List<String> getAllGroups();
     Map<String, Integer> getGroupWeights();

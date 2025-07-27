@@ -1,14 +1,16 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
-import org.bukkit.Particle;
-import org.bukkit.entity.Arrow;
 import org.vicky.platform.IColor;
 import org.vicky.platform.PlatformPlugin;
-import org.vicky.platform.utils.Location3D;
+import org.vicky.platform.defaults.CommonParticle;
+import org.vicky.platform.entity.PlatformArrow;
+import org.vicky.platform.entity.PlatformParticle;
+import org.vicky.platform.utils.Vec3;
+import org.vicky.platform.world.PlatformLocation;
 
 /**
- * ParticleTask is a {@link BukkitRunnable} that continuously spawns particles around an arrow entity,
+ * ParticleTask is a {@link Runnable} that continuously spawns particles around an arrow entity,
  * creating various visual effects such as helices, waves, bursts, and more.
  * <p>
  * The task calculates positions for two groups of particles (head and middle) based on several parameters,
@@ -23,8 +25,8 @@ import org.vicky.platform.utils.Location3D;
  * @author
  */
 public class ParticleTask implements Runnable {
-
-  private final Arrow arrow;
+  private volatile boolean running = true;
+  private final PlatformArrow arrow;
   private final double radiusH;
   private final double radiusM;
   private final double heightStep;
@@ -51,8 +53,8 @@ public class ParticleTask implements Runnable {
   private final float sizeM;
   private final ParticleTypeEffect.SpacingMode spacingMode;
   private final int circleNumber;
-  private final Particle particleH;
-  private final Particle particleM;
+  private final PlatformParticle particleH;
+  private final PlatformParticle particleM;
   private final ParticleTypeEffect.ParticleTypeEffects effectTypeH;
   private final ParticleTypeEffect.ParticleTypeEffects effectTypeM;
   private final float yaw;
@@ -98,7 +100,7 @@ public class ParticleTask implements Runnable {
    */
   public ParticleTask(
       long startTime,
-      Arrow arrow,
+      PlatformArrow arrow,
       double radiusH,
       double radiusM,
       double heightStep,
@@ -119,8 +121,8 @@ public class ParticleTask implements Runnable {
       double backwardVelocity,
       float sizeH,
       float sizeM,
-      Particle particleH,
-      Particle particleM,
+      PlatformParticle particleH,
+      PlatformParticle particleM,
       ParticleTypeEffect.ParticleTypeEffects effectTypeH,
       ParticleTypeEffect.ParticleTypeEffects effectTypeM,
       double rFreq,
@@ -170,7 +172,7 @@ public class ParticleTask implements Runnable {
   // They represent an alternative approach using quaternion rotation, which can be implemented in
   // the future.
   /*
-  public void alignParticlesToArrow(Location3D[] positions, Arrow arrow) {
+  public void alignParticlesToArrow(PlatformLocation[] positions, Arrow arrow) {
       Vec3 direction = arrow.getLocation().getDirection().normalize();
       Quaternion rotation = getRotationTo(new Vec3(0, 1, 0), direction);
       for (int i = 0; i < positions.length; i++) {
@@ -208,9 +210,9 @@ public class ParticleTask implements Runnable {
    * @param particleLoc The original location of the particle.
    * @param arrowLoc    The location of the arrow.
    * @param direction   The direction vector (typically the arrow's velocity) used for rotation.
-   * @return A new Location3D that is the rotated position of the particle relative to the arrow.
+   * @return A new PlatformLocation that is the rotated position of the particle relative to the arrow.
 
-   private Location3D rotateAroundArrow(Location3D particleLoc, Location3D arrowLoc, Vec3 direction) {
+   private PlatformLocation rotateAroundArrow(PlatformLocation particleLoc, PlatformLocation arrowLoc, Vec3 direction) {
     Vec3 relativePos = particleLoc.toVector().subtract(arrowLoc.toVector());
     direction = direction.normalize();
     // Multiply relative position by the normalized direction to influence rotation (adjust as needed)
@@ -241,255 +243,266 @@ public class ParticleTask implements Runnable {
    * <p>
    * This method checks if the arrow is dead, calculates the elapsed time since the task started,
    * determines the current animation angle, and spawns particles based on the configured effect types
-   * for both head and middle particles. The particles are rotated using the {@link #rotateAroundArrow(Location3D, Location3D, Vec3)} method.
+   * for both head and middle particles. The particles are rotated using the {@link #rotateAroundArrow(PlatformLocation, PlatformLocation, Vec3)} method.
    * </p>
    */
   @Override
   public void run() {
-    if (arrow.isDead()) {
-      cancel();
-      return;
-    }
-
-    Location3D loc = arrow.getLocation();
-    long currentTime = System.currentTimeMillis();
-    long elapsedTime = currentTime - startTime; // Calculate elapsed time
-    double angle = (elapsedTime / 10.0);
-
-    // Generate particle positions based on effect type for head and middle groups
-    Location3D[] headPositions;
-    Location3D[] middlePositions;
-
-    // Determine head particle positions based on the head effect type
-    switch (effectTypeH) {
-      case LINE:
-        headPositions = ParticleTypeEffect.LINE(loc.clone(), radiusH, headCount);
-        break;
-      case HELIX:
-        headPositions =
-            ParticleTypeEffect.HELIX(loc.clone(), radiusH, heightStep, angle, headCount);
-        break;
-      case WAVY_LINE:
-        headPositions =
-            ParticleTypeEffect.WAVY_LINE(loc.clone(), radiusH, heightStep, angle, headCount);
-        break;
-      case BURST_SPIRAL:
-        headPositions =
-            ParticleTypeEffect.BURST_SPIRAL(loc.clone(), radiusH, heightStep, angle, headCount);
-        break;
-      case CONVERGING_LINES:
-        headPositions =
-            ParticleTypeEffect.CONVERGING_LINES(loc.clone(), radiusH, heightStep, angle, headCount);
-        break;
-      case RIPPLES:
-        headPositions =
-            ParticleTypeEffect.RIPPLES(
-                loc.clone(), radiusH, angleStep, angle, headCount, spacingMode, circleNumber);
-        break;
-      case FALLING_LEAVES:
-        headPositions =
-            ParticleTypeEffect.FALLING_LEAVES(loc.clone(), radiusH, heightStep, angle, headCount);
-        break;
-      case EXPLODING_STARS:
-        headPositions =
-            ParticleTypeEffect.EXPLODING_STARS(loc.clone(), radiusH, heightStep, angle, headCount);
-        break;
-      case PULSE_WAVES:
-        headPositions =
-            ParticleTypeEffect.PULSE_WAVES(
-                loc.clone(), radiusH, heightStep, angle, headCount, pFreq);
-        break;
-      case OSCILLATING_RINGS:
-        headPositions =
-            ParticleTypeEffect.OSCILLATING_RINGS(
-                loc.clone(), radiusH, heightStep, angle, headCount, rFreq);
-        break;
-      default:
-        throw new IllegalStateException("Unexpected effect type: " + effectTypeH);
-    }
-
-    // Determine middle particle positions based on the middle effect type
-    switch (effectTypeM) {
-      case LINE:
-        middlePositions =
-            ParticleTypeEffect.LINE(
-                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
-                radiusM,
-                middleCount);
-        break;
-      case HELIX:
-        middlePositions =
-            ParticleTypeEffect.HELIX(
-                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
-                radiusM,
-                heightStep,
-                angle,
-                middleCount);
-        break;
-      case WAVY_LINE:
-        middlePositions =
-            ParticleTypeEffect.WAVY_LINE(
-                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
-                radiusM,
-                heightStep,
-                angle,
-                middleCount);
-        break;
-      case BURST_SPIRAL:
-        middlePositions =
-            ParticleTypeEffect.BURST_SPIRAL(
-                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
-                radiusM,
-                heightStep,
-                angle,
-                middleCount);
-        break;
-      case CONVERGING_LINES:
-        middlePositions =
-            ParticleTypeEffect.CONVERGING_LINES(
-                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
-                radiusM,
-                heightStep,
-                angle,
-                middleCount);
-        break;
-      case RIPPLES:
-        middlePositions =
-            ParticleTypeEffect.RIPPLES(
-                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
-                radiusM,
-                angleStep,
-                angle,
-                middleCount,
-                spacingMode,
-                circleNumber);
-        break;
-      case FALLING_LEAVES:
-        middlePositions =
-            ParticleTypeEffect.FALLING_LEAVES(
-                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
-                radiusM,
-                heightStep,
-                angle,
-                middleCount);
-        break;
-      case EXPLODING_STARS:
-        middlePositions =
-            ParticleTypeEffect.EXPLODING_STARS(
-                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
-                radiusM,
-                heightStep,
-                angle,
-                middleCount);
-        break;
-      case PULSE_WAVES:
-        middlePositions =
-            ParticleTypeEffect.PULSE_WAVES(
-                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
-                radiusM,
-                heightStep,
-                angle,
-                middleCount,
-                pFreq);
-        break;
-      case OSCILLATING_RINGS:
-        middlePositions =
-            ParticleTypeEffect.OSCILLATING_RINGS(
-                loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
-                radiusM,
-                heightStep,
-                angle,
-                middleCount,
-                rFreq);
-        break;
-      default:
-        throw new IllegalStateException("Unexpected effect type: " + effectTypeM);
-    }
-
-    Location3D[] rotheadPositions = headPositions;
-    Location3D[] rotmidPositions = middlePositions;
-
-    // Adjust locations for particles for head and middle effects
-    Location3D redstoneLocation = loc.clone();
-    Location3D dustLocation =
-        loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
-
-    // Spawn head particles based on the particle type
-    if (this.particleH == Particle.REDSTONE) {
-      for (Location3D pos : rotheadPositions) {
-        Location3D rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        redstoneLocation
-            .getWorld()
-            .spawnParticle(
-                particleH,
-                rotatedPos,
-                1,
-                spreadXH,
-                spreadYH,
-                spreadZH,
-                speedH,
-                new Particle.DustOptions(headColor, sizeH));
+    while (running) {
+      if (arrow.isDead()) {
+        running = false;
+        return;
       }
-    } else if (particleH == Particle.DUST_COLOR_TRANSITION) {
-      for (Location3D pos : rotheadPositions) {
-        Location3D rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        redstoneLocation
-            .getWorld()
-            .spawnParticle(
-                particleH,
-                rotatedPos,
-                1,
-                spreadXH,
-                spreadYH,
-                spreadZH,
-                speedH,
-                new Particle.DustTransition(transitionColorStart, transitionColorEnd, sizeH));
-      }
-    } else {
-      for (Location3D pos : rotheadPositions) {
-        Location3D rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        loc.getWorld()
-            .spawnParticle(particleH, rotatedPos, 1, spreadXH, spreadYH, spreadZH, speedH, sizeH);
-      }
-    }
 
-    // Spawn middle particles based on the particle type
-    if (particleM == Particle.DUST_COLOR_TRANSITION) {
-      dustLocation =
-          dustLocation.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
-      for (Location3D pos : rotmidPositions) {
-        Location3D rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        dustLocation
-            .getWorld()
-            .spawnParticle(
-                particleM,
-                rotatedPos,
-                1,
-                spreadXM,
-                spreadYM,
-                spreadZM,
-                speedM,
-                new Particle.DustTransition(transitionColorStart, transitionColorEnd, sizeM));
+      PlatformLocation loc = arrow.getLocation();
+      long currentTime = System.currentTimeMillis();
+      long elapsedTime = currentTime - startTime; // Calculate elapsed time
+      double angle = (elapsedTime / 10.0);
+
+      // Generate particle positions based on effect type for head and middle groups
+      PlatformLocation[] headPositions;
+      PlatformLocation[] middlePositions;
+
+      // Determine head particle positions based on the head effect type
+      switch (effectTypeH) {
+        case LINE:
+          headPositions = ParticleTypeEffect.LINE(loc.clone(), radiusH, headCount);
+          break;
+        case HELIX:
+          headPositions =
+                  ParticleTypeEffect.HELIX(loc.clone(), radiusH, heightStep, angle, headCount);
+          break;
+        case WAVY_LINE:
+          headPositions =
+                  ParticleTypeEffect.WAVY_LINE(loc.clone(), radiusH, heightStep, angle, headCount);
+          break;
+        case BURST_SPIRAL:
+          headPositions =
+                  ParticleTypeEffect.BURST_SPIRAL(loc.clone(), radiusH, heightStep, angle, headCount);
+          break;
+        case CONVERGING_LINES:
+          headPositions =
+                  ParticleTypeEffect.CONVERGING_LINES(loc.clone(), radiusH, heightStep, angle, headCount);
+          break;
+        case RIPPLES:
+          headPositions =
+                  ParticleTypeEffect.RIPPLES(
+                          loc.clone(), radiusH, angleStep, angle, headCount, spacingMode, circleNumber);
+          break;
+        case FALLING_LEAVES:
+          headPositions =
+                  ParticleTypeEffect.FALLING_LEAVES(loc.clone(), radiusH, heightStep, angle, headCount);
+          break;
+        case EXPLODING_STARS:
+          headPositions =
+                  ParticleTypeEffect.EXPLODING_STARS(loc.clone(), radiusH, heightStep, angle, headCount);
+          break;
+        case PULSE_WAVES:
+          headPositions =
+                  ParticleTypeEffect.PULSE_WAVES(
+                          loc.clone(), radiusH, heightStep, angle, headCount, pFreq);
+          break;
+        case OSCILLATING_RINGS:
+          headPositions =
+                  ParticleTypeEffect.OSCILLATING_RINGS(
+                          loc.clone(), radiusH, heightStep, angle, headCount, rFreq);
+          break;
+        default:
+          throw new IllegalStateException("Unexpected effect type: " + effectTypeH);
       }
-    } else if (particleM == Particle.REDSTONE) {
-      for (Location3D pos : rotmidPositions) {
-        Location3D rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        PlatformPlugin.particleProvider().spawnDustTransition(
-                rotatedPos,
-                1,
-                spreadXM,
-                spreadYM,
-                spreadZM,
-                speedM
-        );
+
+      // Determine middle particle positions based on the middle effect type
+      switch (effectTypeM) {
+        case LINE:
+          middlePositions =
+                  ParticleTypeEffect.LINE(
+                          (PlatformLocation) loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                          radiusM,
+                          middleCount);
+          break;
+        case HELIX:
+          middlePositions =
+                  ParticleTypeEffect.HELIX(
+                          (PlatformLocation) loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                          radiusM,
+                          heightStep,
+                          angle,
+                          middleCount);
+          break;
+        case WAVY_LINE:
+          middlePositions =
+                  ParticleTypeEffect.WAVY_LINE(
+                          (PlatformLocation) loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                          radiusM,
+                          heightStep,
+                          angle,
+                          middleCount);
+          break;
+        case BURST_SPIRAL:
+          middlePositions =
+                  ParticleTypeEffect.BURST_SPIRAL(
+                          (PlatformLocation) loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                          radiusM,
+                          heightStep,
+                          angle,
+                          middleCount);
+          break;
+        case CONVERGING_LINES:
+          middlePositions =
+                  ParticleTypeEffect.CONVERGING_LINES(
+                          (PlatformLocation) loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                          radiusM,
+                          heightStep,
+                          angle,
+                          middleCount);
+          break;
+        case RIPPLES:
+          middlePositions =
+                  ParticleTypeEffect.RIPPLES(
+                          (PlatformLocation) loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                          radiusM,
+                          angleStep,
+                          angle,
+                          middleCount,
+                          spacingMode,
+                          circleNumber);
+          break;
+        case FALLING_LEAVES:
+          middlePositions =
+                  ParticleTypeEffect.FALLING_LEAVES(
+                          (PlatformLocation) loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                          radiusM,
+                          heightStep,
+                          angle,
+                          middleCount);
+          break;
+        case EXPLODING_STARS:
+          middlePositions =
+                  ParticleTypeEffect.EXPLODING_STARS(
+                          (PlatformLocation) loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                          radiusM,
+                          heightStep,
+                          angle,
+                          middleCount);
+          break;
+        case PULSE_WAVES:
+          middlePositions =
+                  ParticleTypeEffect.PULSE_WAVES(
+                          loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                          radiusM,
+                          heightStep,
+                          angle,
+                          middleCount,
+                          pFreq);
+          break;
+        case OSCILLATING_RINGS:
+          middlePositions =
+                  ParticleTypeEffect.OSCILLATING_RINGS(
+                          loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind)),
+                          radiusM,
+                          heightStep,
+                          angle,
+                          middleCount,
+                          rFreq);
+          break;
+        default:
+          throw new IllegalStateException("Unexpected effect type: " + effectTypeM);
       }
-    } else {
-      for (Location3D pos : rotmidPositions) {
-        Location3D BParticleLocation =
-            loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
-        Location3D rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
-        BParticleLocation.getWorld()
-            .spawnParticle(particleM, rotatedPos, 1, spreadXM, spreadYM, spreadZM, speedM, sizeM);
+
+      PlatformLocation[] rotheadPositions = headPositions;
+      PlatformLocation[] rotmidPositions = middlePositions;
+
+      // Adjust locations for particles for head and middle effects
+      PlatformLocation redstoneLocation = loc.clone();
+      var norm = arrow.getVelocity().normalize().multiply(lagBehind);
+      PlatformLocation dustLocation =
+              loc.clone().subtract(norm.x, norm.y, norm.z);
+
+      // Spawn head particles based on the particle type
+      if (this.particleH == CommonParticle.REDSTONE) {
+        for (PlatformLocation pos : rotheadPositions) {
+          PlatformLocation rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+          PlatformPlugin.particleProvider().spawnColored(
+                  particleH,
+                  rotatedPos,
+                  1,
+                  spreadXH,
+                  spreadYH,
+                  spreadZH,
+                  speedH,
+                  headColor,
+                  sizeH);
+        }
+      } else if (particleH == CommonParticle.DUST_COLOR_TRANSITION) {
+        for (PlatformLocation pos : rotheadPositions) {
+          PlatformLocation rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+          PlatformPlugin.particleProvider().spawnTransition(
+                  particleH,
+                  rotatedPos,
+                  1,
+                  spreadXH,
+                  spreadYH,
+                  spreadZH,
+                  speedH,
+                  transitionColorStart,
+                  transitionColorEnd,
+                  sizeH);
+        }
+      } else {
+        for (PlatformLocation pos : rotheadPositions) {
+          PlatformLocation rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+          PlatformPlugin.particleProvider()
+                  .spawnBasic(particleH, rotatedPos, 1, spreadXH, spreadYH, spreadZH, speedH, sizeH);
+        }
+      }
+
+      // Spawn middle particles based on the particle type
+      if (particleM == CommonParticle.DUST_COLOR_TRANSITION) {
+          for (PlatformLocation pos : rotmidPositions) {
+          PlatformLocation rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+          PlatformPlugin.particleProvider().spawnTransition(
+                          particleM,
+                          rotatedPos,
+                          1,
+                          spreadXM,
+                          spreadYM,
+                          spreadZM,
+                          speedM,
+                          transitionColorStart,
+                          transitionColorEnd,
+                          sizeM);
+        }
+      } else if (particleM == CommonParticle.REDSTONE) {
+        for (PlatformLocation pos : rotmidPositions) {
+          PlatformLocation rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+          PlatformPlugin.particleProvider().spawnColored(
+                  particleM,
+                  rotatedPos,
+                  1,
+                  spreadXM,
+                  spreadYM,
+                  spreadZM,
+                  speedM,
+                  headColor,
+                  sizeM
+          );
+        }
+      } else {
+        for (org.vicky.platform.world.PlatformLocation pos : rotmidPositions) {
+          PlatformLocation BParticleLocation =
+                  (PlatformLocation) loc.clone().subtract(arrow.getVelocity().normalize().multiply(lagBehind));
+          PlatformLocation rotatedPos = rotateAroundArrow(pos, loc, arrow.getVelocity());
+          PlatformPlugin.particleProvider().spawnBasic(
+                  particleM,
+                  rotatedPos,
+                  1,
+                  spreadXM,
+                  spreadYM,
+                  spreadZM,
+                  speedM,
+                  sizeM
+          );
+        }
       }
     }
   }
@@ -505,9 +518,13 @@ public class ParticleTask implements Runnable {
    * @param particleLoc the original location of the particle
    * @param arrowLoc    the location of the arrow
    * @param direction   the arrow's velocity vector (used to derive rotation)
-   * @return a new Location3D that is the rotated position of the particle relative to the arrow
+   * @return a new PlatformLocation that is the rotated position of the particle relative to the arrow
    */
-  private Location3D rotateAroundArrow(Location3D particleLoc, Location3D arrowLoc, Vec3 direction) {
+  private PlatformLocation rotateAroundArrow(PlatformLocation particleLoc, PlatformLocation arrowLoc, Vec3 direction) {
     return new QuaternionRotation().rotateAroundArrow(particleLoc, arrowLoc, direction);
+  }
+
+  public void stop() {
+    running = false;
   }
 }

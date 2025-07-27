@@ -2,11 +2,14 @@
 package org.vicky.utilities;
 
 import org.vicky.platform.IColor;
+import org.vicky.platform.defaults.CommonParticle;
 import org.vicky.platform.defaults.VanillaColor;
+import org.vicky.platform.entity.PlatformArrow;
+import org.vicky.platform.entity.PlatformParticle;
 
 public class ParticleTaskBuilder {
   private long startTime = System.currentTimeMillis();
-  private Arrow arrow;
+  private PlatformArrow arrow;
   private double radiusH = 1.4;
   private double radiusM = 1.1;
   private double heightStep = 1;
@@ -27,8 +30,8 @@ public class ParticleTaskBuilder {
   private double backwardVelocity = 2;
   private float sizeH = 5;
   private float sizeM = 2.7f;
-  private Particle particleH = Particle.REDSTONE;
-  private Particle particleM = Particle.REDSTONE;
+  private PlatformParticle particleH = CommonParticle.REDSTONE;
+  private PlatformParticle particleM = CommonParticle.REDSTONE;
   private ParticleTypeEffect.ParticleTypeEffects effectTypeH =
       ParticleTypeEffect.ParticleTypeEffects.HELIX;
   private ParticleTypeEffect.ParticleTypeEffects effectTypeM =
@@ -46,7 +49,7 @@ public class ParticleTaskBuilder {
     return this;
   }
 
-  public ParticleTaskBuilder setArrow(Arrow arrow) {
+  public ParticleTaskBuilder setArrow(PlatformArrow arrow) {
     this.arrow = arrow;
     return this;
   }
@@ -151,12 +154,12 @@ public class ParticleTaskBuilder {
     return this;
   }
 
-  public ParticleTaskBuilder setParticleH(Particle particleH) {
+  public ParticleTaskBuilder setParticleH(PlatformParticle particleH) {
     this.particleH = particleH;
     return this;
   }
 
-  public ParticleTaskBuilder setParticleM(Particle particleM) {
+  public ParticleTaskBuilder setParticleM(PlatformParticle particleM) {
     this.particleM = particleM;
     return this;
   }

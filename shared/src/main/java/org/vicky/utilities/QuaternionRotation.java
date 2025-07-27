@@ -2,10 +2,11 @@ package org.vicky.utilities;
 
 import org.vicky.platform.utils.Location3D;
 import org.vicky.platform.utils.Vec3;
+import org.vicky.platform.world.PlatformLocation;
 
 public class QuaternionRotation {
 
-    public Location3D rotateAroundArrow(Location3D particleLoc, Location3D arrowLoc, Vec3 direction) {
+    public PlatformLocation rotateAroundArrow(PlatformLocation particleLoc, PlatformLocation arrowLoc, Vec3 direction) {
         Vec3 relativePos = particleLoc.subtract(arrowLoc);
         direction = direction.clone().normalize();
 
@@ -20,7 +21,7 @@ public class QuaternionRotation {
         Quaternion rotationQuat = yawQuat.multiply(pitchQuat);
         Vec3 rotatedPos = rotationQuat.rotateVec3(relativePos);
 
-        return (Location3D) arrowLoc.clone().add(rotatedPos);
+        return arrowLoc.clone().add(rotatedPos);
     }
 }
 

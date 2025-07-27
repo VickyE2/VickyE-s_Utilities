@@ -1,27 +1,25 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities;
 
-import org.vicky.platform.utils.Location3D;
 import org.vicky.platform.utils.Vec3;
-import org.vicky.platform.utils.Location3D;
-import org.vicky.platform.utils.Vec3;
+import org.vicky.platform.world.PlatformLocation;
 
 public class ParticleTypeEffect {
 
-  public static Location3D[] LINE(Location3D origin, double radius, int particleCount) {
-    Location3D[] positions = new Location3D[particleCount];
+  public static PlatformLocation[] LINE(PlatformLocation origin, double radius, int particleCount) {
+    PlatformLocation[] positions = new PlatformLocation[particleCount];
     for (int i = 0; i < particleCount; i++) {
       double x = origin.getX() + radius;
       double z = origin.getZ() + radius;
       double y = origin.getY();
-      positions[i] = new Location3D(x, y, z, 0, 0);
+      positions[i] = new PlatformLocation(origin.getWorld(), x, y, z);
     }
     return positions;
   }
 
-  public static Location3D[] HELIX(
-      Location3D origin, double radius, double heightStep, double angle, int particleCount) {
-    Location3D[] positions = new Location3D[particleCount];
+  public static PlatformLocation[] HELIX(
+      PlatformLocation origin, double radius, double heightStep, double angle, int particleCount) {
+    PlatformLocation[] positions = new PlatformLocation[particleCount];
     double step = 2 * Math.PI / particleCount; // Adjust step based on the number of points
 
     for (int i = 0; i < particleCount; i++) {
@@ -36,14 +34,14 @@ public class ParticleTypeEffect {
       Vec3 point = new Vec3(x, y, z);
 
       // Set the position
-      positions[i] = (Location3D) origin.clone().add(point);
+      positions[i] = (PlatformLocation) origin.clone().add(point);
     }
 
     return positions;
   }
 
-  public static Location3D[] RIPPLES(
-      Location3D origin,
+  public static PlatformLocation[] RIPPLES(
+      PlatformLocation origin,
       double radius,
       double angleStep,
       double angle,
@@ -51,10 +49,10 @@ public class ParticleTypeEffect {
       SpacingMode spacingMode,
       int numCircles) {
     if (numCircles <= 0) {
-      return new Location3D[0]; // Return an empty array
+      return new PlatformLocation[0]; // Return an empty array
     }
 
-    Location3D[] positions = new Location3D[particleCount];
+    PlatformLocation[] positions = new PlatformLocation[particleCount];
     int minPointsPerCircle = 6; // Minimum number of points per circle
     int pointsPerCircle = particleCount / numCircles;
 
@@ -91,7 +89,7 @@ public class ParticleTypeEffect {
         // Set the position
         int index = circleIndex * currentCirclePoints + i;
         if (index < positions.length) {
-          positions[index] = (Location3D) origin.clone().add(point);
+          positions[index] = (PlatformLocation) origin.clone().add(point);
         }
       }
     }
@@ -99,9 +97,9 @@ public class ParticleTypeEffect {
     return positions;
   }
 
-  public static Location3D[] WAVY_LINE(
-      Location3D origin, double radius, double heightStep, double angle, int particleCount) {
-    Location3D[] positions = new Location3D[particleCount];
+  public static PlatformLocation[] WAVY_LINE(
+      PlatformLocation origin, double radius, double heightStep, double angle, int particleCount) {
+    PlatformLocation[] positions = new PlatformLocation[particleCount];
 
     double step = 2 * Math.PI / particleCount; // Adjust step based on the number of points
 
@@ -116,14 +114,14 @@ public class ParticleTypeEffect {
       Vec3 point = new Vec3(x, y, z);
 
       // Set the position
-      positions[i] = (Location3D) origin.clone().add(point);
+      positions[i] = (PlatformLocation) origin.clone().add(point);
     }
     return positions;
   }
 
-  public static Location3D[] BURST_SPIRAL(
-      Location3D origin, double radius, double heightStep, double angle, int particleCount) {
-    Location3D[] positions = new Location3D[particleCount];
+  public static PlatformLocation[] BURST_SPIRAL(
+      PlatformLocation origin, double radius, double heightStep, double angle, int particleCount) {
+    PlatformLocation[] positions = new PlatformLocation[particleCount];
 
     double step = 2 * Math.PI / particleCount; // Adjust step based on the number of points
 
@@ -140,7 +138,7 @@ public class ParticleTypeEffect {
       Vec3 point = new Vec3(x, y, z);
 
       // Set the position
-      positions[i] = (Location3D) origin.clone().add(point);
+      positions[i] = (PlatformLocation) origin.clone().add(point);
     }
     return positions;
   }
@@ -149,9 +147,9 @@ public class ParticleTypeEffect {
 
   // Function to rotate a vector to align with a given direction
 
-  public static Location3D[] CONVERGING_LINES(
-      Location3D origin, double radius, double heightStep, double angle, int particleCount) {
-    Location3D[] positions = new Location3D[particleCount];
+  public static PlatformLocation[] CONVERGING_LINES(
+      PlatformLocation origin, double radius, double heightStep, double angle, int particleCount) {
+    PlatformLocation[] positions = new PlatformLocation[particleCount];
 
     double step = 2 * Math.PI / particleCount; // Adjust step based on the number of points
 
@@ -166,14 +164,14 @@ public class ParticleTypeEffect {
       Vec3 point = new Vec3(x, y, z);
 
       // Set the position
-      positions[i] = (Location3D) origin.clone().add(point);
+      positions[i] = (PlatformLocation) origin.clone().add(point);
     }
     return positions;
   }
 
-  public static Location3D[] FALLING_LEAVES(
-      Location3D origin, double radius, double heightStep, double angle, int particleCount) {
-    Location3D[] positions = new Location3D[particleCount];
+  public static PlatformLocation[] FALLING_LEAVES(
+      PlatformLocation origin, double radius, double heightStep, double angle, int particleCount) {
+    PlatformLocation[] positions = new PlatformLocation[particleCount];
 
     double step = 2 * Math.PI / particleCount; // Adjust step based on the number of points
 
@@ -186,14 +184,14 @@ public class ParticleTypeEffect {
       Vec3 point = new Vec3(x, y, z);
 
       // Set the position
-      positions[i] = (Location3D) origin.clone().add(point);
+      positions[i] = (PlatformLocation) origin.clone().add(point);
     }
     return positions;
   }
 
-  public static Location3D[] EXPLODING_STARS(
-      Location3D origin, double radius, double heightStep, double angle, int particleCount) {
-    Location3D[] positions = new Location3D[particleCount];
+  public static PlatformLocation[] EXPLODING_STARS(
+      PlatformLocation origin, double radius, double heightStep, double angle, int particleCount) {
+    PlatformLocation[] positions = new PlatformLocation[particleCount];
 
     double step = 2 * Math.PI / particleCount; // Adjust step based on the number of points
 
@@ -208,19 +206,19 @@ public class ParticleTypeEffect {
       Vec3 point = new Vec3(x, y, z);
 
       // Set the position
-      positions[i] = (Location3D) origin.clone().add(point);
+      positions[i] = (PlatformLocation) origin.clone().add(point);
     }
     return positions;
   }
 
-  public static Location3D[] PULSE_WAVES(
-      Location3D origin,
+  public static PlatformLocation[] PULSE_WAVES(
+      PlatformLocation origin,
       double radius,
       double heightStep,
       double angle,
       int particleCount,
       double pFreq) {
-    Location3D[] positions = new Location3D[particleCount];
+    PlatformLocation[] positions = new PlatformLocation[particleCount];
     // Adjust step based on the number of points
     for (int i = 0; i < particleCount; i++) {
       double theta = angle + (i / (double) particleCount) * 2 * Math.PI;
@@ -233,19 +231,19 @@ public class ParticleTypeEffect {
       Vec3 point = new Vec3(x, y, z);
 
       // Set the position
-      positions[i] = (Location3D) origin.clone().add(point);
+      positions[i] = (PlatformLocation) origin.clone().add(point);
     }
     return positions;
   }
 
-  public static Location3D[] OSCILLATING_RINGS(
-      Location3D origin,
+  public static PlatformLocation[] OSCILLATING_RINGS(
+      PlatformLocation origin,
       double radius,
       double heightStep,
       double angle,
       int particleCount,
       double rFreq) {
-    Location3D[] positions = new Location3D[particleCount];
+    PlatformLocation[] positions = new PlatformLocation[particleCount];
 
     double step = 2 * Math.PI / particleCount; // Adjust step based on the number of points
 
@@ -260,7 +258,7 @@ public class ParticleTypeEffect {
       Vec3 point = new Vec3(x, y, z);
 
       // Set the position
-      positions[i] = (Location3D) origin.clone().add(point);
+      positions[i] = (PlatformLocation) origin.clone().add(point);
     }
     return positions;
   }

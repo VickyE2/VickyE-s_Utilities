@@ -10,7 +10,8 @@
       </option>
       <option name="taskNames">
         <list>
-          <option value="build" />
+          <option value=":paper-1_20_4:spotlessApply" />
+          <option value=":paper-1_20_4:shadowJar" />
         </list>
       </option>
       <option name="vmOptions" />

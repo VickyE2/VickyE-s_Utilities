@@ -83,6 +83,7 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 	public static vicky_utils getPlugin() {
 		return plugin;
 	}
+	private static final List<Class<?>> mappingClasses = new ArrayList<>();
 
 	@Deprecated(forRemoval = true)
 	public static void hookDependantPlugin(@NotNull JavaPlugin plugin, @NotNull ClassLoader loader) {
@@ -133,12 +134,20 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 	}
 
 	public static void addTemplateClass(Class<? extends DatabaseTemplate> clazz) {
-		sqlManager.addMappingClass(clazz);
+		if (sqlManager == null) {
+			mappingClasses.add(clazz);
+		} else {
+			sqlManager.addMappingClass(clazz);
+		}
 	}
 
 	@SafeVarargs
 	public static void addTemplateClasses(Class<? extends DatabaseTemplate>... clazzez) {
-		sqlManager.addMappingClasses(List.of(clazzez));
+		if (sqlManager == null) {
+			mappingClasses.addAll(List.of(clazzez));
+		} else {
+			sqlManager.addMappingClasses(List.of(clazzez));
+		}
 	}
 
 	/** Called by dependent plugins to register their custom player effects. */
@@ -186,6 +195,7 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 	@Override
 	public void onLoad() {
 		try {
+			PlatformPlugin.set(this);
 			plugin = this;
 			loader = this.getClassLoader();
 			utilsCompact = new VickyUtilsCompat();
@@ -210,7 +220,8 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 					                                                                         dark_gray[%s]""",
 					this.getDescription().getVersion())));
 			this.getDataFolder().mkdirs();
-			listener = new Listener() {};
+			listener = new Listener() {
+			};
 			rankService = new BukkitPlatformRankService(
 					Bukkit.getServicesManager().getRegistration(LuckPerms.class).getProvider());
 			utilsCompact.register();
@@ -489,7 +500,8 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 				.addMappingClass(ThemeRegistry.class).addMappingClass(MusicPlaylist.class)
 				.addMappingClass(MusicPlayer.class)
 				.addMappingClass(org.vicky.utilities.DatabaseManager.templates.MusicPiece.class)
-				.addMappingClass(ExtendedPlayerBase.class).setUsername(generator.generate(20, true, true, true, false))
+				.addMappingClass(ExtendedPlayerBase.class).addMappingClasses(mappingClasses)
+				.setUsername(generator.generate(20, true, true, true, false))
 				.setPassword(generator.generatePassword(30)).setShowSql(false).setFormatSql(false)
 				.setDialect("org.hibernate.community.dialect.SQLiteDialect").setDdlAuto(Hbm2DdlAutoType.UPDATE).build();
 	}

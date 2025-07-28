@@ -27,7 +27,6 @@ allprojects {
     val javaVersion = 21
     val YEAR = 2024;
     group = "org.vicky.vicky_utils"
-    version = "0.0.1-BETA"
     description = "VickyE's Utility Mod"
 
     apply(plugin = "java")
@@ -65,12 +64,6 @@ allprojects {
         }
     }
 
-    publishing {
-        publications.create<MavenPublication>("maven") {
-            from(components["java"])
-        }
-    }
-
     dependencies {
         implementation(kotlin("stdlib-jdk8"))
         api("org.reflections:reflections:0.10.2")
@@ -86,17 +79,6 @@ allprojects {
 
     tasks.withType<Javadoc> {
         options.encoding = "UTF-8"
-    }
-
-    tasks.named<ShadowJar>("shadowJar") {
-        archiveBaseName.set("VickyE-Utils")
-        // ONLY include dependencies from 'api'
-        configurations = listOf(
-            project.configurations.runtimeClasspath.get(),
-        )
-        // Optional: merge services (for reflection, slf4j etc.)
-        mergeServiceFiles()
-        minimize()
     }
 
     plugins.withType<KotlinPlatformJvmPlugin> {
@@ -116,6 +98,59 @@ allprojects {
         targetCompatibility = JavaVersion.toVersion(javaVersion)
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(javaVersion))
+        }
+    }
+}
+
+subprojects {
+    apply(plugin = "maven-publish")
+
+    afterEvaluate {
+        tasks.named<ShadowJar>("shadowJar") {
+            archiveBaseName.set("VickyE-Utils")
+            version = project.version
+            configurations = listOf(
+                project.configurations.runtimeClasspath.get(),
+            )
+            // Optional: merge services (for reflection, slf4j etc.)
+            mergeServiceFiles()
+            minimize()
+        }
+
+        publishing {
+            publications {
+                create<MavenPublication>("gpr") {
+                    groupId = project.group as String
+
+                    artifactId =  when {
+                        project.name.startsWith("paper") -> "vicky-utils-bukkit"
+                        project.name.startsWith("fabric") -> "vicky-utils-fabric"
+                        project.name.startsWith("forge") -> "vicky-utils-forge"
+                        project.name == "shared" -> "vicky-utils-core"
+                        else -> project.name
+                    }
+
+                    version = project.version.toString()
+
+                    if (tasks.findByName("shadowJar") != null) {
+                        artifact(tasks.named("shadowJar").get())
+                    } else {
+                        from(components["java"])
+                    }
+                }
+            }
+
+            repositories {
+                mavenLocal()
+                maven {
+                    name = "GitHubPackages"
+                    url = uri("https://maven.pkg.github.com/VickyE2/VickyE-s_Utilities")
+                    credentials {
+                        username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
+                        password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
+                    }
+                }
+            }
         }
     }
 }

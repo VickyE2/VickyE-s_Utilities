@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "org.vicky.vicky_utils"
-version = "0.0.1-BETA"
+version = "all-0.0.1-BETA"
 
 repositories {
     mavenCentral()

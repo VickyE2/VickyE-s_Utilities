@@ -3,7 +3,7 @@
  *
  * This project uses @Incubating APIs which are subject to change.
  */
-
+version = "1.20.4-0.0.1-BETA"
 repositories {
     mavenLocal()
     maven {
@@ -51,11 +51,17 @@ repositories {
     }
 }
 
+tasks.shadowJar {
+    relocate("org.hibernate", "org.vicky.shadowed.hibernate")
+    relocate("org.jboss.logging", "org.vicky.shadowed.jboss.logging")
+}
+
 dependencies {
     implementation(project(":shared"))
     implementation("org.reflections:reflections:0.10.2")
     implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
     implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
+    implementation("org.jboss.logging:jboss-logging:3.5.3.Final")
     implementation("org.hibernate.orm:hibernate-core:6.4.1.Final")
     implementation("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final")
     implementation("org.xerial:sqlite-jdbc:3.48.0.0")

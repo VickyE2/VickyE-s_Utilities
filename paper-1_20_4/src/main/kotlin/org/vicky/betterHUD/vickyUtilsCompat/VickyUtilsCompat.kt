@@ -192,7 +192,7 @@ class VickyUtilsCompat : Compatibility {
     }
 
     fun register() {
-        contextLogger.printBukkit("Registering vicky_utilities compats...", ContextLogger.LogType.PENDING, true)
+        contextLogger.print("Registering vicky_utilities compats...", ContextLogger.LogType.PENDING, true)
         val strap = BetterHud.getInstance()
         addBuiltIns()
         plugin
@@ -207,44 +207,44 @@ class VickyUtilsCompat : Compatibility {
         registerBooleans(strap)
         registerListeners(strap)
 
-        contextLogger.printBukkit("All vicky_utilities compats registered successfully.", ContextLogger.LogType.SUCCESS, true)
+        contextLogger.print("All vicky_utilities compats registered successfully.", ContextLogger.LogType.SUCCESS, true)
     }
     private fun registerTriggers(strap: BetterHud) {
-        contextLogger.printBukkit("- Registering Hud Triggers", ContextLogger.LogType.PENDING, true)
+        contextLogger.print("- Registering Hud Triggers", ContextLogger.LogType.PENDING, true)
         triggers.forEach { (key, value) ->
             strap.triggerManager.addTrigger("${mapping_key}_$key", value)
-            contextLogger.printBukkit("√ Trigger registered: ${mapping_key}_$key", ContextLogger.LogType.SUCCESS, true)
+            contextLogger.print("√ Trigger registered: ${mapping_key}_$key", ContextLogger.LogType.SUCCESS, true)
         }
     }
     private fun registerNumbers(strap: BetterHud) {
-        contextLogger.printBukkit("- Registering Number Placeholders", ContextLogger.LogType.PENDING, true)
+        contextLogger.print("- Registering Number Placeholders", ContextLogger.LogType.PENDING, true)
         numbers.forEach { (key, value) ->
             strap.placeholderManager.numberContainer.addPlaceholder("${mapping_key}_$key", value)
-            contextLogger.printBukkit("√ Number placeholder registered: ${mapping_key}_$key", ContextLogger.LogType.SUCCESS, true)
+            contextLogger.print("√ Number placeholder registered: ${mapping_key}_$key", ContextLogger.LogType.SUCCESS, true)
         }
     }
     private fun registerStrings(strap: BetterHud) {
-        contextLogger.printBukkit("- Registering String Placeholders", ContextLogger.LogType.PENDING, true)
+        contextLogger.print("- Registering String Placeholders", ContextLogger.LogType.PENDING, true)
         strings.forEach { (key, value) ->
             strap.placeholderManager.stringContainer.addPlaceholder("${mapping_key}_$key", value)
-            contextLogger.printBukkit("√ String placeholder registered: ${mapping_key}_$key", ContextLogger.LogType.SUCCESS, true)
+            contextLogger.print("√ String placeholder registered: ${mapping_key}_$key", ContextLogger.LogType.SUCCESS, true)
         }
     }
     private fun registerBooleans(strap: BetterHud) {
-        contextLogger.printBukkit("- Registering Boolean Placeholders", ContextLogger.LogType.PENDING, true)
+        contextLogger.print("- Registering Boolean Placeholders", ContextLogger.LogType.PENDING, true)
         booleans.forEach { (key, value) ->
             strap.placeholderManager.booleanContainer.addPlaceholder("${mapping_key}_$key", value)
-            contextLogger.printBukkit("√ Boolean placeholder registered: ${mapping_key}_$key", ContextLogger.LogType.SUCCESS, true)
+            contextLogger.print("√ Boolean placeholder registered: ${mapping_key}_$key", ContextLogger.LogType.SUCCESS, true)
         }
     }
     private fun registerListeners(strap: BetterHud) {
-        contextLogger.printBukkit("- Registering Listeners", ContextLogger.LogType.PENDING, true)
+        contextLogger.print("- Registering Listeners", ContextLogger.LogType.PENDING, true)
         listeners.forEach { (key, listenerFactory) ->
             strap.listenerManager.addListener("${mapping_key}_$key") { config ->
                 val function = listenerFactory(config)
                 java.util.function.Function { event -> function(event) }
             }
-            contextLogger.printBukkit("√ Listener registered: ${mapping_key}_$key", ContextLogger.LogType.SUCCESS, true)
+            contextLogger.print("√ Listener registered: ${mapping_key}_$key", ContextLogger.LogType.SUCCESS, true)
         }
     }
 }

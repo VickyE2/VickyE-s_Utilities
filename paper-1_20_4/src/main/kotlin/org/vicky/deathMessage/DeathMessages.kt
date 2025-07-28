@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.deathMessage
 
 import net.kyori.adventure.text.Component
@@ -21,7 +22,7 @@ object DeathCauseRegistry {
 
     fun registerCause(@NotNull key: String, @NotNull cause: DeathCause) {
         causeMap.computeIfAbsent(key) { mutableListOf() }.add(cause)
-        logger.printBukkit("Registered death cause: $key", ContextLogger.LogType.BASIC, false)
+        logger.print("Registered death cause: $key", ContextLogger.LogType.BASIC, false)
     }
 
     @JvmOverloads

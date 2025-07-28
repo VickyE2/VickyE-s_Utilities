@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.kotlinUtils
 
 import kr.toxicity.hud.api.bukkit.nms.NMS
@@ -118,9 +119,9 @@ fun writeImage(
         }
         if (cropTo32)
             resizeIconTo32x32(outFile, outFile)
-        contextLogger.printBukkit("Image '$outputName' created", ContextLogger.LogType.SUCCESS, true)
+        contextLogger.print("Image '$outputName' created", ContextLogger.LogType.SUCCESS, true)
     } else {
-        contextLogger.printBukkit("Image '$outputName' already exists: ${outFile.name}", ContextLogger.LogType.WARNING, true)
+        contextLogger.print("Image '$outputName' already exists: ${outFile.name}", ContextLogger.LogType.WARNING, true)
     }
 }
 

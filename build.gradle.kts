@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformJvmPlugin
 import org.jetbrains.kotlin.gradle.targets.js.binaryen.BinaryenRootPlugin.Companion.kotlinBinaryenExtension
 
@@ -12,6 +13,7 @@ plugins {
     `maven-publish` apply true
     kotlin("jvm") version "2.1.10" apply true
     id("com.diffplug.spotless") version "6.19.0" apply true
+    id("io.github.goooler.shadow") version "8.1.8" apply true
 }
 
 allprojects {
@@ -23,6 +25,7 @@ allprojects {
 
 allprojects {
     val javaVersion = 21
+    val YEAR = 2024;
     group = "org.vicky.vicky_utils"
     version = "0.0.1-BETA"
     description = "VickyE's Utility Mod"
@@ -32,6 +35,7 @@ allprojects {
     apply(plugin = "java-library")
     apply(plugin = "maven-publish")
     apply(plugin = "com.diffplug.spotless")
+    apply(plugin = "io.github.goooler.shadow")
 
     configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         ratchetFrom("origin/master")
@@ -41,28 +45,22 @@ allprojects {
             trimTrailingWhitespace()
             endWithNewline()
             indentWithTabs()
-            indentWithSpaces(4)
+            indentWithSpaces(6)
         }
 
         kotlin {
             target("src/main/kotlin/**/*.kt")
-            licenseHeader("/* Licensed under Apache-2.0 \$YEAR. */")
+            licenseHeader("/* Licensed under Apache-2.0 $YEAR. */")
         }
 
         java {
             target("src/main/java/**/*.java")
-
             importOrder(
                 "java", "javax", "org", "com", "com.diffplug", "", "#com.diffplug", "#"
             )
             removeUnusedImports()
             formatAnnotations()
-            googleJavaFormat().apply {
-                version = "1.23.0"
-                style("GOOGLE")
-                reflowLongStrings(true)
-            }
-
+            eclipse()
             licenseHeader("/* Licensed under Apache-2.0 \$YEAR. */")
         }
     }
@@ -78,12 +76,27 @@ allprojects {
         api("org.reflections:reflections:0.10.2")
     }
 
+    tasks.jar {
+        archiveBaseName.set("VickyUtils")
+    }
+
     tasks.withType<JavaCompile> {
         options.encoding = "UTF-8"
     }
 
     tasks.withType<Javadoc> {
         options.encoding = "UTF-8"
+    }
+
+    tasks.named<ShadowJar>("shadowJar") {
+        archiveBaseName.set("VickyE-Utils")
+        // ONLY include dependencies from 'api'
+        configurations = listOf(
+            project.configurations.runtimeClasspath.get(),
+        )
+        // Optional: merge services (for reflection, slf4j etc.)
+        mergeServiceFiles()
+        minimize()
     }
 
     plugins.withType<KotlinPlatformJvmPlugin> {

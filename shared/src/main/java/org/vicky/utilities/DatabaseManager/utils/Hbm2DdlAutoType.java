@@ -1,0 +1,11 @@
+/* Licensed under Apache-2.0 2025. */
+package org.vicky.utilities.DatabaseManager.utils;
+
+public enum Hbm2DdlAutoType {
+	NONE, VALIDATE, UPDATE, CREATE, CREATE_DROP, DROP, CREATE_ONLY;
+
+	@Override
+	public String toString() {
+		return name().toLowerCase().replace("_", "-");
+	}
+}

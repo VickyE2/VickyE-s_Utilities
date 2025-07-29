@@ -2,8 +2,7 @@ plugins {
     kotlin("jvm")
 }
 
-group = "org.vicky.vicky_utils"
-version = "1.23.0"
+version = "all-0.0.1-BETA"
 
 repositories {
     mavenCentral()

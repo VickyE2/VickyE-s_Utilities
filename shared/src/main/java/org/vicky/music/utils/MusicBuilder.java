@@ -80,6 +80,7 @@ public class MusicBuilder {
    * Creates a MusicTrack from a score string.
    * <p>
    * The score string supports:
+   * </p>
    * <ul>
    *   <li>Single notes (e.g., "C", "D-", "F+"). Optionally, each token can have a volume modifier (e.g., "D^2" or "E∨2").</li>
    *   <li>Rests represented by ".".</li>
@@ -90,6 +91,7 @@ public class MusicBuilder {
    *   </li>
    *   <li>Streached Notes (e.g., "C->n"). n is the number of seconds the note is stretched for. also works for chords C—E—G->n</li>
    * </ul>
+   * <p>
    * The totalTime (in ticks) is divided among non-absolute events (unless overridden by absolute durations
    * or tempo modifiers). The base volume (passed as a parameter) is modified on a per-token basis.
    * </p>
@@ -348,6 +350,7 @@ public class MusicBuilder {
    * Returns a pitch value based on the given note symbol.
    * <p>
    * Supports standard musical notes:
+   * </p>
    * <ul>
    *   <li>C – base pitch 0.5f</li>
    *   <li>D – base pitch 0.6f</li>
@@ -358,6 +361,7 @@ public class MusicBuilder {
    *   <li>B – base pitch 1.1f</li>
    *   <li>C+ – base pitch 1.2f (octave up)</li>
    * </ul>
+   * <p>
    * The '+' modifier increases octave by 1 and '-' decreases it by 1.
    * </p>
    *

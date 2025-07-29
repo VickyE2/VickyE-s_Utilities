@@ -1,8 +1,6 @@
 plugins {
     kotlin("jvm")
 }
-
-group = "org.vicky.vicky_utils"
 version = "all-0.0.1-BETA"
 
 repositories {

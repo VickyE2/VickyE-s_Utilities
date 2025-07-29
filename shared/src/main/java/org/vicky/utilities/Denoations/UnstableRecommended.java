@@ -17,7 +17,8 @@ import org.jetbrains.annotations.ApiStatus;
  * releases, but is currently the preferred or recommended way to achieve a
  * goal.
  *
- * @apiNote This is useful for features that are in active iteration.
+ * Unstable and under iteration.
+ * <p><b>Note:</b> This is useful for features that are in active iteration.
  */
 @Retention(RetentionPolicy.CLASS)
 @Target({ElementType.PARAMETER, ElementType.METHOD, ElementType.FIELD})

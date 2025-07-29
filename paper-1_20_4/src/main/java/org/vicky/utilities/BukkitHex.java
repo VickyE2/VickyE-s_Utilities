@@ -160,7 +160,7 @@ public class BukkitHex {
 
   /**
    * Applies a rainbow effect to text contained in a rainbow marker.
-   * Expected format: rainbow[-<length>]-color1-color2-...-colorN[Text]
+   * Expected format: rainbow[-{length}]-color1-color2-...-colorN[Text]
    *
    * @param message The full rainbow marker string.
    * @return The string with a rainbow effect applied.

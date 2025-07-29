@@ -38,6 +38,7 @@ import org.vicky.listeners.BaseGuiListener;
  *
  * <p>
  * Example chain usage:
+ * </p>
  * <pre>
  * {@code
  * ButtonAction.chain(player -> {
@@ -61,7 +62,6 @@ import org.vicky.listeners.BaseGuiListener;
  * });
  * }
  * </pre>
- * </p>
  *
  * @param <T> The type produced by the chainable action.
  */

@@ -13,18 +13,15 @@ import jakarta.persistence.*;
  * <strong>If you would like to extend this class for a more versatile database
  * entity:</strong>
  *
- * <pre>
- * {
- * 	&#64;code
- * 	&#64;Entity
- * 	&#64;Table(name = "extended_global_player_type_a")
+ * <pre>{@code
+ * 	@Entity
+ * 	@Table(name = "extended_global_player_type_a")
  * 	public class ExtendedGlobalPlayer extends ExtendedPlayerBase {
- * 		&#64;JoinTable(name = "some_new_field", joinColumns = @JoinColumn(name = "some_field_parameter"), inverseJoinColumns = @JoinColumn(name = "some_other_table_id"))
+ * 		@JoinTable(name = "some_new_field", joinColumns = @JoinColumn(name = "some_field_parameter"), inverseJoinColumns = @JoinColumn(name = "some_other_table_id"))
  * 		@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
  * 		private List<SomeClass> someClassList = new ArrayList<>();
  * 	}
- * }
- * </pre>
+ * }</pre>
  *
  * Some way to get the ExtendedGlobalPlayer of a DatabasePlayer
  *

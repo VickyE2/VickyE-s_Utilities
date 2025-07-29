@@ -11,5 +11,12 @@ pluginManagement {
     repositories {
         gradlePluginPortal()
         maven("https://repo.papermc.io/repository/maven-public/")
+        maven("https://maven.minecraftforge.net/") {
+            name = "MinecraftForge"
+        }
     }
+}
+
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.7.0"
 }

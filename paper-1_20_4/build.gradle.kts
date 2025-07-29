@@ -54,10 +54,11 @@ repositories {
 tasks.shadowJar {
     relocate("org.hibernate", "org.vicky.shadowed.hibernate")
     relocate("org.jboss.logging", "org.vicky.shadowed.jboss.logging")
+    relocate("net.wesjd", "org.vicky.anvilgui")
 }
 
 dependencies {
-    implementation(project(":shared"))
+    implementation("io.github.vickye2:vicky-utils-core:all-0.0.1-BETA")
     implementation("org.reflections:reflections:0.10.2")
     implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
     implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")

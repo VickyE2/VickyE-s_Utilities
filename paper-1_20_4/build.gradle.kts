@@ -54,7 +54,7 @@ repositories {
 tasks.shadowJar {
     relocate("org.hibernate", "org.vicky.shadowed.hibernate")
     relocate("org.jboss.logging", "org.vicky.shadowed.jboss.logging")
-    relocate("net.wesjd", "org.vicky.anvilgui")
+    relocate("net.wesjd", "org.vicky.shadowed.net.wesjd")
 }
 
 dependencies {

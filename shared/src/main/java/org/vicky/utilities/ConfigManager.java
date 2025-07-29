@@ -72,6 +72,15 @@ public class ConfigManager {
     createConfig(path);
   }
 
+  /**
+   * Creates the config manager classwith no associated config
+   *
+   * @param shouldLog Specifies weather the context logger should give out logs on steps taken
+   */
+  public ConfigManager(boolean shouldLog) {
+    this.shouldLog = shouldLog;
+  }
+
   // Create or load the config file
   public void createConfig(String path) {
     File configFile = new File(PlatformPlugin.dataFolder(), path);

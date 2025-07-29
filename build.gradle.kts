@@ -243,6 +243,7 @@ subprojects {
         }
 
         tasks.named<ShadowJar>("shadowJar") {
+            relocate("org.reflections", "org.vicky.shaded.reflections")
             archiveBaseName.set("VickyE-Utils-${
                 when {
                     project.name.startsWith("paper") -> "Bukkit"
@@ -258,6 +259,10 @@ subprojects {
             archiveClassifier.set("")
             mergeServiceFiles()
             minimize()
+            exclude("META-INF/maven/**")
+            exclude("META-INF/*.kotlin_module")
+            exclude("META-INF/versions/**")
+            exclude("module-info.class")
         }
         /*mavenPublishing {
             publishToMavenCentral()

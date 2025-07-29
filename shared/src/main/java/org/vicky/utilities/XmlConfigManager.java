@@ -11,6 +11,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.configurate.AttributedConfigurationNode;
 import org.spongepowered.configurate.ConfigurationOptions;
 import org.spongepowered.configurate.loader.AtomicFiles;
@@ -25,7 +27,7 @@ public class XmlConfigManager {
   public XmlConfigurationLoader loader;
   public AttributedConfigurationNode rootNode;
   public ContextLogger logger = new ContextLogger(ContextLogger.ContextType.SYSTEM, "CONFIG-XML");
-  private final File configFile;
+  private File configFile;
   private final PlatformScheduler scheduler;
   public ConfigurationOptions options;
 
@@ -49,114 +51,140 @@ public class XmlConfigManager {
     this.scheduler = PlatformPlugin.scheduler();
   }
 
-  // Create or load the config file
-  public void createConfig(String path) {
-    // Ensure the parent directories for the file exist
-    File parentDir = configFile.getParentFile();
-    if (!parentDir.exists()) {
-      parentDir.mkdirs(); // Create all necessary parent directories
-    }
-
-    options =
-        XmlConfigurationLoader.builder().headerMode(HeaderMode.PRESET).indent(4).defaultOptions();
-
-    loader =
-        XmlConfigurationLoader.builder()
-            .writesExplicitType(false)
-            .path(configFile.toPath())
-            .indent(4)
-            .sink(AtomicFiles.atomicWriterFactory(configFile.toPath(), UTF_8))
-            .build();
-
-    if (!configFile.exists()) {
-      try {
-        // Create the file if it does not exist
-        configFile.createNewFile();
-        Files.write(
-            configFile.toPath(),
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><config></config>"
-                .getBytes(StandardCharsets.UTF_8));
-        logger.print("Created new xml file: " + path);
-        loadConfigValues();
-      } catch (IOException e) {
-        logger.print(
-            "Failed to create new xml file: " + e.getMessage(), ContextLogger.LogType.ERROR);
-      }
-    } else {
-      loadConfigValues();
-    }
-    new Thread(
-            () -> {
-              try {
-                WatchService watcher = FileSystems.getDefault().newWatchService();
-                Path configDir = configFile.getParentFile().toPath();
-                configDir.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
-
-                while (true) {
-                  WatchKey key = watcher.take();
-                  for (WatchEvent<?> event : key.pollEvents()) {
-                    if (event.context().toString().equalsIgnoreCase(path)) {
-                      scheduler.runMain(() -> {
-                          reloadAndUpdateStatics();
-                          logger.print(
-                              "Config auto-reloaded due to file change.",
-                              ContextLogger.LogType.BASIC);
-                        }
-                      );
-                    }
-                  }
-                  key.reset();
-                }
-              } catch (IOException | InterruptedException e) {
-                logger.print("Error setting up config file watcher: " + e.getMessage(), true);
-              }
-            })
-        .start();
+  /**
+   * Creates the XmlConfigManager class with no associated config
+   */
+  public XmlConfigManager() {
+    this.scheduler = PlatformPlugin.scheduler();
   }
 
-  public void createConfig(String path, String defualtKey) {
-    File configFile = new File(path, this.configFile.getName());
-    // Ensure the parent directories for the file exist
-    File parentDir = configFile.getParentFile();
-    if (!parentDir.exists()) {
-      parentDir.mkdirs(); // Create all necessary parent directories
-    }
+  /**
+   * Creates and initializes a configuration file located in the plugin's data folder.
+   * Automatically sets up a file watcher to reload on changes.
+   *
+   * @param path The relative path to the configuration file within the plugin's data folder.
+   */
+  public void createConfig(String path) {
+    setupConfig(new File(PlatformPlugin.dataFolder(), path), null, true);
+  }
 
-    options =
-        XmlConfigurationLoader.builder()
+  /**
+   * Creates and initializes a configuration file at an absolute path on the file system.
+   * Automatically sets up a file watcher to reload on changes.
+   *
+   * @param path The absolute path to the configuration file.
+   */
+  public void createPathedConfig(String path) {
+    setupConfig(new File(path), null, true);
+  }
+
+  /**
+   * Initializes the configuration using a pre-assigned {@code configFile}.
+   * This method will throw an exception if the config file has not been set.
+   * Automatically sets up a file watcher to reload on changes.
+   *
+   * @throws IllegalStateException If {@code configFile} has not been assigned.
+   */
+  public void createConfig() {
+    if (this.configFile == null)
+      throw new IllegalStateException("No config file has been assigned!");
+    setupConfig(this.configFile, null, true);
+  }
+
+  /**
+   * Creates and initializes a configuration file with a custom default root tag.
+   * The file will be placed in the plugin's data folder.
+   * <p>
+   * This version does not enable automatic file watching.
+   *
+   * @param path       The relative path to the configuration file.
+   * @param defaultKey The default root XML tag to use if the file is created.
+   */
+  public void createConfig(String path, String defaultKey) {
+    setupConfig(new File(PlatformPlugin.dataFolder(), path), defaultKey, false);
+  }
+
+  /**
+   * Creates and initializes a configuration file at an absolute path with a custom default root tag.
+   * <p>
+   * This version does not enable automatic file watching.
+   *
+   * @param path       The absolute path to the configuration file.
+   * @param defaultKey The default root XML tag to use if the file is created.
+   */
+  public void createPathedConfig(String path, String defaultKey) {
+    setupConfig(new File(path), defaultKey, false);
+  }
+
+
+  // Create or load the config file
+  private void setupConfig(File file, @Nullable String defaultKey, boolean watch) {
+    this.configFile = file;
+
+    File parentDir = file.getParentFile();
+    if (!parentDir.exists()) parentDir.mkdirs();
+
+    var builder = XmlConfigurationLoader.builder()
             .headerMode(HeaderMode.PRESET)
             .indent(4)
-            .defaultTagName(defualtKey)
-            .defaultOptions();
+            .path(file.toPath())
+            .sink(AtomicFiles.atomicWriterFactory(file.toPath(), UTF_8))
+            .writesExplicitType(false);
 
-    loader =
-        XmlConfigurationLoader.builder()
-            .defaultTagName(defualtKey)
-            .writesExplicitType(false)
-            .path(configFile.toPath())
-            .indent(4)
-            .sink(AtomicFiles.atomicWriterFactory(configFile.toPath(), UTF_8))
-            .build();
-
-    if (!configFile.exists()) {
-      try {
-        // Create the file if it does not exist
-        configFile.createNewFile();
-        Files.write(
-            configFile.toPath(),
-            Arrays.asList(
-                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
-                "<" + defualtKey + "></" + defualtKey + ">"));
-        logger.print("Created new xml file: " + path);
-        loadConfigValues();
-      } catch (IOException e) {
-        logger.print(
-            "Failed to create new xml file: " + e.getMessage(), ContextLogger.LogType.ERROR);
-      }
+    if (defaultKey != null) {
+      builder.defaultTagName(defaultKey);
+      options = builder.defaultTagName(defaultKey).defaultOptions();
     } else {
-      loadConfigValues();
+      options = builder.defaultOptions();
     }
+
+    loader = builder.build();
+
+    if (!file.exists()) {
+      try {
+        file.createNewFile();
+        String defaultContent = defaultKey != null
+                ? "<?xml version=\"1.0\" encoding=\"UTF-8\"?><" + defaultKey + "></" + defaultKey + ">"
+                : "<?xml version=\"1.0\" encoding=\"UTF-8\"?><config></config>";
+        Files.write(file.toPath(), defaultContent.getBytes(StandardCharsets.UTF_8));
+        logger.print("Created new xml file: " + file.getPath());
+      } catch (IOException e) {
+        logger.print("Failed to create new xml file: " + e.getMessage(), ContextLogger.LogType.ERROR);
+      }
+    }
+
+    loadConfigValues();
+
+    if (watch) watchConfigFile(file);
   }
+
+  private void watchConfigFile(File file) {
+    new Thread(() -> {
+      try {
+        WatchService watcher = FileSystems.getDefault().newWatchService();
+        Path dir = file.getParentFile().toPath();
+        dir.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
+        String fileName = file.getName();
+
+        while (true) {
+          WatchKey key = watcher.take();
+          for (WatchEvent<?> event : key.pollEvents()) {
+            if (event.context().toString().equalsIgnoreCase(fileName)) {
+              scheduler.runMain(() -> {
+                reloadAndUpdateStatics();
+                logger.print("Config auto-reloaded due to file change.", ContextLogger.LogType.BASIC);
+              });
+            }
+          }
+          key.reset();
+        }
+      } catch (IOException | InterruptedException e) {
+        logger.print("Error setting up config file watcher: " + e.getMessage(), true);
+      }
+    }).start();
+  }
+
+
 
   public void loadConfig(String path, String file) {
     File configFile = new File(path, file);

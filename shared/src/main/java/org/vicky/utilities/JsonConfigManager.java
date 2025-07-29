@@ -25,8 +25,54 @@ public class JsonConfigManager {
   public ConfigurationOptions options;
 
   // Create or load the config file
+
+  /**
+   * Creates the config in the path specified with the parent dir being the {@link PlatformPlugin} datafolder {@link PlatformPlugin#dataFolder()}
+   *
+   * @param path The path of the config file (.json)
+   */
   public void createConfig(String path) {
     File configFile = new File(PlatformPlugin.dataFolder(), path);
+
+    // Ensure the parent directories for the file exist
+    File parentDir = configFile.getParentFile();
+    if (!parentDir.exists()) {
+      parentDir.mkdirs(); // Create all necessary parent directories
+    }
+
+    options = JacksonConfigurationLoader.builder().headerMode(HeaderMode.PRESET).defaultOptions();
+
+    loader =
+        JacksonConfigurationLoader.builder()
+            .path(configFile.toPath())
+            .indent(2)
+            .fieldValueSeparatorStyle(FieldValueSeparatorStyle.SPACE_BOTH_SIDES)
+            .build();
+
+    if (!configFile.exists()) {
+      try {
+        // Create the file if it does not exist
+        configFile.createNewFile();
+        try (FileWriter writer = new FileWriter(configFile)) {
+          writer.write("{}"); // Start with an empty JSON object
+        }
+        logger.print("Created new json file: " + path);
+      } catch (IOException e) {
+        logger.print(
+            "Failed to create new json file: " + e.getMessage(), ContextLogger.LogType.ERROR);
+      }
+    } else {
+      loadConfigValues();
+    }
+  }
+
+  /**
+   * Creates the config in the path specified
+   *
+   * @param path The path of the config file (.json)
+   */
+  public void createPathedConfig(String path) {
+    File configFile = new File(path);
 
     // Ensure the parent directories for the file exist
     File parentDir = configFile.getParentFile();

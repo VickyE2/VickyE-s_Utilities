@@ -29,8 +29,23 @@ public class XmlConfigManager {
   private final PlatformScheduler scheduler;
   public ConfigurationOptions options;
 
+  /**
+   * Creates the config in the path specified
+   *
+   * @param configFile The path of the config file (.xml)
+   */
   public XmlConfigManager(File configFile) {
     this.configFile = configFile;
+    this.scheduler = PlatformPlugin.scheduler();
+  }
+
+  /**
+   * Creates the config in the path specified with the parent dir being the {@link PlatformPlugin} datafolder {@link PlatformPlugin#dataFolder()}
+   *
+   * @param path The path of the config file (.xml)
+   */
+  public XmlConfigManager(String path) {
+    this.configFile = new File(PlatformPlugin.dataFolder(), path);
     this.scheduler = PlatformPlugin.scheduler();
   }
 

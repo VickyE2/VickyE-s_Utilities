@@ -20,6 +20,9 @@ import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.PlatformScheduler;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
+/**
+ * A yaml based config manager
+ */
 public class ConfigManager {
 
   public ConfigurationLoader<CommentedConfigurationNode> loader;
@@ -30,11 +33,40 @@ public class ConfigManager {
   final ObjectMapper.Factory factory = ObjectMapper.factoryBuilder().build();
   private final PlatformScheduler scheduler = PlatformPlugin.scheduler();
 
-  // Constructor 1: With a specified path
+  /**
+   * Creates the config in the path specified with the parent dir being the {@link PlatformPlugin} datafolder {@link PlatformPlugin#dataFolder()}
+   *
+   * @param path The path of the config file (.yml)
+   */
   public ConfigManager(String path) {
     createConfig(path);
   }
 
+  /**
+   * Creates the config in the path specified with the parent dir being the {@link PlatformPlugin} datafolder {@link PlatformPlugin#dataFolder()}
+   *
+   * @param configFile The path of the config file (.yml)
+   */
+  public ConfigManager(File configFile) {
+    createPathedConfig(configFile.getPath());
+  }
+
+  /**
+   * Creates the config in the path specified.
+   * @param configFile The path of the config file (.yml)
+   * @param shouldLog Specifies weather the context logger should give out logs on steps taken
+   */
+  public ConfigManager(File configFile, boolean shouldLog) {
+    createPathedConfig(configFile.getPath());
+    this.shouldLog = shouldLog;
+  }
+
+  /**
+   * Creates the config in the path specified with the parent dir being the {@link PlatformPlugin} datafolder {@link PlatformPlugin#dataFolder()}
+   *
+   * @param path The path of the config file (.yml)
+   * @param shouldLog Specifies weather the context logger should give out logs on steps taken
+   */
   public ConfigManager(String path, boolean shouldLog) {
     this.shouldLog = shouldLog;
     createConfig(path);
@@ -99,8 +131,8 @@ public class ConfigManager {
         .start();
   }
 
-  public void createPathedConfig(String pat) {
-    File configFile = new File(pat);
+  public void createPathedConfig(String path) {
+    File configFile = new File(path);
 
     options =
         YamlConfigurationLoader.builder().indent(2).nodeStyle(NodeStyle.BLOCK).defaultOptions().serializers(builder -> builder.registerAnnotatedObjects(factory));
@@ -117,7 +149,7 @@ public class ConfigManager {
         // Create the file if it does not exist
         configFile.createNewFile();
         if (shouldLog) {
-          logger.print("Created new config file: " + pat);
+          logger.print("Created new config file: " + path);
         }
         loadConfigValues();
       } catch (IOException e) {

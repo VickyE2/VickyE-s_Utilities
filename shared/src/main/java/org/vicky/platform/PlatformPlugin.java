@@ -20,11 +20,11 @@ public interface PlatformPlugin {
     }
 
     static PlatformLogger logger() {
-        return get().getLogger();
+        return get().getPlatformLogger();
     }
 
     static PlatformScheduler scheduler() {
-        return get().getScheduler();
+        return get().getPlatformScheduler();
     }
 
     static PlatformRankService rankService() {
@@ -40,7 +40,7 @@ public interface PlatformPlugin {
     }
 
     static File dataFolder() {
-        return get().getDataFolder();
+        return get().getPlatformDataFolder();
     }
 
     static PlatformChatFormatter chatFormatter() {
@@ -48,7 +48,7 @@ public interface PlatformPlugin {
     }
 
     static PlatformConfig config() {
-        return get().getConfig();
+        return get().getPlatformConfig();
     }
 
     static PlatformEntityFactory entityFactory() {
@@ -83,16 +83,16 @@ public interface PlatformPlugin {
         return get().getPlatformPlayer(uuid);
     }
 
-    PlatformLogger getLogger();
-    PlatformScheduler getScheduler();
+    PlatformLogger getPlatformLogger();
+    PlatformScheduler getPlatformScheduler();
     PlatformRankService getRankService();
     PlatformParticleProvider getParticleProvider();
     PlatformChatFormatter getChatFormatter();
-    PlatformConfig getConfig();
+    PlatformConfig getPlatformConfig();
     PlatformBossBarFactory getPlatformBossBarFactory();
     PlatformEntityFactory getPlatformEntityFactory();
     PlatformLocationAdapter getPlatformLocationAdapter();
-    File getDataFolder();
+    File getPlatformDataFolder();
     Optional<PlatformPlayer> getPlatformPlayer(UUID uuid);
 
     void onEnable();

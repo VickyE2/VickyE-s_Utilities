@@ -2,8 +2,8 @@ package org.vicky.platform;
 
 public interface PlatformConfig {
     boolean getBooleanValue(String debug);
-    boolean getStringValue(String debug);
-    boolean getIntegerValue(String debug);
-    boolean getFloatValue(String debug);
-    boolean getDoubleValue(String debug);
+    String getStringValue(String debug);
+    Integer getIntegerValue(String debug);
+    Float getFloatValue(String debug);
+    Double getDoubleValue(String debug);
 }

@@ -1,8 +1,9 @@
 package org.vicky.platform;
 
 import org.vicky.platform.utils.Location3D;
+import org.vicky.platform.world.PlatformLocation;
 
 public interface PlatformLocationAdapter {
-    Object toNative(Location3D location); // Could return Bukkit Location or Fabric Vec3d, etc.
-    Location3D fromNative(Object nativeLocation);
+    Object toNative(PlatformLocation location); // Could return Bukkit Location or Fabric Vec3d, etc.
+    PlatformLocation fromNative(Object nativeLocation);
 }

@@ -7,7 +7,7 @@ import org.vicky.platform.defaults.BossBarOverlay;
 public interface PlatformBossBar {
     void setTitle(Component title);
     void setProgress(Float progress);
-    void setVisible(Boolean visible);
+    void setVisible(Boolean visible, PlatformPlayer player);
     void setColor(BossBarColor color);
     void setOverlay(BossBarOverlay overlay);
 

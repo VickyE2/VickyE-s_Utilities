@@ -2,6 +2,7 @@ package org.vicky.platform;
 
 import net.kyori.adventure.text.Component;
 import org.vicky.platform.utils.Location3D;
+import org.vicky.platform.world.PlatformLocation;
 
 import java.util.UUID;
 
@@ -13,6 +14,6 @@ public interface PlatformPlayer {
     void sendComponent(Component component);
     void showBossBar(PlatformBossBar bar);
     void hideBossBar(PlatformBossBar bar);
-    void playSound(Location3D location, String soundName, Object soundCategory, Float volume, Float pitch);
-    Location3D getLocation();
+    void playSound(PlatformLocation location, String soundName, Object soundCategory, Float volume, Float pitch);
+    PlatformLocation getLocation();
 }

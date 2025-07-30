@@ -123,7 +123,7 @@ allprojects {
     }
 
     tasks.named<Jar>("jar") {
-        enabled = false
+        enabled = true
     }
 }
 
@@ -257,7 +257,9 @@ subprojects {
             )
             archiveClassifier.set("")
             mergeServiceFiles()
-            minimize()
+            minimize {
+                exclude(dependency("io.github.vickye2:.*:.*"))
+            }
         }
         /*mavenPublishing {
             publishToMavenCentral()

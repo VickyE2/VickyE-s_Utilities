@@ -1,8 +1,10 @@
-package org.vicky.v_utils;
+package org.vicky;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
@@ -24,19 +26,36 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
+import org.vicky.forgeplatform.*;
+import org.vicky.utilities.ANSIColor;
+import org.vicky.utilities.ContextLogger.ContextLogger;
+import org.vicky.utilities.ForgeModConfig;
+import org.vicky.platform.*;
+import org.vicky.forgeplatform.useables.ForgePlatformPlayer;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
+import java.util.UUID;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(VickyUtilitiesForge.MODID)
-public class VickyUtilitiesForge {
+public class VickyUtilitiesForge implements PlatformPlugin {
 
     // Define mod id in a common place for everything to reference
     public static final String MODID = "v_utils";
+    public static MinecraftServer server;
     // Directly reference a slf4j logger
-    private static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = LogUtils.getLogger();
+    public static final ContextLogger CONTEXT_LOGGER =
+            new ContextLogger(ContextLogger.ContextType.SYSTEM, "V-UTLS");
     // Create a Deferred Register to hold Blocks which will all be registered under the "v_utils" namespace
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
     // Create a Deferred Register to hold Items which will all be registered under the "v_utils" namespace
@@ -81,20 +100,17 @@ public class VickyUtilitiesForge {
         modEventBus.addListener(this::addCreative);
 
         // Register our mod's ForgeConfigSpec so that Forge can create and load the config file for us
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ForgeModConfig.SPEC);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        // Some common setup code
-        LOGGER.info("HELLO FROM COMMON SETUP");
-        LOGGER.info("DIRT BLOCK >> {}", ForgeRegistries.BLOCKS.getKey(Blocks.DIRT));
-
-        if (Config.logDirtBlock)
-            LOGGER.info("DIRT BLOCK >> {}", ForgeRegistries.BLOCKS.getKey(Blocks.DIRT));
-
-        LOGGER.info(Config.magicNumberIntroduction + Config.magicNumber);
-
-        Config.items.forEach((item) -> LOGGER.info("ITEM >> {}", item.toString()));
+        CONTEXT_LOGGER.print(ANSIColor.colorizeMixed("""
+					gradient-10deg-right-#AA0000-#DDDD00[
+					 _  _  __  ___  __ _  _  _  _ ____    _  _  ____  __  __    __  ____  __  ____  ____
+					/ )( \\(  )/ __)(  / )( \\/ )(// ___)  / )( \\(_  _)(  )(  )  (  )(_  _)(  )(  __)/ ___)
+					\\ \\/ / )(( (__  )  (  )  /   \\___ \\  ) \\/ (  )(   )( / (_/\\ )(   )(   )(  ) _) \\___ \\
+					 \\__/ (__)\\___)(__\\_)(__/    (____/  \\____/ (__) (__)\\____/(__) (__) (__)(____)(____/]
+					                                                                         dark_gray[0.0.1-BETA]"""));
     }
 
     // Add the example block item to the building blocks tab
@@ -106,8 +122,80 @@ public class VickyUtilitiesForge {
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        // Do something when the server starts
         LOGGER.info("HELLO from server starting");
+        server = event.getServer();
+    }
+
+    @Override
+    public PlatformLogger getPlatformLogger() {
+        return new ForgeLogger();
+    }
+
+    @Override
+    public PlatformScheduler getPlatformScheduler() {
+        return new ForgePlatformScheduler();
+    }
+
+    @Override
+    public PlatformRankService getRankService() {
+        return null;
+    }
+
+    @Override
+    public PlatformParticleProvider getParticleProvider() {
+        return new ForgeParticleProvider();
+    }
+
+    @Override
+    public PlatformChatFormatter getChatFormatter() {
+        return new ForgeChatFormatter();
+    }
+
+    @Override
+    public PlatformConfig getPlatformConfig() {
+        return ForgePlatformConfig.getInstance();
+    }
+
+    @Override
+    public PlatformBossBarFactory getPlatformBossBarFactory() {
+        return new ForgeBossBarFactory();
+    }
+
+    @Override
+    public PlatformEntityFactory getPlatformEntityFactory() {
+        return new ForgePlatformEntityfactory();
+    }
+
+    @Override
+    public PlatformLocationAdapter getPlatformLocationAdapter() {
+        return new ForgePlatformLocationAdapter();
+    }
+
+    @Override
+    public File getPlatformDataFolder() {
+        Path dataFolderPath = FMLPaths.CONFIGDIR.get().resolve("my_mod_id");
+        try {
+            Files.createDirectory(dataFolderPath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
+
+    @Override
+    public Optional<PlatformPlayer> getPlatformPlayer(UUID uuid) {
+        ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+        return player != null ? Optional.of(new ForgePlatformPlayer(player)) : Optional.empty();
+    }
+
+    @Override
+    public void onEnable() {
+
+    }
+
+    @Override
+    public void onDisable() {
+
     }
 
     // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent

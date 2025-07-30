@@ -209,7 +209,12 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 
 	@Override
 	public void onEnable() {
-		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null
 				&& Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
 			Bukkit.getLogger().info(ANSIColor.colorizeMixed(String.format("""
 					gradient-10deg-right-#AA0000-#DDDD00[

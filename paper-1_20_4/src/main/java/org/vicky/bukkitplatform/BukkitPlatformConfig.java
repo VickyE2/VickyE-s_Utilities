@@ -16,17 +16,17 @@ public class BukkitPlatformConfig implements PlatformConfig {
 	}
 
 	@Override
-	public int getIntegerValue(String key) {
+	public Integer getIntegerValue(String key) {
 		return Global.globalConfigManager.getIntegerValue(key);
 	}
 
 	@Override
-	public float getFloatValue(String key) {
-		return Global.globalConfigManager.getIntegerValue(key);
+	public Float getFloatValue(String key) {
+		return (float) Global.globalConfigManager.getIntegerValue(key);
 	}
 
 	@Override
-	public double getDoubleValue(String key) {
+	public Double getDoubleValue(String key) {
 		return Global.globalConfigManager.getDoubleValue(key);
 	}
 }

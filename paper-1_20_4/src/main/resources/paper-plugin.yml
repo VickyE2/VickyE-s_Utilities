@@ -5,6 +5,7 @@ api-version: '1.20'
 prefix: V-UTL
 authors: [ VickyE2 ]
 description: A plugin For all My essentials
+loader: org.vicky.VickyUtilsPluginLoader
 dependencies:
   server:
     PlaceholderAPI:

@@ -55,19 +55,34 @@ tasks.shadowJar {
     // relocate("org.hibernate", "org.vicky.shadowed.hibernate")
     // relocate("org.jboss.logging", "org.vicky.shadowed.jboss.logging")
     relocate("net.wesjd", "org.vicky.shadowed.net.wesjd")
-    exclude("org.hibernate.orm")
-    exclude("org.jboss.logging")
+    dependencies {
+        exclude(dependency("org.hibernate.orm:hibernate-core"))
+        exclude(dependency("org.hibernate.orm:hibernate-community-dialects"))
+        exclude(dependency("org.jboss.logging:jboss-logging"))
+    }
+    exclude("org/hibernate/**")
+    exclude("org/jboss/logging/**")
+    exclude("jakarta/persistence/**")
+    exclude("javax/**")
+    exclude("org/antlr/**")
+    exclude("org/glassfish/**")
+    exclude("org/spongepowered/configurate/**")
 }
 
 dependencies {
-    implementation("io.github.vickye2:vicky-utils-core:all-0.0.1-BETA")
+    implementation("io.github.vickye2:vicky-utils-core:all-0.0.1-BETA") {
+        exclude(group = "org.jboss.logging")
+        exclude(group = "org.hibernate")
+        exclude(group = "org.xerial")
+        exclude(group = "jakarta.persistence")
+    }
     implementation("org.reflections:reflections:0.10.2")
     implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
     implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
-    compileOnly("org.jboss.logging:jboss-logging:3.5.3.Final")
-    compileOnly("org.hibernate.orm:hibernate-core:6.4.1.Final")
-    compileOnly("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final")
-    compileOnly("org.xerial:sqlite-jdbc:3.48.0.0")
+    implementation("org.jboss.logging:jboss-logging:3.5.3.Final")
+    implementation("org.hibernate.orm:hibernate-core:6.4.1.Final")
+    implementation("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final")
+    implementation("org.xerial:sqlite-jdbc:3.48.0.0")
     implementation("org.spongepowered:configurate-yaml:4.1.2")
     implementation("org.spongepowered:configurate-jackson:4.1.2")
     implementation("org.spongepowered:configurate-xml:4.1.2")

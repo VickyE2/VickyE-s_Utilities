@@ -19,6 +19,9 @@ public class VickyUtilsPluginLoader implements PluginLoader {
         resolver.addDependency(new Dependency(new DefaultArtifact("org.hibernate.orm:hibernate-core:6.4.1.Final"), null));
         resolver.addDependency(new Dependency(new DefaultArtifact("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final"), null));
         resolver.addDependency(new Dependency(new DefaultArtifact("org.jboss.logging:jboss-logging:3.5.3.Final"), null));
+        resolver.addDependency(new Dependency(new DefaultArtifact("org.spongepowered:configurate-yaml:4.1.2"), null));
+        resolver.addDependency(new Dependency(new DefaultArtifact("org.spongepowered:configurate-jackson:4.1.2"), null));
+        resolver.addDependency(new Dependency(new DefaultArtifact("org.spongepowered:configurate-xml:4.1.2"), null));
 
         classpathBuilder.addLibrary(resolver);
     }

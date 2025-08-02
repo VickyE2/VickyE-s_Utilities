@@ -9,5 +9,6 @@ public interface PlatformMusicRegistry {
     void playPiece(String key, PlatformPlayer player);
     Collection<MusicPiece> getRegisteredPieces();
     PlatformPlayer renderMusicPage(PlatformPlayer player, int page);
-    void loadGenres(); // Load genre → color mappings
+
+    void loadGenres();
 }

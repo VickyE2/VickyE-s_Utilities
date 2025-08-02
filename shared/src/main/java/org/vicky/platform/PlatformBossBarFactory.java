@@ -1,15 +1,7 @@
 package org.vicky.platform;
 
-import net.kyori.adventure.text.Component;
-import org.vicky.platform.defaults.BossBarColor;
-import org.vicky.platform.defaults.BossBarOverlay;
+import org.vicky.platform.utils.BossBarDescriptor;
 
-public interface PlatformBossBarFactory {
-    PlatformBossBar createBossBar(
-            Component title,
-            Float progress,
-            BossBarColor color,
-            BossBarOverlay overlay,
-            String context
-    );
+public interface PlatformBossBarFactory<T extends BossBarDescriptor> {
+    PlatformBossBar createBossBar(T descriptor);
 }

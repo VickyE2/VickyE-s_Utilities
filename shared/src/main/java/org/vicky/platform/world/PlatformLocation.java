@@ -33,6 +33,14 @@ public class PlatformLocation extends Location3D implements Cloneable {
         return new Location3D(x, y, z);
     }
 
+    public PlatformLocation getRelative(int x, int y, int z) {
+        return new PlatformLocation(this.world, this.x - x, this.y - y, this.z - z);
+    }
+
+    public PlatformBlock getBlock() {
+        return this.world.getBlockAt(x, y, z);
+    }
+
     @Override
     public PlatformLocation clone() {
         return (PlatformLocation) super.clone();

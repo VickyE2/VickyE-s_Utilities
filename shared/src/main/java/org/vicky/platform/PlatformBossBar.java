@@ -2,6 +2,7 @@ package org.vicky.platform;
 
 import net.kyori.adventure.text.Component;
 import org.vicky.platform.defaults.BossBarOverlay;
+import org.vicky.platform.utils.BossBarDescriptor;
 
 public interface PlatformBossBar {
     void setTitle(Component title);
@@ -16,4 +17,10 @@ public interface PlatformBossBar {
     void addViewer(PlatformPlayer viewer);
     void removeViewer(PlatformPlayer viewer);
     void hideAll();
+
+    BossBarDescriptor getDescriptor();
+
+    void setDescriptor(BossBarDescriptor descriptor);
+
+    void updateFromDescriptor();
 }

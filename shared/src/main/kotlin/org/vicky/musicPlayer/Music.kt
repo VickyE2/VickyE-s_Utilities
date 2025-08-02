@@ -1,6 +1,7 @@
 package org.vicky.musicPlayer
 
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
 import net.kyori.adventure.text.format.TextDecoration
 import org.vicky.music.MusicRegistry.genreColors
@@ -8,30 +9,29 @@ import org.vicky.music.utils.MusicBuilder
 import org.vicky.music.utils.MusicEvent
 import org.vicky.music.utils.MusicPiece
 import org.vicky.music.utils.MusicTrack
+import org.vicky.platform.IColor
 import org.vicky.platform.PlatformBossBar
 import org.vicky.platform.PlatformPlayer
 import org.vicky.platform.PlatformPlugin
-import org.vicky.platform.defaults.BossBarColor
 import org.vicky.platform.defaults.BossBarOverlay
+import org.vicky.platform.defaults.VanillaColor
+import org.vicky.platform.utils.BossBarDescriptor
 import org.vicky.utilities.DatabaseManager.dao_s.MusicPieceDAO
 import org.vicky.utilities.DatabaseManager.dao_s.MusicPlayerDAO
 import java.util.*
 import java.util.function.Consumer
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.List
-import kotlin.collections.MutableList
-import kotlin.collections.MutableMap
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.forEach
-import kotlin.collections.getOrPut
-import kotlin.collections.isNotEmpty
-import kotlin.collections.iterator
-import kotlin.collections.mutableListOf
-import kotlin.collections.mutableMapOf
 import kotlin.math.abs
 import kotlin.math.pow
+
+private fun String.toVanillaColor(): IColor {
+    val cleanHex = this.removePrefix("#")
+    require(cleanHex.length == 6) { "Invalid hex color: $this" }
+
+    val r = cleanHex.substring(0, 2).toInt(16)
+    val g = cleanHex.substring(2, 4).toInt(16)
+    val b = cleanHex.substring(4, 6).toInt(16)
+    return VanillaColor(r, g, b)
+}
 
 object MusicPlayer {
     private val playerStates = mutableMapOf<UUID, PlayerState>()
@@ -78,8 +78,15 @@ object MusicPlayer {
         var tickEvents: MutableMap<Long, MutableList<MusicEvent>> = mutableMapOf()
     )
 
-    fun play(player: PlatformPlayer, track: MusicPiece) {
+    @JvmOverloads
+    fun play(player: PlatformPlayer, track: MusicPiece, iconResourceLocation: String = "minecraft:block/dirt") {
         log(player, "Started playing track '${track.pieceName}' with ${track.trackList.sumOf { it.events.size }} total events.")
+        val tickEvents = mutableMapOf<Long, MutableList<MusicEvent>>()
+        track.trackList.forEach { t ->
+            t.events.forEach { e ->
+                tickEvents.getOrPut(e.timeOffset) { mutableListOf() }.add(e)
+            }
+        }
         val state = playerStates.getOrPut(player.uniqueId()) {
             val genre = track.genre?.lowercase() ?: "default"
             val color = genreColors[genre] ?: TextColor.color(0xAAAAAA)
@@ -87,14 +94,22 @@ object MusicPlayer {
             val status = "▶ Now Playing : ${track.pieceName}"
             val title = Component.text("$status: ${track.pieceName}", color)
             val progress = (0).toFloat().coerceIn(0f, 1f)
-            PlayerState(track = track, bossBar = PlatformPlugin.bossBarFactory().createBossBar(title, progress,
-                BossBarColor.PINK, BossBarOverlay.PROGRESS, "music"))
-        }
-        val tickEvents = mutableMapOf<Long, MutableList<MusicEvent>>()
-        track.trackList.forEach { t ->
-            t.events.forEach { e ->
-                tickEvents.getOrPut(e.timeOffset) { mutableListOf() }.add(e)
-            }
+            PlayerState(
+                track = track, bossBar = PlatformPlugin.bossBarFactory().createBossBar(
+                    MusicBossBarDescriptor(
+                        title,
+                        Component.text(track.authors.toString().replace("[", "").replace("]", ""), NamedTextColor.GRAY),
+                        progress,
+                        color.asHexString().toVanillaColor(),
+                        BossBarOverlay.PROGRESS,
+                        genre,
+                        true,
+                        tickEvents.keys.max(),
+                        0,
+                        iconResourceLocation
+                    )
+                )
+            )
         }
         state.tickEvents = tickEvents
         state.track = track
@@ -210,7 +225,51 @@ object MusicPlayer {
         val progress = (tick.toDouble() / track.totalDuration()).toFloat().coerceIn(0f, 1f)
         val bossBar = playerStates[player.uniqueId()]?.bossBar ?: return
 
-        bossBar.setTitle(title)
-        bossBar.setProgress(progress)
+        // ⬇ Update descriptor if necessary
+        if (bossBar.descriptor is MusicBossBarDescriptor) {
+            val cloned = bossBar.getDescriptor().clone()
+            cloned as MusicBossBarDescriptor
+            cloned.isPaused = paused
+            cloned.progress = progress
+            cloned.currentTick = tick
+            cloned.title = title
+            bossBar.descriptor = cloned
+            bossBar.updateFromDescriptor()
+        }
+    }
+}
+
+data class MusicBossBarDescriptor(
+    var title: Component,
+    var subTitle: Component?,
+    var progress: Float = 1.0f,
+    var color: IColor? = null,
+    val overlay: BossBarOverlay? = null,
+
+    val genre: String? = null,
+    var isPaused: Boolean = false,
+    val trackDuration: Long? = null,
+    var currentTick: Int? = null,
+    var icon: String? = null
+) : BossBarDescriptor(title) {
+    fun toBossBarDescriptor(): BossBarDescriptor {
+        val effectiveTitle: Component = (if (icon != null)
+            Component.text("$icon ", TextColor.fromHexString(color?.toHex().toString())).append(title)
+        else title)
+
+        val bossBar = BossBarDescriptor(effectiveTitle)
+            .progress(progress)
+            .color(color)
+            .overlay(overlay)
+            .context("music")
+            .addData("isPaused", isPaused)
+
+        if (genre != null) bossBar.addData("genre", genre)
+        if (trackDuration != null) bossBar.addData("trackDuration", trackDuration)
+        if (currentTick != null) bossBar.addData("currentTick", currentTick)
+        if (icon != null) bossBar.addData("icon", icon)
+        if (subTitle != null) bossBar.addData("subTitle", subTitle)
+
+        return bossBar
     }
 }

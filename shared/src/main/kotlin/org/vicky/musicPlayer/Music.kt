@@ -239,25 +239,21 @@ object MusicPlayer {
     }
 }
 
-data class MusicBossBarDescriptor(
-    var title: Component,
-    var subTitle: Component?,
-    var progress: Float = 1.0f,
-    var color: IColor? = null,
-    val overlay: BossBarOverlay? = null,
+class MusicBossBarDescriptor(
+    private var title: Component,
+    private var subTitle: Component?,
+    private var progress: Float = 1.0f,
+    private var color: IColor? = null,
+    private val overlay: BossBarOverlay? = null,
 
     val genre: String? = null,
     var isPaused: Boolean = false,
     val trackDuration: Long? = null,
     var currentTick: Int? = null,
     var icon: String? = null
-) : BossBarDescriptor(title) {
-    fun toBossBarDescriptor(): BossBarDescriptor {
-        val effectiveTitle: Component = (if (icon != null)
-            Component.text("$icon ", TextColor.fromHexString(color?.toHex().toString())).append(title)
-        else title)
-
-        val bossBar = BossBarDescriptor(effectiveTitle)
+) : BossBarDescriptor(title, subTitle, progress, color, overlay, "music") {
+    fun toPlainBossBarDescriptor(): BossBarDescriptor {
+        val bossBar = BossBarDescriptor(title)
             .progress(progress)
             .color(color)
             .overlay(overlay)

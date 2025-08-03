@@ -8,18 +8,57 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class BossBarDescriptor implements Cloneable {
-    private Component title;
-    private Component subTitle;
-    private float progress;
-    private IColor color;
-    private BossBarOverlay overlay;
-    private String context;
+
+    public Component title;
+    public Component subTitle;
+    public float progress;
+    public IColor color;
+    public BossBarOverlay overlay;
+    public String context;
     private Map<String, Object> information = new HashMap<>();
 
-    public BossBarDescriptor(Component title) {
+    // ✅ New full constructor
+    public BossBarDescriptor(
+            Component title,
+            Component subTitle,
+            float progress,
+            IColor color,
+            BossBarOverlay overlay,
+            String context,
+            Map<String, Object> data
+    ) {
         this.title = title;
+        this.subTitle = subTitle;
+        this.progress = progress;
+        this.color = color;
+        this.overlay = overlay;
+        this.context = context;
+        if (data != null) this.information.putAll(data);
     }
 
+    // ✅ New full constructor
+    public BossBarDescriptor(
+            Component title,
+            Component subTitle,
+            float progress,
+            IColor color,
+            BossBarOverlay overlay,
+            String context
+    ) {
+        this.title = title;
+        this.subTitle = subTitle;
+        this.progress = progress;
+        this.color = color;
+        this.overlay = overlay;
+        this.context = context;
+    }
+
+    // ✅ Minimal constructor fallback for legacy
+    public BossBarDescriptor(Component title) {
+        this(title, null, 1.0f, null, null, "default", new HashMap<>());
+    }
+
+    // 🔁 Fluent API still supported
     public BossBarDescriptor title(Component title) {
         this.title = title;
         return this;
@@ -55,9 +94,13 @@ public class BossBarDescriptor implements Cloneable {
         return this;
     }
 
-    // Getters
+    // ✅ Getters
     public Component getTitle() {
         return title;
+    }
+
+    public Component getSubTitle() {
+        return subTitle;
     }
 
     public float getProgress() {

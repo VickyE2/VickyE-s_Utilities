@@ -23,16 +23,6 @@ import java.util.function.Consumer
 import kotlin.math.abs
 import kotlin.math.pow
 
-private fun String.toVanillaColor(): IColor {
-    val cleanHex = this.removePrefix("#")
-    require(cleanHex.length == 6) { "Invalid hex color: $this" }
-
-    val r = cleanHex.substring(0, 2).toInt(16)
-    val g = cleanHex.substring(2, 4).toInt(16)
-    val b = cleanHex.substring(4, 6).toInt(16)
-    return VanillaColor(r, g, b)
-}
-
 object MusicPlayer {
     private val playerStates = mutableMapOf<UUID, PlayerState>()
     // Java-style static map for reverse lookup (pitch → name)
@@ -100,7 +90,7 @@ object MusicPlayer {
                         title,
                         Component.text(track.authors.toString().replace("[", "").replace("]", ""), NamedTextColor.GRAY),
                         progress,
-                        color.asHexString().toVanillaColor(),
+                        VanillaColor.decode(color.asHexString()),
                         BossBarOverlay.PROGRESS,
                         genre,
                         true,

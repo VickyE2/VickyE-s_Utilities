@@ -13,6 +13,7 @@ dependencies {
     api("org.spongepowered:configurate-jackson:4.1.2")
     api("org.spongepowered:configurate-xml:4.1.2")
     implementation("com.google.code.gson:gson:2.13.1")
+    implementation(files("libs/jNBT-1.6.0.jar"))
     testImplementation(kotlin("test"))
     implementation("org.jetbrains:annotations:24.0.1")
     api("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")

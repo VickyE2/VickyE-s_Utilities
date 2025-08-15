@@ -15,21 +15,41 @@ public class Vec3 implements Cloneable {
         return new Vec3(x + other.x, y + other.y, z + other.z);
     }
 
+    public Vec3 add(Double x, Double y, Double z) {
+        return new Vec3(x + this.x, y + this.y, z + this.z);
+    }
+
+    public Vec3 add(Integer x, Integer y, Integer z) {
+        return new Vec3(x + this.x, y + this.y, z + this.z);
+    }
+
     public Vec3 normalize() {
         double length = Math.sqrt(x * x + y * y + z * z);
         if (length == 0) return new Vec3(0, 0, 0);
         return new Vec3(x / length, y / length, z / length);
     }
 
-    public double getX() {
+    public int getX() {
+        return (int) x;
+    }
+
+    public int getY() {
+        return (int) y;
+    }
+
+    public int getZ() {
+        return (int) z;
+    }
+
+    public double getDoubleX() {
         return x;
     }
 
-    public double getY() {
+    public double getDoubleY() {
         return y;
     }
 
-    public double getZ() {
+    public double getDoubleZ() {
         return z;
     }
 
@@ -60,5 +80,16 @@ public class Vec3 implements Cloneable {
 
     public double dot(Vec3 v) {
         return x * v.x + y * v.y + z * v.z;
+    }
+
+    public double lengthSq() {
+        return x * x + y * y + z * z;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj.getClass() != this.getClass()) return false;
+        Vec3 vector = (Vec3) obj;
+        return vector.x == this.x && vector.y == this.y && vector.z == this.z;
     }
 }

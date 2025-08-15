@@ -1,18 +1,11 @@
-package org.vicky.platform;
+package org.vicky.platform.events;
 
-public interface PlatformEvent {
-    /**
-     * Returns the name of the event (optional).
-     */
-    default String getEventName() {
-        return this.getClass().getSimpleName();
-    }
-
+public interface PlatformCancellableEvent extends PlatformEvent {
     /**
      * If the event is cancelable.
      */
     default boolean isCancelable() {
-        return false;
+        return true;
     }
 
     /**

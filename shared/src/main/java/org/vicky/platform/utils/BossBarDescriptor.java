@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class BossBarDescriptor implements Cloneable {
-
     public Component title;
     public Component subTitle;
     public float progress;

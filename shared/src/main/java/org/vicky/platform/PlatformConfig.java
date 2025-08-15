@@ -10,4 +10,8 @@ public interface PlatformConfig {
     Double getDoubleValue(String debug);
 
     void setConfigValue(String key, PermittedObject<?> value);
+
+    boolean doesKeyExist(String key);
+
+    void saveConfig();
 }

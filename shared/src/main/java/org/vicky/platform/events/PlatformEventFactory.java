@@ -1,4 +1,4 @@
-package org.vicky.platform;
+package org.vicky.platform.events;
 
 import org.vicky.platform.exceptions.UnsupportedEventException;
 

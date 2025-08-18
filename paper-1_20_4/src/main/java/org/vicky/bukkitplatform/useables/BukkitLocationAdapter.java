@@ -6,7 +6,7 @@ import org.bukkit.World;
 import org.vicky.platform.PlatformLocationAdapter;
 import org.vicky.platform.world.PlatformLocation;
 
-public class BukkitLocationAdapter implements PlatformLocationAdapter {
+public class BukkitLocationAdapter implements PlatformLocationAdapter<Location> {
 
 	public static PlatformLocation from(Location loc) {
 		return new PlatformLocation(new BukkitWorldAdapter(loc.getWorld()), loc.getX(), loc.getY(), loc.getZ());
@@ -25,7 +25,7 @@ public class BukkitLocationAdapter implements PlatformLocationAdapter {
 	}
 
 	@Override
-	public PlatformLocation fromNative(Object nativeLocation) {
+	public PlatformLocation fromNative(Location nativeLocation) {
 		if (!(nativeLocation instanceof Location loc))
 			throw new IllegalArgumentException("Expected Bukkit Location");
 		return new PlatformLocation(new BukkitWorldAdapter(loc.getWorld()), loc.getX(), loc.getY(), loc.getZ());

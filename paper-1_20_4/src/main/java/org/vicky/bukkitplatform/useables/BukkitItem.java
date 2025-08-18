@@ -1,4 +1,26 @@
 package org.vicky.bukkitplatform.useables;
 
-public class BukkitItem implements PlaformItem {
+import org.bukkit.inventory.ItemStack;
+import org.vicky.platform.PlatformItem;
+
+import java.util.UUID;
+
+public class BukkitItem implements PlatformItem {
+
+    private final ItemStack stack;
+    private final UUID id = UUID.randomUUID();
+
+    public BukkitItem(ItemStack stack) {
+        this.stack = stack;
+    }
+
+    @Override
+    public String getName() {
+        return stack.getType().name();
+    }
+
+    @Override
+    public String getIdentifier() {
+        return id.toString();
+    }
 }

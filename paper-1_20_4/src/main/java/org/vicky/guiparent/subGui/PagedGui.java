@@ -1,10 +1,6 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.guiparent.subGui;
 
-import static org.vicky.guiparent.GuiCreator.createItem;
-
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -13,6 +9,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.vicky.guiparent.BaseGui;
 import org.vicky.guiparent.GuiCreator;
 import org.vicky.listeners.BaseGuiListener;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static org.vicky.guiparent.GuiCreator.createItem;
 
 public abstract class PagedGui extends BaseGui {
   private final int itemsPerPage;
@@ -54,7 +55,7 @@ public abstract class PagedGui extends BaseGui {
                 ex.printStackTrace();
                 return;
               }
-              guiManager.openPaginatedGUI(
+                guiManager.paginated(
                   player,
                   guiHeight,
                   (GuiCreator.ArrowGap)
@@ -97,7 +98,7 @@ public abstract class PagedGui extends BaseGui {
 
                           for (int i = 0; i < limit; i++) {
                             GuiCreator.ItemConfig itemConfig = pageItems.get(i);
-                            ItemStack item = createItem(itemConfig, player, plugin);
+                              ItemStack item = createItem(itemConfig, player);
                             int targetSlot = sortedSlots.get(i);
 
                             inventory.setItem(targetSlot, item);

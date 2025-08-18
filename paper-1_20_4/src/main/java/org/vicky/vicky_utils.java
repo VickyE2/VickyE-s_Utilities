@@ -1,21 +1,16 @@
 /* Licensed under Apache-2.0 2024-2025. */
 package org.vicky;
 
-import static org.vicky.global.Global.*;
-import static org.vicky.kotlinUtils.UtilsKt.mortalise;
-import static org.vicky.utilities.DatabaseManager.SQLManager.generator;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.*;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-import java.util.stream.Collectors;
-
+import dev.jorel.commandapi.CommandAPICommand;
+import dev.jorel.commandapi.CommandPermission;
+import dev.jorel.commandapi.arguments.ArgumentSuggestions;
+import dev.jorel.commandapi.arguments.EntitySelectorArgument;
+import dev.jorel.commandapi.arguments.IntegerArgument;
+import dev.jorel.commandapi.arguments.StringArgument;
+import jakarta.persistence.EntityManager;
+import net.luckperms.api.LuckPerms;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -60,14 +55,19 @@ import org.vicky.utilities.Theme.ThemeSelectionGuiListener;
 import org.vicky.utilities.Theme.ThemeStorer;
 import org.vicky.utilities.Theme.ThemeUnzipper;
 
-import dev.jorel.commandapi.CommandAPICommand;
-import dev.jorel.commandapi.CommandPermission;
-import dev.jorel.commandapi.arguments.ArgumentSuggestions;
-import dev.jorel.commandapi.arguments.EntitySelectorArgument;
-import dev.jorel.commandapi.arguments.IntegerArgument;
-import dev.jorel.commandapi.arguments.StringArgument;
-import jakarta.persistence.EntityManager;
-import net.luckperms.api.LuckPerms;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.stream.Collectors;
+
+import static org.vicky.global.Global.*;
+import static org.vicky.kotlinUtils.UtilsKt.mortalise;
+import static org.vicky.utilities.DatabaseManager.SQLManager.generator;
 
 @SuppressWarnings({"deprecation", "UnstableApiUsage"})
 public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
@@ -622,12 +622,17 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 	}
 
 	@Override
+	public PlatformItemFactory getPlatformItemFactory() {
+		return new BukkitItemFactory();
+	}
+
+	@Override
 	public PlatformEntityFactory getPlatformEntityFactory() {
 		return new BukkitEntityFactory();
 	}
 
 	@Override
-	public PlatformLocationAdapter getPlatformLocationAdapter() {
+	public PlatformLocationAdapter<Location> getPlatformLocationAdapter() {
 		return new BukkitLocationAdapter();
 	}
 

@@ -1,11 +1,9 @@
 /* Licensed under Apache-2.0 2024-2025. */
 package org.vicky;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -16,9 +14,10 @@ import org.vicky.guiparent.DefaultGuiListener;
 import org.vicky.guiparent.GuiCreator;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 class VickyUtilsCommunicator extends Communicateable {
 	@Override
@@ -142,7 +141,7 @@ class VickyUtilsCommunicator extends Communicateable {
 
 		switch (guiType.toLowerCase()) {
 			case "normal", "single", "one" -> {
-				creator.openGUI(player, height, 9, title, textured, textureKey, offset,
+                creator.simple(player, height, 9, title, textured, textureKey, offset,
 						items.toArray(new GuiCreator.ItemConfig[0]));
 			}
 			case "paged", "paginated", "page" -> {
@@ -153,7 +152,7 @@ class VickyUtilsCommunicator extends Communicateable {
 				// You can split item types here later (mainItems vs pageItems), but for now we
 				// use all as
 				// pageItems.
-				creator.openPaginatedGUI(player, height, GuiCreator.ArrowGap.valueOf(
+                creator.paginated(player, height, GuiCreator.ArrowGap.valueOf(
 						payload.has("arrowGap") ? payload.get("arrowGap").getAsString().toUpperCase() : "MEDIUM"), // hardcoded
 																													// for
 																													// now;
@@ -177,7 +176,7 @@ class VickyUtilsCommunicator extends Communicateable {
 				boolean canClickLeft = payload.has("canClickLeft") && payload.get("canClickLeft").getAsBoolean();
 				boolean canClickRight = payload.has("canClickRight") && payload.get("canClickRight").getAsBoolean();
 
-				creator.openAnvilGUI(player, initialText, textured, textureKey, offset, items.get(0), // left
+                creator.anvil(player, initialText, textured, textureKey, offset, items.get(0), // left
 						items.get(1), // right
 						items.get(2), // output
 						title, canClickLeft, canClickRight, (p, state, slot) -> List.of(), // Placeholder completion

@@ -1,12 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.Theme;
 
-import static org.vicky.global.Global.themeSelectionListener;
-
 import jakarta.persistence.NoResultException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -20,6 +15,12 @@ import org.vicky.utilities.DatabaseManager.dao_s.ThemeDAO;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
 import org.vicky.utilities.DatabaseManager.templates.Theme;
 import org.vicky.utilities.SmallCapsConverter;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import static org.vicky.global.Global.themeSelectionListener;
 
 public class ThemeSelectionGui extends BaseGui {
   /**
@@ -78,7 +79,7 @@ public class ThemeSelectionGui extends BaseGui {
                       },
                       true));
           themeConfigs.add(config);
-          guiManager.openPaginatedGUI(
+            guiManager.paginated(
               player,
               6,
               GuiCreator.ArrowGap.MEDIUM,

@@ -1,17 +1,18 @@
 /* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.utilities;
 
+import org.bukkit.plugin.java.JavaPlugin;
+import org.vicky.utilities.ContextLogger.ContextLogger;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import org.bukkit.plugin.java.JavaPlugin;
-import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class FileManager {
 
@@ -22,6 +23,11 @@ public class FileManager {
 		this.plugin = plugin;
 	}
 
+	public static Optional<StackWalker.StackFrame> getCallerFrame() {
+		StackWalker walker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
+		return walker.walk(frames -> frames.skip(1).findFirst()); // skip(0) is current method
+	}
+
 	/**
 	 * Extracts assets from the plugin JAR to the ItemsAdder directory. It will
 	 * extract everything in the specified folder from the JAR.
@@ -29,6 +35,7 @@ public class FileManager {
 	 * @param folders
 	 *            List of folder paths inside the JAR to extract.
 	 */
+
 	public void extractDefaultIAAssets(List<String> folders) {
 		try {
 			// Get the URL of the JAR file

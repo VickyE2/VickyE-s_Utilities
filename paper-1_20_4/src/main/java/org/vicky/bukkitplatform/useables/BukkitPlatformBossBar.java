@@ -11,11 +11,13 @@ import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.defaults.BossBarOverlay;
 import org.vicky.platform.utils.BossBarDescriptor;
 
+import static org.vicky.bukkitplatform.useables.BukkitBossBarDescriptor.mapToBarStyle;
+
 public class BukkitPlatformBossBar implements PlatformBossBar {
 	private final BossBar bar;
-    private BukkitBossBarDescriptor descriptor;
+    private BossBarDescriptor descriptor;
 
-    public BukkitPlatformBossBar(BossBar bar, BukkitBossBarDescriptor descriptor) {
+    public BukkitPlatformBossBar(BossBar bar, BossBarDescriptor descriptor) {
 		this.bar = bar;
         this.descriptor = descriptor;
 	}
@@ -83,9 +85,9 @@ public class BukkitPlatformBossBar implements PlatformBossBar {
     public void updateFromDescriptor() {
         bar.setColor(BukkitBossBarFactory.adaptColor(descriptor.color));
         bar.setProgress(descriptor.progress);
-        bar.setStyle(descriptor.toBukkitBossBar().getStyle());
-        bar.setTitle(descriptor.toBukkitBossBar().getTitle());
-        bar.setVisible(descriptor.toBukkitBossBar().isVisible());
+        bar.setStyle(mapToBarStyle(descriptor.getOverlay()));
+        bar.setTitle(PlainTextComponentSerializer.plainText().serialize(descriptor.getTitle()));
+        bar.setVisible(true);
 	}
 
 	public BossBar getBossBar() {

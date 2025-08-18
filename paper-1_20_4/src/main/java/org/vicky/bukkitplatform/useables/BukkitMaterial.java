@@ -4,13 +4,7 @@ import org.bukkit.Material;
 import org.vicky.platform.utils.ResourceLocation;
 import org.vicky.platform.world.PlatformMaterial;
 
-public class BukkitMaterial implements PlatformMaterial {
-
-    private final Material material;
-
-    public BukkitMaterial(Material material) {
-        this.material = material;
-    }
+public record BukkitMaterial(Material material) implements PlatformMaterial {
 
     @Override
     public boolean isSolid() {

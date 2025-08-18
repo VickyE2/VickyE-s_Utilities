@@ -3,6 +3,7 @@ package org.vicky.bukkitplatform;
 
 import org.vicky.global.Global;
 import org.vicky.platform.PlatformConfig;
+import org.vicky.utilities.PermittedObject;
 
 public class BukkitPlatformConfig implements PlatformConfig {
 	@Override
@@ -28,5 +29,20 @@ public class BukkitPlatformConfig implements PlatformConfig {
 	@Override
 	public Double getDoubleValue(String key) {
 		return Global.globalConfigManager.getDoubleValue(key);
+	}
+
+	@Override
+	public void setConfigValue(String s, PermittedObject<?> permittedObject) {
+		Global.globalConfigManager.setBracedConfigValue(s, permittedObject.getValue(), "");
+	}
+
+	@Override
+	public boolean doesKeyExist(String s) {
+		return Global.globalConfigManager.doesPathExist(s);
+	}
+
+	@Override
+	public void saveConfig() {
+		Global.globalConfigManager.saveConfig();
 	}
 }

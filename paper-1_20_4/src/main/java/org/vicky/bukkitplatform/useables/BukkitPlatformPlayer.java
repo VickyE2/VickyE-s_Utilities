@@ -1,15 +1,15 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.bukkitplatform.useables;
 
-import java.util.UUID;
-
+import net.kyori.adventure.text.Component;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-import org.vicky.platform.*;
+import org.vicky.platform.PlatformBossBar;
+import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.world.PlatformLocation;
 
-import net.kyori.adventure.text.Component;
+import java.util.UUID;
 
 public class BukkitPlatformPlayer implements PlatformPlayer {
 
@@ -54,14 +54,14 @@ public class BukkitPlatformPlayer implements PlatformPlayer {
 	@Override
 	public void showBossBar(@NotNull PlatformBossBar bar) {
 		if (bar instanceof BukkitPlatformBossBar bukkitBar) {
-			bukkitBar.getBossBar().addViewer(player);
+			bukkitBar.getBossBar().addPlayer(player);
 		}
 	}
 
 	@Override
 	public void hideBossBar(@NotNull PlatformBossBar bar) {
 		if (bar instanceof BukkitPlatformBossBar bukkitBar) {
-			bukkitBar.getBossBar().removeViewer(player);
+			bukkitBar.getBossBar().removePlayer(player);
 		}
 	}
 
@@ -76,6 +76,12 @@ public class BukkitPlatformPlayer implements PlatformPlayer {
 	@Override
 	public @NotNull PlatformLocation getLocation() {
 		return BukkitLocationAdapter.from(player.getLocation());
+	}
+
+	@Override
+	public boolean teleport(PlatformLocation platformLocation) {
+		this.player.teleport(BukkitLocationAdapter.to(platformLocation));
+		return false;
 	}
 
 	public Player getBukkitPlayer() {

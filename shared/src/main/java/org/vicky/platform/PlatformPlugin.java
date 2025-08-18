@@ -55,8 +55,12 @@ public interface PlatformPlugin {
         return get().getPlatformEntityFactory();
     }
 
-    static PlatformLocationAdapter locationAdapter() {
+    static PlatformLocationAdapter<?> locationAdapter() {
         return get().getPlatformLocationAdapter();
+    }
+
+    static PlatformItemFactory itemFactory() {
+        return get().getPlatformItemFactory();
     }
 
     static void registerTemplateUtilityPackage(String jarName, String packageName) {
@@ -90,13 +94,14 @@ public interface PlatformPlugin {
     PlatformChatFormatter getChatFormatter();
     PlatformConfig getPlatformConfig();
     PlatformBossBarFactory getPlatformBossBarFactory();
+
+    PlatformItemFactory getPlatformItemFactory();
     PlatformEntityFactory getPlatformEntityFactory();
-    PlatformLocationAdapter getPlatformLocationAdapter();
+
+    PlatformLocationAdapter<?> getPlatformLocationAdapter();
     File getPlatformDataFolder();
     Optional<PlatformPlayer> getPlatformPlayer(UUID uuid);
 
-    void onEnable();
-    void onDisable();
     class Holder {
         private static final Map<String, String> pendingDBTemplates = new HashMap<>();
         private static final Map<String, String> pendingDBTemplatesUtils = new HashMap<>();

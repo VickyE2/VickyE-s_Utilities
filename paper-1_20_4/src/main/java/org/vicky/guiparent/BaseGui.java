@@ -1,10 +1,6 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.guiparent;
 
-import static org.vicky.guiparent.GuiCreator.createItem;
-
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -12,6 +8,11 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.vicky.listeners.BaseGuiListener;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static org.vicky.guiparent.GuiCreator.createItem;
 
 /**
  * BaseGui is an abstract class providing the core functionality for creating and displaying GUIs.
@@ -139,7 +140,7 @@ public abstract class BaseGui {
                 Set<Integer> slotSet = GuiCreator.parseSlots(itemConfig.getSlotRange());
                 for (int slot : slotSet) {
                   if (slot < 54) {
-                    ItemStack item = createItem(itemConfig, player, plugin);
+                    ItemStack item = createItem(itemConfig, player);
                     inventory.setItem(slot, item);
                   }
                 }

@@ -1,8 +1,6 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.effectsSystem;
 
-import static org.vicky.vicky_utils.plugin;
-
 import org.bukkit.Color;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -28,6 +26,6 @@ public interface Brewable {
   boolean hasGlint();
 
   default ItemStack brewResult(Player player) {
-    return GuiCreator.createItem(generateConfig(), player, plugin);
+    return GuiCreator.createItem(generateConfig(), player);
   }
 }

@@ -1,22 +1,22 @@
 package org.vicky.bukkitplatform.useables;
 
-import org.bukkit.inventory.ItemStack;
+import org.vicky.guiparent.GuiCreator;
 import org.vicky.platform.PlatformItem;
 
 import java.util.UUID;
 
-public class BukkitItem implements PlatformItem {
+public class ItemConfigPlatformItem implements PlatformItem {
 
-    private final ItemStack stack;
+    private final GuiCreator.ItemConfig stack;
     private final UUID id = UUID.randomUUID();
 
-    public BukkitItem(ItemStack stack) {
+    public ItemConfigPlatformItem(GuiCreator.ItemConfig stack) {
         this.stack = stack;
     }
 
     @Override
     public String getName() {
-        return stack.getType().name();
+        return stack.getMaterial().name();
     }
 
     @Override
@@ -24,7 +24,7 @@ public class BukkitItem implements PlatformItem {
         return id.toString();
     }
 
-    public ItemStack getStack() {
+    public GuiCreator.ItemConfig getStack() {
         return stack;
     }
 }

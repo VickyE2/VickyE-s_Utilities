@@ -42,6 +42,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.vicky.utilities.FileManager.getCallerFrame;
@@ -224,6 +225,8 @@ public class GuiCreator {
 			if (itemConfig.getCustomModelData() != null) {
 				meta.setCustomModelData(itemConfig.getCustomModelData());
 			}
+			if (itemConfig.getItemMetaFunction() != null)
+				itemConfig.getItemMetaFunction().apply(meta);
 			item.setItemMeta(meta);
 		}
 		return item;
@@ -1316,6 +1319,8 @@ public class GuiCreator {
 		private final Color potionColor;
 		@Nullable
 		private final Rarity rarity; // Custom NBT data
+		@Nullable
+		private final Function<ItemMeta, Void> itemMetaFunction;
 		private String name;
 		private String slotRange; // e.g., "1-10" or "1,8"
 		private boolean clickable;
@@ -1340,7 +1345,10 @@ public class GuiCreator {
 		 *            A list of strings representing the lore for the item.
 		 * @param nbtData
 		 *            A map of custom NBT keys and values (can be empty or null).
+		 *
+		 * @deprecated In favour of using {@link ItemConfigBuilder}
 		 */
+		@Deprecated
 		public ItemConfig(@Nullable Material material, @NotNull String name, @Nullable String slotRange,
 				boolean clickable, @Nullable Integer customModelData, @Nullable String itemsAdderName,
 				@NotNull List<String> lore, @Nullable Map<String, Object> nbtData,
@@ -1359,6 +1367,7 @@ public class GuiCreator {
 			this.basePotionData = null;
 			this.potionColor = null;
 			this.customPotionEffects = null;
+			this.itemMetaFunction = null;
 		}
 
 		/**
@@ -1382,7 +1391,10 @@ public class GuiCreator {
 		 *            A list of strings representing the lore for the item.
 		 * @param nbtData
 		 *            A map of custom NBT keys and values (can be empty or null).
+		 *
+		 * @deprecated In favour of using {@link ItemConfigBuilder}
 		 */
+		@Deprecated
 		public ItemConfig(@Nullable Material material, @NotNull String name, @Nullable Rarity rarity,
 				@Nullable String slotRange, boolean clickable, @Nullable Integer customModelData,
 				@Nullable String itemsAdderName, @NotNull List<String> lore, @Nullable Map<String, Object> nbtData,
@@ -1401,6 +1413,7 @@ public class GuiCreator {
 			this.basePotionData = null;
 			this.potionColor = null;
 			this.customPotionEffects = null;
+			this.itemMetaFunction = null;
 		}
 
 		/**
@@ -1420,7 +1433,10 @@ public class GuiCreator {
 		 *            The ItemsAdder item name (optional, may be null).
 		 * @param lore
 		 *            A list of strings representing the lore for the item.
+		 *
+		 * @deprecated In favour of using {@link ItemConfigBuilder}
 		 */
+		@Deprecated
 		public ItemConfig(@Nullable Material material, @NotNull String name, @Nullable String slotRange,
 				boolean clickable, @Nullable Integer customModelData, @Nullable String itemsAdderName,
 				@NotNull List<String> lore, @Nullable ButtonAction buttonAction) {
@@ -1438,6 +1454,7 @@ public class GuiCreator {
 			this.basePotionData = null;
 			this.potionColor = null;
 			this.customPotionEffects = null;
+			this.itemMetaFunction = null;
 		}
 
 		/**
@@ -1461,7 +1478,10 @@ public class GuiCreator {
 		 *            The OfflinePlayer representing the head owner.
 		 * @param nbtData
 		 *            A map of custom NBT keys and values (can be empty or null).
+		 *
+		 * @deprecated In favour of using {@link ItemConfigBuilder}
 		 */
+		@Deprecated
 		public ItemConfig(@Nullable Material material, @NotNull String name, @Nullable String slotRange,
 				boolean clickable, @Nullable Integer customModelData, @Nullable String itemsAdderName,
 				@NotNull List<String> lore, @NotNull OfflinePlayer headOwner, @Nullable Map<String, Object> nbtData,
@@ -1480,6 +1500,7 @@ public class GuiCreator {
 			this.basePotionData = null;
 			this.potionColor = null;
 			this.customPotionEffects = null;
+			this.itemMetaFunction = null;
 		}
 
 		/**
@@ -1501,7 +1522,10 @@ public class GuiCreator {
 		 *            A list of strings representing the lore for the item.
 		 * @param headOwner
 		 *            The OfflinePlayer representing the head owner.
+		 *
+		 * @deprecated In favour of using {@link ItemConfigBuilder}
 		 */
+		@Deprecated
 		public ItemConfig(@Nullable Material material, @NotNull String name, @Nullable String slotRange,
 				boolean clickable, @Nullable Integer customModelData, @Nullable String itemsAdderName,
 				@NotNull List<String> lore, @NotNull OfflinePlayer headOwner, @Nullable ButtonAction buttonAction) {
@@ -1519,8 +1543,13 @@ public class GuiCreator {
 			this.basePotionData = null;
 			this.potionColor = null;
 			this.customPotionEffects = null;
+			this.itemMetaFunction = null;
 		}
 
+		/**
+		 * @deprecated In favour of using {@link ItemConfigBuilder}
+		 */
+		@Deprecated
 		public ItemConfig(@Nullable Material material, @NotNull String name, @Nullable String slotRange,
 				boolean clickable, @Nullable Integer customModelData, @Nullable String itemsAdderName,
 				@NotNull List<String> lore, @NotNull OfflinePlayer headOwner, @Nullable ButtonAction buttonAction,
@@ -1540,10 +1569,15 @@ public class GuiCreator {
 			this.basePotionData = potionData;
 			this.potionColor = potionColor;
 			this.customPotionEffects = potionEffects;
+			this.itemMetaFunction = null;
 		}
 
+		/**
+		 * @deprecated In favour of using {@link ItemConfigBuilder}
+		 */
+		@Deprecated
 		public ItemConfig(
-				Material material,
+				@NotNull Material material,
 				String name,
 				@Nullable Rarity rarity,
 				String slotRange,
@@ -1557,7 +1591,8 @@ public class GuiCreator {
 				PotionData basePotionData,
 				List<PotionEffect> customPotionEffects,
 				Color potionColor,
-				boolean hasEnchantmentEffect) {
+				boolean hasEnchantmentEffect,
+				Function<ItemMeta, Void> itemMetaFunction) {
 			this.material = material;
 			this.name = name;
 			this.rarity = rarity;
@@ -1573,6 +1608,7 @@ public class GuiCreator {
 			this.potionColor = potionColor;
 			this.customPotionEffects = customPotionEffects;
 			this.hasEnchantmentEffect = hasEnchantmentEffect;
+			this.itemMetaFunction = itemMetaFunction;
 		}
 
 		/**
@@ -1672,6 +1708,16 @@ public class GuiCreator {
 		 */
 		public Material getMaterial() {
 			return material;
+		}
+
+		/**
+		 * Gets the transformer for the specified itemMeta. Mostly internal
+		 *
+		 * @return the meta transforming function
+		 */
+		@Nullable
+		public Function<ItemMeta, Void> getItemMetaFunction() {
+			return itemMetaFunction;
 		}
 
 		/**
@@ -2074,6 +2120,8 @@ public class GuiCreator {
 		private PotionData basePotionData = null;
 		@Nullable
 		private Color potionColor = null;
+		@Nullable
+		private Function<ItemMeta, Void> itemMetaTransformer = (it) -> null;
 
 		private ItemConfigBuilder(Material material) {
 			this.material = material;
@@ -2171,6 +2219,11 @@ public class GuiCreator {
 			return this;
 		}
 
+		public ItemConfigBuilder setItemMetaTransformer(@Nullable Function<ItemMeta, Void> itemMetaTransformer) {
+			this.itemMetaTransformer = itemMetaTransformer;
+			return this;
+		}
+
 		/**
 		 * Build an {@link ItemConfig} with the current builder state.
 		 *
@@ -2179,7 +2232,7 @@ public class GuiCreator {
 		 */
 		public ItemConfig build() {
 			return new ItemConfig(material, name, rarity, slotRange, clickable, customModelData, itemsAdderName, lore,
-					nbtData, buttonAction, headOwner, basePotionData, customPotionEffects, potionColor, hasEnchantmentEffect);
+					nbtData, buttonAction, headOwner, basePotionData, customPotionEffects, potionColor, hasEnchantmentEffect, itemMetaTransformer);
 		}
 	}
 }

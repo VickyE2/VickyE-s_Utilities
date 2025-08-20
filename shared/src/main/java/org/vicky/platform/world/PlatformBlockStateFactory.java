@@ -1,6 +1,6 @@
 package org.vicky.platform.world;
 
-public interface PlatformBlockStateProvider {
+public interface PlatformBlockStateFactory {
     PlatformBlockState<?> getBlockState(String type);
 }
 

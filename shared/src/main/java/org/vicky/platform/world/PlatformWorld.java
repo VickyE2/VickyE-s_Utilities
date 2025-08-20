@@ -1,25 +1,29 @@
 package org.vicky.platform.world;
 
 import de.pauleff.api.ICompoundTag;
+import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.utils.Vec3;
+
+import java.util.List;
 
 public interface PlatformWorld<T, N> {
     String getName();
 
     N getNative();
+
     int getHighestBlockYAt(double x, double z);
 
     int getMaxWorldHeight();
+
+    List<PlatformPlayer> getPlayers();
 
     PlatformBlock<T> getBlockAt(double x, double y, double z);
 
     PlatformBlock<T> getBlockAt(Vec3 pos);
 
-    PlatformBlockState<T> AIR();
+    PlatformBlockState<T> getAirBlockState();
 
-    PlatformBlockState<T> TOP_LAYER_BLOCK();
-
-    PlatformBlockState<T> STONE_LAYER_BLOCK();
+    PlatformBlockState<T> getWaterBlockState();
 
     /**
      * Sets the block state at the given position.

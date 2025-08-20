@@ -1,5 +1,8 @@
 package org.vicky.platform;
 
+import org.vicky.platform.events.PlatformEventFactory;
+import org.vicky.platform.world.PlatformBlockStateFactory;
+
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,7 +19,15 @@ public interface PlatformPlugin {
     }
 
     static void set(PlatformPlugin instance) {
-        Holder.INSTANCE = instance;
+        if (Holder.INSTANCE == null) {
+            Holder.INSTANCE = instance;
+        } else {
+            throw new IllegalStateException("Cannot set PlatformPlugin after its already been set.");
+        }
+    }
+
+    static PlatformBlockStateFactory stateFactory() {
+        return get().getPlatformBlockStateFactory();
     }
 
     static PlatformLogger logger() {
@@ -63,6 +74,10 @@ public interface PlatformPlugin {
         return get().getPlatformItemFactory();
     }
 
+    static PlatformEventFactory eventFactory() {
+        return get().getEventFactory();
+    }
+
     static void registerTemplateUtilityPackage(String jarName, String packageName) {
         Holder.pendingDBTemplatesUtils.put(packageName, jarName);
     }
@@ -77,6 +92,17 @@ public interface PlatformPlugin {
 
     static Map<String, String> getPendingDBTemplatesUtils() {
         return Holder.pendingDBTemplatesUtils;
+    }
+
+    /**
+     * Only the instance that was registered can unregister itself.
+     */
+    default void unregister() {
+        if (Holder.INSTANCE == this) {
+            Holder.INSTANCE = null;
+        } else {
+            throw new IllegalStateException("Only the registered instance can unregister itself!");
+        }
     }
 
     static ClassLoader classLoader() {
@@ -95,8 +121,11 @@ public interface PlatformPlugin {
     PlatformConfig getPlatformConfig();
     PlatformBossBarFactory getPlatformBossBarFactory();
 
+    PlatformBlockStateFactory getPlatformBlockStateFactory();
     PlatformItemFactory getPlatformItemFactory();
     PlatformEntityFactory getPlatformEntityFactory();
+
+    PlatformEventFactory getEventFactory();
 
     PlatformLocationAdapter<?> getPlatformLocationAdapter();
     File getPlatformDataFolder();

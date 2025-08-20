@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.bukkitplatform.useables;
 
 import org.bukkit.boss.BarColor;
@@ -9,7 +10,8 @@ public final class ColorAdapters {
     }
 
     public static BarColor adaptColor(IColor color) {
-        if (color == null) return BarColor.WHITE;
+        if (color == null)
+            return BarColor.WHITE;
 
         // 1) Try hex string if available
         String hex = null;
@@ -19,7 +21,8 @@ public final class ColorAdapters {
         }
         if (hex != null) {
             hex = hex.trim();
-            if (hex.startsWith("#")) hex = hex.substring(1);
+            if (hex.startsWith("#"))
+                hex = hex.substring(1);
             if (hex.length() == 6) {
                 try {
                     int rgb = Integer.parseInt(hex, 16);
@@ -50,9 +53,11 @@ public final class ColorAdapters {
     }
 
     // Convert a float channel to 0..255 int.
-    // If value looks like 0..1 range we scale by 255, otherwise assume it's already 0..255.
+    // If value looks like 0..1 range we scale by 255, otherwise assume it's already
+    // 0..255.
     private static int floatToByte(float v) {
-        if (Float.isNaN(v) || Float.isInfinite(v)) return 255;
+        if (Float.isNaN(v) || Float.isInfinite(v))
+            return 255;
         if (v <= 1.0f && v >= 0.0f) {
             return clampToByte(Math.round(v * 255f));
         } else {
@@ -61,8 +66,10 @@ public final class ColorAdapters {
     }
 
     private static int clampToByte(int x) {
-        if (x < 0) return 0;
-        if (x > 255) return 255;
+        if (x < 0)
+            return 0;
+        if (x > 255)
+            return 255;
         return x;
     }
 
@@ -74,9 +81,7 @@ public final class ColorAdapters {
             int cr = (cand >> 16) & 0xFF;
             int cg = (cand >> 8) & 0xFF;
             int cb = cand & 0xFF;
-            double d = (r - cr) * (double) (r - cr)
-                    + (g - cg) * (double) (g - cg)
-                    + (b - cb) * (double) (b - cb);
+            double d = (r - cr) * (double) (r - cr) + (g - cg) * (double) (g - cg) + (b - cb) * (double) (b - cb);
             if (d < bestDist) {
                 bestDist = d;
                 best = bc;

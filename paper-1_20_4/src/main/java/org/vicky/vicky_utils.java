@@ -42,6 +42,8 @@ import org.vicky.music.utils.MusicPiece;
 import org.vicky.music.utils.Sound;
 import org.vicky.mythic.MythicRegistrar;
 import org.vicky.platform.*;
+import org.vicky.platform.events.PlatformEventFactory;
+import org.vicky.platform.world.PlatformBlockStateFactory;
 import org.vicky.utilities.*;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 import org.vicky.utilities.DatabaseManager.HibernateDatabaseManager;
@@ -209,12 +211,12 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 
 	@Override
 	public void onEnable() {
-        try {
-            Class.forName("org.sqlite.JDBC");
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null
+		try {
+			Class.forName("org.sqlite.JDBC");
+		} catch (ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		}
+		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null
 				&& Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
 			Bukkit.getLogger().info(ANSIColor.colorizeMixed(String.format("""
 					gradient-10deg-right-#AA0000-#DDDD00[
@@ -622,6 +624,11 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 	}
 
 	@Override
+	public PlatformBlockStateFactory getPlatformBlockStateFactory() {
+		return new BukkitBlockStateFactory();
+	}
+
+	@Override
 	public PlatformItemFactory getPlatformItemFactory() {
 		return new BukkitItemFactory();
 	}
@@ -629,6 +636,11 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 	@Override
 	public PlatformEntityFactory getPlatformEntityFactory() {
 		return new BukkitEntityFactory();
+	}
+
+	@Override
+	public PlatformEventFactory getEventFactory() {
+		return null;
 	}
 
 	@Override

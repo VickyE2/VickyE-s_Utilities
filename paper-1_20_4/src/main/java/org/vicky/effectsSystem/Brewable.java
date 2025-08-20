@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024. */
+/* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.effectsSystem;
 
 import org.bukkit.Color;
@@ -7,25 +7,25 @@ import org.bukkit.inventory.ItemStack;
 import org.vicky.guiparent.GuiCreator;
 
 public interface Brewable {
-  String getPotionName();
+    String getPotionName();
 
-  String getEffectKey();
+    String getEffectKey();
 
-  ItemStack mainBrewItem();
+    ItemStack mainBrewItem();
 
-  ItemStack bottomPotion();
+    ItemStack bottomPotion();
 
-  boolean canSplash();
+    boolean canSplash();
 
-  boolean canLinger();
+    boolean canLinger();
 
-  Color potionColor();
+    Color potionColor();
 
-  GuiCreator.ItemConfig generateConfig();
+    GuiCreator.ItemConfig generateConfig();
 
-  boolean hasGlint();
+    boolean hasGlint();
 
-  default ItemStack brewResult(Player player) {
-    return GuiCreator.createItem(generateConfig(), player);
-  }
+    default ItemStack brewResult(Player player) {
+        return GuiCreator.createItem(generateConfig(), player);
+    }
 }

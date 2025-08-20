@@ -40,10 +40,13 @@ public class BukkitBossBarFactory implements PlatformBossBarFactory {
         BarColor barColor = mapToBarColor(descriptor.color);
         BarStyle barStyle = mapToBarStyle(descriptor.overlay);
 
-        // Attempt: Bukkit.createBossBar(Component, BarColor, BarStyle) (Paper supports Component)
+        // Attempt: Bukkit.createBossBar(Component, BarColor, BarStyle) (Paper supports
+        // Component)
         try {
-            Method createMethod = Bukkit.class.getMethod("createBossBar", Component.class, BarColor.class, BarStyle.class);
-            Object created = createMethod.invoke(null, descriptor.title != null ? descriptor.title : Component.empty(), barColor, barStyle);
+            Method createMethod = Bukkit.class.getMethod("createBossBar", Component.class, BarColor.class,
+                    BarStyle.class);
+            Object created = createMethod.invoke(null, descriptor.title != null ? descriptor.title : Component.empty(),
+                    barColor, barStyle);
             if (created instanceof BossBar) {
                 BossBar bb = (BossBar) created;
                 configureBukkitBossBar(bb, descriptor);
@@ -56,7 +59,8 @@ public class BukkitBossBarFactory implements PlatformBossBarFactory {
         }
 
         // Fallback: use text string (works on all Bukkit variants)
-        String text = PlainTextComponentSerializer.plainText().serialize(descriptor.title != null ? descriptor.title : Component.empty());
+        String text = PlainTextComponentSerializer.plainText()
+                .serialize(descriptor.title != null ? descriptor.title : Component.empty());
         BossBar bossBar = Bukkit.createBossBar(text, barColor, barStyle);
         configureBukkitBossBar(bossBar, descriptor);
         return bossBar;

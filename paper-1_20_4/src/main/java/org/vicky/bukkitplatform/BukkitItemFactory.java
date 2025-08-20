@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.bukkitplatform;
 
 import org.bukkit.Bukkit;
@@ -14,6 +15,7 @@ public class BukkitItemFactory implements PlatformItemFactory {
         if (platformMaterial instanceof BukkitMaterial material) {
             return new BukkitItem(new ItemStack(material.material()));
         }
-        return new BukkitItem(Bukkit.getItemFactory().createItemStack(platformMaterial.getResourceLocation().asString()));
+        return new BukkitItem(
+                Bukkit.getItemFactory().createItemStack(platformMaterial.getResourceLocation().asString()));
     }
 }

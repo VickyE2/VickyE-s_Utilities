@@ -6,10 +6,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
+import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.utils.Vec3;
 import org.vicky.platform.world.PlatformBlock;
 import org.vicky.platform.world.PlatformBlockState;
 import org.vicky.platform.world.PlatformWorld;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class BukkitWorldAdapter implements PlatformWorld<BlockData, World> {
 	private final World world;
@@ -38,6 +42,11 @@ public class BukkitWorldAdapter implements PlatformWorld<BlockData, World> {
 		return world.getMaxHeight();
 	}
 
+    @Override
+    public List<PlatformPlayer> getPlayers() {
+        return world.getPlayers().stream().map(BukkitPlatformPlayer::of).collect(Collectors.toUnmodifiableList());
+    }
+
 	@Override
 	public PlatformBlock<BlockData> getBlockAt(double v, double v1, double v2) {
 		return null;
@@ -49,18 +58,13 @@ public class BukkitWorldAdapter implements PlatformWorld<BlockData, World> {
 	}
 
 	@Override
-	public PlatformBlockState<BlockData> AIR() {
+    public PlatformBlockState<BlockData> getAirBlockState() {
 		return BukkitBlockState.from(Material.AIR);
 	}
 
 	@Override
-	public PlatformBlockState<BlockData> TOP_LAYER_BLOCK() {
-		return BukkitBlockState.from(Material.GRASS_BLOCK);
-	}
-
-	@Override
-	public PlatformBlockState<BlockData> STONE_LAYER_BLOCK() {
-		return BukkitBlockState.from(Material.STONE);
+    public PlatformBlockState<BlockData> getWaterBlockState() {
+        return BukkitBlockState.from(Material.WATER);
 	}
 
 	@Override
@@ -69,7 +73,8 @@ public class BukkitWorldAdapter implements PlatformWorld<BlockData, World> {
 	}
 
 	@Override
-	public void setPlatformBlockState(Vec3 vec3, PlatformBlockState<BlockData> platformBlockState, ICompoundTag iCompoundTag) {
+    public void setPlatformBlockState(Vec3 vec3, PlatformBlockState<BlockData> platformBlockState,
+                                      ICompoundTag iCompoundTag) {
 		world.getBlockAt(vec3.getX(), vec3.getY(), vec3.getZ()).setBlockData(platformBlockState.getNative(), false);
 		// Help needed
 	}

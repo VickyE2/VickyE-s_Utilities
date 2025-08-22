@@ -9,24 +9,24 @@ import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.repository.RemoteRepository;
 
 public class VickyUtilsPluginLoader implements PluginLoader {
-    @Override
-    public void classloader(PluginClasspathBuilder classpathBuilder) {
-        MavenLibraryResolver resolver = new MavenLibraryResolver();
+	@Override
+	public void classloader(PluginClasspathBuilder classpathBuilder) {
+		MavenLibraryResolver resolver = new MavenLibraryResolver();
 
-        resolver.addRepository(
-                new RemoteRepository.Builder("central", "default", "https://repo1.maven.org/maven2/").build());
+		resolver.addRepository(
+				new RemoteRepository.Builder("central", "default", "https://repo1.maven.org/maven2/").build());
 
-        resolver.addDependency(
-                new Dependency(new DefaultArtifact("org.hibernate.orm:hibernate-core:6.4.1.Final"), null));
-        resolver.addDependency(new Dependency(
-                new DefaultArtifact("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final"), null));
-        resolver.addDependency(
-                new Dependency(new DefaultArtifact("org.jboss.logging:jboss-logging:3.5.3.Final"), null));
-        resolver.addDependency(new Dependency(new DefaultArtifact("org.spongepowered:configurate-yaml:4.1.2"), null));
-        resolver.addDependency(
-                new Dependency(new DefaultArtifact("org.spongepowered:configurate-jackson:4.1.2"), null));
-        resolver.addDependency(new Dependency(new DefaultArtifact("org.spongepowered:configurate-xml:4.1.2"), null));
+		resolver.addDependency(
+				new Dependency(new DefaultArtifact("org.hibernate.orm:hibernate-core:6.4.1.Final"), null));
+		resolver.addDependency(new Dependency(
+				new DefaultArtifact("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final"), null));
+		resolver.addDependency(
+				new Dependency(new DefaultArtifact("org.jboss.logging:jboss-logging:3.5.3.Final"), null));
+		resolver.addDependency(new Dependency(new DefaultArtifact("org.spongepowered:configurate-yaml:4.1.2"), null));
+		resolver.addDependency(
+				new Dependency(new DefaultArtifact("org.spongepowered:configurate-jackson:4.1.2"), null));
+		resolver.addDependency(new Dependency(new DefaultArtifact("org.spongepowered:configurate-xml:4.1.2"), null));
 
-        classpathBuilder.addLibrary(resolver);
-    }
+		classpathBuilder.addLibrary(resolver);
+	}
 }

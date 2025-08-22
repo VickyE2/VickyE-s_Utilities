@@ -8,8 +8,8 @@ import org.vicky.platform.world.PlatformBlockState;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 
 public class BukkitBlockStateFactory implements PlatformBlockStateFactory {
-    @Override
-    public PlatformBlockState<BlockData> getBlockState(String type) {
-        return BukkitBlockState.from(Bukkit.createBlockData(type).getMaterial());
-    }
+	@Override
+	public PlatformBlockState<BlockData> getBlockState(String type) {
+		return BukkitBlockState.from(Bukkit.createBlockData(type).getMaterial());
+	}
 }

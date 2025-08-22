@@ -256,7 +256,6 @@ subprojects {
             )
             archiveClassifier.set("")
             mergeServiceFiles()
-            minimize()
             exclude("META-INF/maven/**")
             exclude("META-INF/*.kotlin_module")
             exclude("META-INF/versions/**")

@@ -95,13 +95,16 @@ public class ButtonAction<T> {
         this.main_plugin = plugin;
     }
 
-    /**
-     * Constructs a ButtonAction with an action type, action data, and closeGui
+	/**
+	 * Constructs a ButtonAction with an action type, action data, and closeGui
      * flag.
      *
-     * @param actionType The type of action.
-     * @param actionData The data associated with the action.
-     * @param closeGui   Whether to close the GUI after executing the action.
+     * @param actionType
+     *            The type of action.
+     * @param actionData
+     *            The data associated with the action.
+     * @param closeGui
+     *            Whether to close the GUI after executing the action.
      * @deprecated Use {@link #ofGeneric(ActionType, Object, boolean)} instead.
      */
     @Deprecated
@@ -119,10 +122,14 @@ public class ButtonAction<T> {
     /**
      * Constructs a ButtonAction for opening a GUI.
      *
-     * @param actionType The type of action.
-     * @param guiClass   The class of the GUI to open.
-     * @param plugin     The JavaPlugin instance.
-     * @param closeGui   Whether to close the current GUI before opening the new one.
+     * @param actionType
+     *            The type of action.
+     * @param guiClass
+     *            The class of the GUI to open.
+     * @param plugin
+     *            The JavaPlugin instance.
+     * @param closeGui
+     *            Whether to close the current GUI before opening the new one.
      * @deprecated Use {@link #ofOpenGui(Class, JavaPlugin, boolean)} instead.
      */
     @Deprecated
@@ -383,9 +390,11 @@ public class ButtonAction<T> {
     /**
      * Chains a subsequent action that transforms the result of the previous action.
      *
-     * @param nextAction A BiFunction that receives the Player and the result of the
-     *                   current chain, and returns a new result.
-     * @param <R>        The type of the result of the next action.
+     * @param nextAction
+     *            A BiFunction that receives the Player and the result of the
+     *            current chain, and returns a new result.
+     * @param <R>
+     *            The type of the result of the next action.
      * @return A new ButtonAction representing the extended chain.
      */
     public <R> ButtonAction<R> thenBi(BiFunction<Player, T, R> nextAction) {

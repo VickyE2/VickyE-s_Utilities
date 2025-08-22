@@ -1,6 +1,7 @@
 name: Vicky-s_Utilities
 version: '0.0.1-BETA'
 main: org.vicky.vicky_utils
+load: PREWORLD
 api-version: '1.20'
 prefix: V-UTL
 authors: [ VickyE2 ]

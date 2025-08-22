@@ -160,5 +160,5 @@ public abstract class PagedGui extends BaseGui {
 
     public List<GuiCreator.ItemConfig> getItems() {
         return items;
-    }
+	}
 }

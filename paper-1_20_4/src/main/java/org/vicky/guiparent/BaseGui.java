@@ -51,7 +51,7 @@ public abstract class BaseGui {
         this.guiManager.setOwner(this);
         guiType = type;
 
-        // Register the listener for GUI actions
+		// Register the listener for GUI actions
         plugin.getServer().getPluginManager().registerEvents(this.listener, plugin);
     }
 
@@ -65,7 +65,8 @@ public abstract class BaseGui {
      * The default listener is registered for GUI events.
      * </p>
      *
-     * @param plugin the JavaPlugin instance for the plugin
+     * @param plugin
+     *            the JavaPlugin instance for the plugin
      */
     public BaseGui(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -90,7 +91,8 @@ public abstract class BaseGui {
      * Each subclass must implement this method to open its particular GUI.
      * </p>
      *
-     * @param player the player to whom the GUI is shown
+     * @param player
+     *            the player to whom the GUI is shown
      */
     public abstract void showGui(Player player);
 
@@ -101,7 +103,8 @@ public abstract class BaseGui {
      * new listener is then registered for GUI events.
      * </p>
      *
-     * @param listener the new {@link BaseGuiListener} to set
+     * @param listener
+     *            the new {@link BaseGuiListener} to set
      */
     public void setListener(BaseGuiListener listener) {
         if (this.listener != null)

@@ -363,7 +363,7 @@ public class BukkitHex {
             sb.append(ansiColor).append(text.charAt(i));
         }
         sb.append(RESET);
-        return sb.toString();
+		return sb.toString();
     }
 
     /**
@@ -451,5 +451,5 @@ public class BukkitHex {
      */
     public void addCustomColor(String colorName, String hexCode) {
         COLOR_MAP.put(colorName.toLowerCase(), HexGenerator.of(hexCode));
-    }
+	}
 }

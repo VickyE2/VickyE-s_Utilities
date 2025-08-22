@@ -284,6 +284,6 @@ public class BukkitBossBarDescriptor extends BossBarDescriptor {
         // otherwise, create a new instance preserving data
         BukkitBossBarDescriptor d = new BukkitBossBarDescriptor(c.getTitle(), c.getSubTitle(), c.getProgress(),
                 c.getColor(), c.getOverlay(), c.getContext(), c.getInformation());
-        return d;
-    }
+		return d;
+	}
 }

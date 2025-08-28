@@ -1,15 +1,21 @@
 package org.vicky.platform.utils;
 
+import java.util.Objects;
+
 public class ResourceLocation {
     private String namespace = "minecraft";
-    private String path = "";
+    private final String path;
 
     private ResourceLocation(String path) {
         if (path.isEmpty()) throw new IllegalArgumentException("The path of a resource locator cannot be null.");
         if (path.contains(":")) {
-            this.namespace = path.split(":")[0];
-            this.path = path.split(":")[1];
+            String[] parts = path.split(":", 2);
+            if (!parts[0].matches("[a-z0-9_.-]+")) throw new IllegalArgumentException("Invalid namespace " + namespace);
+            if (!parts[1].matches("[a-z0-9_.-]+")) throw new IllegalArgumentException("Invalid path " + path);
+            this.namespace = parts[0];
+            this.path = parts[1];
         } else {
+            if (!path.matches("[a-z0-9_.-]+")) throw new IllegalArgumentException("Invalid path " + path);
             this.path = path;
         }
     }
@@ -18,6 +24,8 @@ public class ResourceLocation {
         if (path.isEmpty()) throw new IllegalArgumentException("The path of a resource locator cannot be null.");
         if (namespace.isEmpty())
             throw new IllegalArgumentException("The namespace of a resource locator cannot be null.");
+        if (!namespace.matches("[a-z0-9_.-]+")) throw new IllegalArgumentException("Invalid namespace " + namespace);
+        if (!path.matches("[a-z0-9_.-]+")) throw new IllegalArgumentException("Invalid path " + path);
         this.path = path;
         this.namespace = namespace;
     }
@@ -55,5 +63,16 @@ public class ResourceLocation {
     @Override
     public String toString() {
         return asString();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof ResourceLocation)) {
+            return false;
+        }
+        if (!Objects.equals(this.namespace, ((ResourceLocation) obj).namespace)) {
+            return false;
+        }
+        return Objects.equals(this.path, ((ResourceLocation) obj).path);
     }
 }

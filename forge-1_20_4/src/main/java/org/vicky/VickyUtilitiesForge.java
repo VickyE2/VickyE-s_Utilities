@@ -2,6 +2,7 @@ package org.vicky;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,7 +12,6 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraftforge.api.distmarker.Dist;
@@ -32,11 +32,14 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
 import org.vicky.forgeplatform.*;
+import org.vicky.forgeplatform.useables.ForgePlatformPlayer;
+import org.vicky.forgeplatform.useables.ForgeVec3;
+import org.vicky.platform.*;
+import org.vicky.platform.events.PlatformEventFactory;
+import org.vicky.platform.world.PlatformBlockStateFactory;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 import org.vicky.utilities.ForgeModConfig;
-import org.vicky.platform.*;
-import org.vicky.forgeplatform.useables.ForgePlatformPlayer;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,35 +53,34 @@ import java.util.UUID;
 public class VickyUtilitiesForge implements PlatformPlugin {
 
     // Define mod id in a common place for everything to reference
-    public static final String MODID = "v_utils";
+    public static final String MODID = "v_utls";
     public static MinecraftServer server;
     // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
     public static final ContextLogger CONTEXT_LOGGER =
             new ContextLogger(ContextLogger.ContextType.SYSTEM, "V-UTLS");
-    // Create a Deferred Register to hold Blocks which will all be registered under the "v_utils" namespace
+    // Create a Deferred Register to hold Blocks which will all be registered under the "v_utls" namespace
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
-    // Create a Deferred Register to hold Items which will all be registered under the "v_utils" namespace
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
-    // Create a Deferred Register to hold CreativeModeTabs which will all be registered under the "v_utils" namespace
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
-
-    // Creates a new Block with the id "v_utils:example_block", combining the namespace and path
+    // Creates a new Block with the id "v_utls:example_block", combining the namespace and path
     public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.STONE)));
-    // Creates a new BlockItem with the id "v_utils:example_block", combining the namespace and path
+    // Create a Deferred Register to hold Items which will all be registered under the "v_utls" namespace
+    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
+    // Creates a new BlockItem with the id "v_utls:example_block", combining the namespace and path
     public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block", () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties()));
-
-    // Creates a new food item with the id "v_utils:example_id", nutrition 1 and saturation 2
+    // Creates a new food item with the id "v_utls:example_id", nutrition 1 and saturation 2
     public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register("example_item", () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
             .alwaysEat().nutrition(1).saturationMod(2f).build())));
-
-    // Creates a creative tab with the id "v_utils:example_tab" for the example item, that is placed after the combat tab
+    // Create a Deferred Register to hold CreativeModeTabs which will all be registered under the "v_utls" namespace
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    // Creates a creative tab with the id "v_utls:example_tab" for the example item, that is placed after the combat tab
     public static final RegistryObject<CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("example_tab", () -> CreativeModeTab.builder()
             .withTabsBefore(CreativeModeTabs.COMBAT)
             .icon(() -> EXAMPLE_ITEM.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
             output.accept(EXAMPLE_ITEM.get()); // Add the example item to the tab. For your own tabs, this method is preferred over the event
             }).build());
+
+    public static RegistryAccess access;
 
     public VickyUtilitiesForge() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -124,6 +126,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     public void onServerStarting(ServerStartingEvent event) {
         LOGGER.info("HELLO from server starting");
         server = event.getServer();
+        access = server.registryAccess();
     }
 
     @Override
@@ -162,18 +165,33 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     }
 
     @Override
+    public PlatformBlockStateFactory getPlatformBlockStateFactory() {
+        return new ForgePlatformBlockStateFactory();
+    }
+
+    @Override
+    public PlatformItemFactory getPlatformItemFactory() {
+        return new ForgePlatformItemFactory();
+    }
+
+    @Override
     public PlatformEntityFactory getPlatformEntityFactory() {
         return new ForgePlatformEntityfactory();
     }
 
     @Override
-    public PlatformLocationAdapter getPlatformLocationAdapter() {
+    public PlatformEventFactory getEventFactory() {
+        return new ForgeEventFactory();
+    }
+
+    @Override
+    public PlatformLocationAdapter<ForgeVec3> getPlatformLocationAdapter() {
         return new ForgePlatformLocationAdapter();
     }
 
     @Override
     public File getPlatformDataFolder() {
-        Path dataFolderPath = FMLPaths.CONFIGDIR.get().resolve("my_mod_id");
+        Path dataFolderPath = FMLPaths.CONFIGDIR.get().resolve(MODID);
         try {
             Files.createDirectory(dataFolderPath);
         } catch (IOException e) {
@@ -186,16 +204,6 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     public Optional<PlatformPlayer> getPlatformPlayer(UUID uuid) {
         ServerPlayer player = server.getPlayerList().getPlayer(uuid);
         return player != null ? Optional.of(new ForgePlatformPlayer(player)) : Optional.empty();
-    }
-
-    @Override
-    public void onEnable() {
-
-    }
-
-    @Override
-    public void onDisable() {
-
     }
 
     // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent

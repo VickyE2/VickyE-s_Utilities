@@ -7,10 +7,11 @@ import org.vicky.network.PacketHandler;
 import org.vicky.network.packets.CreateSSBossBar;
 import org.vicky.network.packets.RemoveSSBossBar;
 import org.vicky.network.packets.UpdateSSBossBar;
+import org.vicky.platform.IColor;
 import org.vicky.platform.PlatformBossBar;
 import org.vicky.platform.PlatformPlayer;
-import org.vicky.platform.defaults.BossBarColor;
 import org.vicky.platform.defaults.BossBarOverlay;
+import org.vicky.platform.utils.BossBarDescriptor;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -24,8 +25,10 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
     private float progress;
     private String hex;
     private final Set<PlatformPlayer> viewers = new HashSet<>();
+    private BossBarDescriptor descriptor;
 
-    public MusicScreenSlidingBossBar(Component title, Component subTitle, float progress, String color, @Nullable ResourceLocation image) {
+    public MusicScreenSlidingBossBar(BossBarDescriptor descriptor, Component title, Component subTitle, float progress, String color, @Nullable ResourceLocation image) {
+        this.descriptor = descriptor;
         this.title = title;
         this.subTitle = subTitle;
         this.hex = color;
@@ -45,21 +48,6 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
         updateAll(); // Send packet
     }
 
-    public void setHex(String hex) {
-        this.hex = hex;
-        updateAll();
-    }
-
-    public void setImage(@Nullable ResourceLocation image) {
-        this.image = image;
-        updateAll();
-    }
-
-    public void setSubTitle(Component subTitle) {
-        this.subTitle = subTitle;
-        updateAll();
-    }
-
     @Override
     public void setVisible(Boolean visible, PlatformPlayer viewer) {
         if (!(viewer instanceof ForgePlatformPlayer player)) return;
@@ -77,8 +65,14 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
     }
 
     @Override
-    public void setColor(BossBarColor color) {
-        /**/
+    public boolean isVisible(PlatformPlayer player) {
+        if (!(player instanceof ForgePlatformPlayer platformPlayer)) return false;
+        return viewers.contains(platformPlayer);
+    }
+
+    @Override
+    public void setColor(IColor color) {
+        this.hex = color.toHex();
     }
 
     @Override
@@ -98,7 +92,30 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
 
     @Override
     public void hideAll() {
+        viewers.forEach(v -> {
+            if (!(v instanceof ForgePlatformPlayer player)) return;
+            PacketHandler.sendToClient(new RemoveSSBossBar(id), player.getHandle());
+        });
+    }
 
+    @Override
+    public BossBarDescriptor getDescriptor() {
+        return descriptor;
+    }
+
+    @Override
+    public void setDescriptor(BossBarDescriptor descriptor) {
+        this.descriptor = descriptor;
+    }
+
+    @Override
+    public void updateFromDescriptor() {
+        this.title = descriptor.title;
+        this.hex = descriptor.color.toHex();
+        this.subTitle = descriptor.subTitle;
+        this.progress = descriptor.progress;
+        this.image = new ResourceLocation((String) descriptor.getInformation().get("image"));
+        updateAll();
     }
 
     private void updateAll() {
@@ -106,37 +123,5 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
             if (!(viewer instanceof ForgePlatformPlayer player)) return;
             PacketHandler.sendToClient(new UpdateSSBossBar(id, title, subTitle, progress, hex, image), player.getHandle());
         }
-    }
-
-    public Component getTitle() {
-        return title;
-    }
-
-    public float getProgress() {
-        return progress;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public Set<PlatformPlayer> getViewers() {
-        return new HashSet<>(viewers);
-    }
-
-    public Component getSubTitle() {
-        return subTitle;
-    }
-
-    public @Nullable ResourceLocation getImage() {
-        return image;
-    }
-
-    /**
-     * Has no #
-     * @return
-     */
-    public String getHexColor() {
-        return hex.replace("#", "");
     }
 }

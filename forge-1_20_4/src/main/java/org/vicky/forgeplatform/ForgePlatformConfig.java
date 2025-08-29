@@ -3,6 +3,7 @@ package org.vicky.forgeplatform;
 import org.vicky.platform.PlatformConfig;
 import org.vicky.utilities.ForgeModConfig;
 import org.vicky.utilities.JsonConfigManager;
+import org.vicky.utilities.PermittedObject;
 
 public class ForgePlatformConfig implements PlatformConfig {
 
@@ -32,18 +33,33 @@ public class ForgePlatformConfig implements PlatformConfig {
     }
 
     @Override
-    public int getIntegerValue(String debug) {
+    public Integer getIntegerValue(String debug) {
         return manager.getIntegerValue(debug);
     }
 
     @Override
-    public float getFloatValue(String debug) {
-        return manager.getIntegerValue(debug);
+    public Float getFloatValue(String debug) {
+        return (float) manager.getIntegerValue(debug);
     }
 
     @Override
-    public double getDoubleValue(String debug) {
+    public Double getDoubleValue(String debug) {
         return manager.getDoubleValue(debug);
+    }
+
+    @Override
+    public void setConfigValue(String key, PermittedObject<?> value) {
+        manager.setConfigValue(key, value.getValue());
+    }
+
+    @Override
+    public boolean doesKeyExist(String key) {
+        return manager.doesPathExist(key);
+    }
+
+    @Override
+    public void saveConfig() {
+        manager.saveConfig();
     }
 
     public void setConfigValue(String key, Object value) {

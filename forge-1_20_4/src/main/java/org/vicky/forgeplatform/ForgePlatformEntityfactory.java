@@ -5,9 +5,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.level.Level;
+import org.vicky.forgeplatform.useables.ForgeVec3;
 import org.vicky.platform.PlatformEntityFactory;
 import org.vicky.platform.entity.PlatformArrow;
-import org.vicky.forgeplatform.useables.ForgeVec3;
 import org.vicky.platform.utils.Vec3;
 import org.vicky.platform.world.PlatformLocation;
 
@@ -78,7 +78,7 @@ public class ForgePlatformEntityfactory implements PlatformEntityFactory {
 
         @Override
         public PlatformLocation getLocation() {
-            return ForgePlatformLocationAdapter.from(new ForgeVec3(arrow.level(), arrow.xo, arrow.yo, arrow.zo));
+            return new ForgeVec3(arrow.level(), arrow.xo, arrow.yo, arrow.zo, arrow.yRotO, arrow.xRotO);
         }
 
         @Override

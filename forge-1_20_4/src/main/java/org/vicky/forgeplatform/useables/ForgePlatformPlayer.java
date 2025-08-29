@@ -2,15 +2,16 @@ package org.vicky.forgeplatform.useables;
 
 import net.kyori.adventure.text.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
+import org.vicky.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.platform.PlatformBossBar;
 import org.vicky.platform.PlatformPlayer;
+import org.vicky.platform.world.PlatformLocation;
 
 import java.util.UUID;
-import net.minecraft.server.level.ServerPlayer;
-import org.vicky.forgeplatform.adventure.AdventureComponentConverter;
-import org.vicky.platform.world.PlatformLocation;
 
 public class ForgePlatformPlayer implements PlatformPlayer {
 
@@ -66,7 +67,7 @@ public class ForgePlatformPlayer implements PlatformPlayer {
     @Override
     public void playSound(PlatformLocation location, String soundName, Object soundCategory, Float volume, Float pitch) {
         if (location instanceof ForgeVec3 loc) {
-            ResourceLocation soundId = new ResourceLocation(soundName);
+            ResourceLocation soundId = ResourceLocation.parse(soundName);
             SoundSource category = soundCategory instanceof SoundSource source ? source : SoundSource.PLAYERS;
             player.level().playSound(null, loc.getX(), loc.getY(), loc.getZ(), net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(soundId), category, volume, pitch);
         }
@@ -79,8 +80,27 @@ public class ForgePlatformPlayer implements PlatformPlayer {
                 level,
                 player.getX(),
                 player.getY(),
-                player.getZ()
+                player.getZ(),
+                player.yRotO,
+                player.xRotO
         );
+    }
+
+    @Override
+    public boolean teleport(PlatformLocation location) {
+        if (location instanceof ForgeVec3 pos) {
+            if (pos.getForgeWorld() instanceof ServerLevel level) {
+                player.teleportTo(level, pos.x, pos.y, pos.z, pos.yaw, pos.pitch);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof ForgePlatformPlayer)) return false;
+        return ((ForgePlatformPlayer) obj).getHandle() == this.player;
     }
 
     public ServerPlayer getHandle() {

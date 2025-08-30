@@ -31,6 +31,7 @@ public class SQLManager {
   private final List<Class<?>> mappingClasses;
   private final ContextLogger logger =
       new ContextLogger(ContextLogger.ContextType.HIBERNATE, "MANAGER");
+  private final String databaseFolder;
   private String jdbcUrl;
   private DatabaseCreator database;
   private SessionFactory sessionFactory;
@@ -42,10 +43,12 @@ public class SQLManager {
       boolean showSql,
       boolean formatSql,
       String ddlAuto,
-      List<Class<?>> mappingClasses) {
+      List<Class<?>> mappingClasses,
+      String databaseFolder) {
     Properties dbCredentials = loadCredentials();
     this.username = dbCredentials.getOrDefault("username", username).toString();
     this.password = dbCredentials.getOrDefault("password", password).toString();
+    this.databaseFolder = databaseFolder;
     dbCredentials.setProperty("username", this.username);
     dbCredentials.setProperty("password", this.password);
     try {
@@ -165,7 +168,7 @@ public class SQLManager {
   }
 
   public void createDatabase() throws Exception {
-    File parentFolder = new File(PlatformPlugin.dataFolder(), "databases/");
+    File parentFolder = new File(PlatformPlugin.dataFolder(), "databases/" + databaseFolder + "/");
     parentFolder.mkdirs();
     String sqlitePath = new File(parentFolder, "global.db").getAbsolutePath();
     database = new DatabaseCreator.DatabaseBuilder().name(sqlitePath).build();

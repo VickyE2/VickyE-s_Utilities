@@ -1,10 +1,11 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.utilities.DatabaseManager;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 import org.vicky.utilities.DatabaseManager.utils.Hbm2DdlAutoType;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class SQLManagerBuilder {
   private final List<Class<?>> mappingClasses = new ArrayList<>();
@@ -15,6 +16,7 @@ public class SQLManagerBuilder {
   private String dialect;
   private boolean showSql;
   private boolean formatSql;
+  private String databaseFolder = "defaulted";
   private Hbm2DdlAutoType ddlAuto;
 
   public SQLManagerBuilder setUsername(String username) {
@@ -24,6 +26,11 @@ public class SQLManagerBuilder {
 
   public SQLManagerBuilder setPassword(String password) {
     this.password = password;
+    return this;
+  }
+
+  public SQLManagerBuilder setDatabaseFolder(String databaseFolder) {
+    this.databaseFolder = databaseFolder;
     return this;
   }
 
@@ -65,6 +72,6 @@ public class SQLManagerBuilder {
 
     // Return the instance of SQLManager
     return new SQLManager(
-        username, password, dialect, showSql, formatSql, ddlAuto.toString(), mappingClasses);
+            username, password, dialect, showSql, formatSql, ddlAuto.toString(), mappingClasses, databaseFolder);
   }
 }

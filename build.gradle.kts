@@ -285,6 +285,7 @@ subprojects {
             exclude("javax/**")
             exclude("org/slf4j/**")
             exclude("org/jetbrains/**")
+            exclude("com/google/**")
         }
         /*mavenPublishing {
             publishToMavenCentral()

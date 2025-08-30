@@ -56,12 +56,15 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
     relocate("org.antlr.v4", "org.vicky.shaded.antlr.v4")
     relocate("jakarta", "org.vicky.shaded.jakarta")
     relocate("javassist", "org.vicky.shaded.javassist")
-    relocate("org.jboss.logging", "org.vicky.shaded.jboss.logging")
+    relocate("org.jboss.logging", "org.vicky.shaded.jboss.logging") {
+        exclude("META-INF/services/**")
+    }
+    relocate("org.hibernate", "org.vicky.shaded.hibernate")
 
     // Exclude dependencies you want to keep external
     dependencies {
         exclude("org/eclipse/**")
-        exclude("module-info.class")
+        // exclude("module-info.class")
         exclude(dependency("org.spongepowered:.*"))
         exclude(dependency("org.jetbrains:annotations"))
         exclude(dependency("com.google.code.gson:.*"))
@@ -72,9 +75,6 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
 
     // Optional: list runtime dependencies in Class-Path
     mergeServiceFiles()
-    transform(com.github.jengelman.gradle.plugins.shadow.transformers.PropertiesFileTransformer::class.java) {
-        paths = listOf("META-INF/services/org.jboss.logging.LoggerProvider")
-    }
     manifest {
         attributes(
             "Class-Path" to project.configurations.getByName("runtimeClasspath")

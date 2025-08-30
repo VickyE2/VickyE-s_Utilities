@@ -31,14 +31,15 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
-import org.vicky.forgeplatform.*;
-import org.vicky.forgeplatform.useables.ForgePlatformPlayer;
-import org.vicky.forgeplatform.useables.ForgeVec3;
+import org.vicky.forge.forgeplatform.forgeplatform.*;
+import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgePlatformPlayer;
+import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgeVec3;
+import org.vicky.forge.network.PacketHandler;
+import org.vicky.forge.utilities.ForgeModConfig;
 import org.vicky.music.MusicRegistry;
 import org.vicky.music.utils.MusicBuilder;
 import org.vicky.music.utils.MusicPiece;
 import org.vicky.music.utils.Sound;
-import org.vicky.network.PacketHandler;
 import org.vicky.platform.*;
 import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
@@ -53,7 +54,6 @@ import org.vicky.utilities.DatabaseManager.templates.MusicPlayer;
 import org.vicky.utilities.DatabaseManager.templates.MusicPlaylist;
 import org.vicky.utilities.DatabaseManager.utils.Hbm2DdlAutoType;
 import org.vicky.utilities.DatabaseTemplate;
-import org.vicky.utilities.ForgeModConfig;
 
 import java.io.File;
 import java.io.IOException;
@@ -104,6 +104,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     public static SQLManager sqlManager;
 
     public VickyUtilitiesForge() {
+        PlatformPlugin.set(this);
         new MusicRegistry();
         sqlManager = new SQLManagerBuilder()
                 .addMappingClass(DatabasePlayer.class)
@@ -116,6 +117,8 @@ public class VickyUtilitiesForge implements PlatformPlugin {
                 .setPassword(generator.generatePassword(30)).setShowSql(false).setFormatSql(false)
                 .setDialect("org.hibernate.community.dialect.SQLiteDialect")
                 .setDdlAuto(Hbm2DdlAutoType.UPDATE).build();
+        sqlManager.configureSessionFactory();
+        sqlManager.startDatabase();
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::commonSetup);
         BLOCKS.register(modEventBus);
@@ -124,10 +127,8 @@ public class VickyUtilitiesForge implements PlatformPlugin {
         MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ForgeModConfig.SPEC);
-        registerMusicBuiltins();
-        sqlManager.configureSessionFactory();
-        sqlManager.startDatabase();
         PacketHandler.register();
+        registerMusicBuiltins();
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -276,11 +277,11 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     public File getPlatformDataFolder() {
         Path dataFolderPath = FMLPaths.GAMEDIR.get().resolve(MODID);
         try {
-            Files.createDirectory(dataFolderPath);
+            Files.createDirectories(dataFolderPath); // safe: only creates if missing
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to create data folder for mod: " + MODID, e);
         }
-        return null;
+        return dataFolderPath.toFile();
     }
 
     @Override

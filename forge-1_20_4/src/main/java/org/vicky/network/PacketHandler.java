@@ -2,11 +2,12 @@ package org.vicky.network;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.*;
+import net.minecraftforge.network.ChannelBuilder;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.SimpleChannel;
 import org.vicky.VickyUtilitiesForge;
-import org.vicky.network.packets.CreateSSBossBar;
-import org.vicky.network.packets.RemoveSSBossBar;
-import org.vicky.network.packets.UpdateSSBossBar;
+import org.vicky.network.packets.*;
 
 public class PacketHandler {
     private static final int PROTOCOL_VERSION = 1;
@@ -34,6 +35,16 @@ public class PacketHandler {
                 .encoder(RemoveSSBossBar::encode)
                 .decoder(RemoveSSBossBar::decode)
                 .consumerMainThread(RemoveSSBossBar::handle)
+                .add();
+        INSTANCE.messageBuilder(OpenOwnedRecordsScreen.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(OpenOwnedRecordsScreen::encode)
+                .decoder(OpenOwnedRecordsScreen::decode)
+                .consumerMainThread(OpenOwnedRecordsScreen::handle)
+                .add();
+        INSTANCE.messageBuilder(PlaySpecifyableSong.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(PlaySpecifyableSong::encode)
+                .decoder(PlaySpecifyableSong::decode)
+                .consumerMainThread(PlaySpecifyableSong::handle)
                 .add();
     }
 

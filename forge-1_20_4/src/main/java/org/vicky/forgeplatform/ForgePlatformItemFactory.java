@@ -1,6 +1,5 @@
 package org.vicky.forgeplatform;
 
-import net.minecraft.world.level.ItemLike;
 import org.vicky.forgeplatform.useables.ForgePlatformItem;
 import org.vicky.forgeplatform.useables.ForgePlatformMaterial;
 import org.vicky.platform.PlatformItem;
@@ -10,8 +9,8 @@ import org.vicky.platform.world.PlatformMaterial;
 public class ForgePlatformItemFactory implements PlatformItemFactory {
     @Override
     public PlatformItem fromMaterial(PlatformMaterial material) {
-        if (material instanceof ForgePlatformMaterial(ItemLike material1)) {
-            return new ForgePlatformItem(material1.asItem().getDefaultInstance());
+        if (material instanceof ForgePlatformMaterial material1) {
+            return new ForgePlatformItem(material1.material().asItem().getDefaultInstance());
         }
         throw new IllegalArgumentException("Expected `ForgePlatformMaterial` got " + material.getClass().getSimpleName());
     }

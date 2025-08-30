@@ -34,19 +34,37 @@ import org.slf4j.Logger;
 import org.vicky.forgeplatform.*;
 import org.vicky.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.forgeplatform.useables.ForgeVec3;
+import org.vicky.music.MusicRegistry;
+import org.vicky.music.utils.MusicBuilder;
+import org.vicky.music.utils.MusicPiece;
+import org.vicky.music.utils.Sound;
+import org.vicky.network.PacketHandler;
 import org.vicky.platform.*;
 import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
+import org.vicky.utilities.DatabaseManager.HibernateDatabaseManager;
+import org.vicky.utilities.DatabaseManager.SQLManager;
+import org.vicky.utilities.DatabaseManager.SQLManagerBuilder;
+import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
+import org.vicky.utilities.DatabaseManager.templates.ExtendedPlayerBase;
+import org.vicky.utilities.DatabaseManager.templates.MusicPlayer;
+import org.vicky.utilities.DatabaseManager.templates.MusicPlaylist;
+import org.vicky.utilities.DatabaseManager.utils.Hbm2DdlAutoType;
+import org.vicky.utilities.DatabaseTemplate;
 import org.vicky.utilities.ForgeModConfig;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import static org.vicky.utilities.DatabaseManager.SQLManager.generator;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(VickyUtilitiesForge.MODID)
@@ -81,28 +99,35 @@ public class VickyUtilitiesForge implements PlatformPlugin {
             }).build());
 
     public static RegistryAccess access;
+    public static final HibernateDatabaseManager databaseManager = new HibernateDatabaseManager();
+    private static final List<Class<?>> mappingClasses = new ArrayList<>();
+    public static SQLManager sqlManager;
 
     public VickyUtilitiesForge() {
+        new MusicRegistry();
+        sqlManager = new SQLManagerBuilder()
+                .addMappingClass(DatabasePlayer.class)
+                .addMappingClass(MusicPlaylist.class)
+                .addMappingClass(MusicPlayer.class)
+                .addMappingClass(org.vicky.utilities.DatabaseManager.templates.MusicPiece.class)
+                .addMappingClass(ExtendedPlayerBase.class)
+                .addMappingClasses(mappingClasses)
+                .setUsername(generator.generate(20, true, true, true, false))
+                .setPassword(generator.generatePassword(30)).setShowSql(false).setFormatSql(false)
+                .setDialect("org.hibernate.community.dialect.SQLiteDialect")
+                .setDdlAuto(Hbm2DdlAutoType.UPDATE).build();
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-
-        // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
-
-        // Register the Deferred Register to the mod event bus so blocks get registered
         BLOCKS.register(modEventBus);
-        // Register the Deferred Register to the mod event bus so items get registered
         ITEMS.register(modEventBus);
-        // Register the Deferred Register to the mod event bus so tabs get registered
         CREATIVE_MODE_TABS.register(modEventBus);
-
-        // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
-
-        // Register the item to a creative tab
         modEventBus.addListener(this::addCreative);
-
-        // Register our mod's ForgeConfigSpec so that Forge can create and load the config file for us
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ForgeModConfig.SPEC);
+        registerMusicBuiltins();
+        sqlManager.configureSessionFactory();
+        sqlManager.startDatabase();
+        PacketHandler.register();
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -121,13 +146,71 @@ public class VickyUtilitiesForge implements PlatformPlugin {
         if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS)
             event.accept(EXAMPLE_BLOCK_ITEM);
     }
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
+
+    public static void addTemplateClass(Class<? extends DatabaseTemplate> clazz) {
+        if (sqlManager == null) {
+            mappingClasses.add(clazz);
+        } else {
+            sqlManager.addMappingClass(clazz);
+        }
+    }
+
+    @SafeVarargs
+    public static void addTemplateClasses(Class<? extends DatabaseTemplate>... clazzez) {
+        if (sqlManager == null) {
+            mappingClasses.addAll(List.of(clazzez));
+        } else {
+            sqlManager.addMappingClasses(List.of(clazzez));
+        }
+    }
+
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        LOGGER.info("HELLO from server starting");
+        LOGGER.info("AHA... There is a server after all...");
         server = event.getServer();
         access = server.registryAccess();
     }
+
+    private void registerMusicBuiltins() {
+        var registry = MusicRegistry.getInstance(MusicRegistry.class);
+        List<MusicPiece> pieces = new ArrayList<>();
+        var symphony1Builder = new MusicBuilder();
+
+        pieces.addAll(List.of(
+                new MusicPiece("vicky_utils_symphony1", "Symphony 1", List.of(
+                        symphony1Builder.ofScore(Sound.PIANO, "C+,D+,E+,C+,D+,E+,C+,D+,E+,C++—C+,C++—D+,C++—E+,"
+                                        + "@[cello1][B],D+,E+,B,D+,E+,B,D+,E+,B++—B,B++—D+,B++—E+,"
+                                        + "@[cello2][A],D+,E+,A,D+,E+,A,D+,E+,A++—A,A++—D+,A++—E+,"
+                                        + "@[cello3][G],D+,E+,G,D+,E+,G,D+,E+,G++—C++,G++—G+,G++—E+,@[cello4][G++—C+],"
+                                        + "D+—G,E+—C,C+,D+—G,E+—C,C+,D+—G,E+—C,C+,D+—G,E+—C,"
+                                        + "B,G—D+,B-—E+,B,G—D+,B-—E+,B,G—D+,B-—E+,B,G—D+,B-—E+,"
+                                        + "A,E—D+,A-—E+,A,E—D+,A-—E+,A,E—D+,A-—E+,A,E—D+,A-—E+,"
+                                        + "G,G-—D+,G—E+,G,G-—D+,G—E+,G,G-—D+,G—E+,C++,G+,E+,"
+                                        + "@[instrujoin][C+—C-],G-—G++,C—C++,C-—C++,G-—G++,C—C++,C-—C++,G-—G++,C—C++,C-—C++,G-—G++,C—C++,"
+                                        + "@[dinstru][D-—B++],G-—G++,B-—D++,D-—B++,G-—G++,B-—D++,D-—B++,G-—G++,B-—D++,D-—B++,G-—G++,B-—D++,"
+                                        + "@[cinstru][G--—A++],D-—D++,G-—G+,G--—A++,D-—D++,G-—G+,G--—A++,D-—D++,G-—G+,G--—A++,D-—D++,G-—G+,"
+                                        + "@[ginstru][G-—G++],B-—G+,D—B+,G-—G++,B-—G+,D—B+,G-—G++,B-—G+,D—B+,"
+                                        + "G,B,D+,C+,D+—G,E+—C,D+—G,E+—C,D+—G,E+—C,C+—G,"
+                                        + "C+,B,C+,D+,B-—E+,G—D+,B-—E+,G—D+,B-—E+,G—D+,B-—E+,B-—C+,"
+                                        + "B,A,B,C+,E—D+,A-—E+,E—D+,A-—E+,E—D+,A-—E+,E—D+,A-—G,"
+                                        + "A,G,A,B,G-—D+,G—E+,G-—D+,G—E+,G-—D+,G—E+,G-—D+,G—E+,"
+                                        + "G,F,E,G,F--—A+,G-—G+,F--—A+,G-—G+,F--—A+,G-—G+,F--—A+,G-—F+,"
+                                        + "G+,F+,E+,G+,G--—F+,G+,G--—F+,G+,G--—F+,G+,G--—D+,"
+                                        + "C++,B+,A+,B+,C++—F--,B+—F-,F--—C++,F-—B+,F--—C++,F-—B+,F--—C++,F-—A+,"
+                                        + "D++,C++,B+,C++,G--—D++,G-—G+,G--—D++,G-—G+,G--—D++,G-—G+,G--—D++,G-—G+,C++—E++—G++",
+                                (236 * 9), 1),
+                        symphony1Builder.ofScore(Sound.VIOLIN,
+                                "C+->@cello1,B+->@cello2,A+->@cello3,G+->@cello4,.->@instrujoin,[G,C+,G,D+,G,F+]*2,.->@dinstru,[G,A,G,C+,G,D]*2,.->@cinstru,A,B,C,.->@ginstru,B,C,D",
+                                (12 * 9), 0.8f),
+                        symphony1Builder.ofScore(Sound.BRASS, ".->@instrujoin,C-->@dinstru,D-->@cinstru,G--->@ginstru",
+                                (236 * 9), 0.9f)),
+                        new String[]{"VickyE2"}, "BLUES", 0xBB004D)
+        ));
+
+        for (var piece : pieces)
+            registry.register(piece);
+    }
+
 
     @Override
     public PlatformLogger getPlatformLogger() {
@@ -191,7 +274,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
     @Override
     public File getPlatformDataFolder() {
-        Path dataFolderPath = FMLPaths.CONFIGDIR.get().resolve(MODID);
+        Path dataFolderPath = FMLPaths.GAMEDIR.get().resolve(MODID);
         try {
             Files.createDirectory(dataFolderPath);
         } catch (IOException e) {

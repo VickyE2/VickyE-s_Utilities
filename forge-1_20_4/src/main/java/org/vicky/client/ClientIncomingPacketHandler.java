@@ -1,11 +1,14 @@
 package org.vicky.client;
 
+import net.minecraft.client.Minecraft;
 import net.minecraftforge.event.network.CustomPayloadEvent;
 import org.vicky.client.screen.SimpleMusicSliderBossBar;
+import org.vicky.client.screen.SongLibraryScreen;
+import org.vicky.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.network.packets.CreateSSBossBar;
+import org.vicky.network.packets.OpenOwnedRecordsScreen;
 import org.vicky.network.packets.RemoveSSBossBar;
 import org.vicky.network.packets.UpdateSSBossBar;
-import org.vicky.forgeplatform.adventure.AdventureComponentConverter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +27,13 @@ public class ClientIncomingPacketHandler {
             bar.setColor(msg.hex());
             bar.setImage(msg.image());
             activeBars.put(msg.id(), bar);
+        });
+    }
+
+    public static void proceedWithOpeningScoreScreen(OpenOwnedRecordsScreen msg, CustomPayloadEvent.Context ctx) {
+        ctx.enqueueWork(() -> {
+            var screen = new SongLibraryScreen(msg.songs());
+            Minecraft.getInstance().setScreen(screen);
         });
     }
 

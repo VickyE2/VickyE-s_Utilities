@@ -4,13 +4,16 @@ import net.kyori.adventure.text.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.vicky.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.platform.PlatformBossBar;
 import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.world.PlatformLocation;
 
+import java.util.Locale;
 import java.util.UUID;
 
 public class ForgePlatformPlayer implements PlatformPlayer {
@@ -64,13 +67,19 @@ public class ForgePlatformPlayer implements PlatformPlayer {
         }
     }
 
+
     @Override
-    public void playSound(PlatformLocation location, String soundName, Object soundCategory, Float volume, Float pitch) {
-        if (location instanceof ForgeVec3 loc) {
-            ResourceLocation soundId = ResourceLocation.parse(soundName);
-            SoundSource category = soundCategory instanceof SoundSource source ? source : SoundSource.PLAYERS;
-            player.level().playSound(null, loc.getX(), loc.getY(), loc.getZ(), net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(soundId), category, volume, pitch);
-        }
+    public void playSound(PlatformLocation location, String soundName, Object category, Float volume, Float pitch) {
+        if (!(player instanceof ServerPlayer player)) return;
+        ResourceLocation soundId = new ResourceLocation(soundName);
+        SoundEvent event = ForgeRegistries.SOUND_EVENTS.getValue(soundId);
+        if (event == null) return;
+        player.playNotifySound(
+                event,
+                SoundSource.valueOf(category.toString().toUpperCase(Locale.ROOT)), // e.g. "RECORDS"
+                volume,
+                pitch
+        );
     }
 
     @Override

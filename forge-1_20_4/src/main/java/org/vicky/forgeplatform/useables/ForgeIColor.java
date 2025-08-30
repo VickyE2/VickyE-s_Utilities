@@ -56,4 +56,10 @@ public class ForgeIColor implements IColor {
         int b = (int) (blue * 255) & 0xFF;
         return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
+
+
+    @Override
+    public String toHex() {
+        return String.format("#%02X%02X%02X", red, green, blue);
+    }
 }

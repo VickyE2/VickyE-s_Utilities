@@ -59,7 +59,9 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
     relocate("org.jboss.logging", "org.vicky.shaded.jboss.logging") {
         exclude("META-INF/services/**")
     }
-    relocate("org.hibernate", "org.vicky.shaded.hibernate")
+    relocate("org.hibernate", "org.vicky.shaded.hibernate") {
+        exclude("org/hibernate/community/**")
+    }
 
     // Exclude dependencies you want to keep external
     dependencies {

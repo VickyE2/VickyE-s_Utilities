@@ -49,7 +49,7 @@ public class SQLManager {
     dbCredentials.setProperty("username", this.username);
     dbCredentials.setProperty("password", this.password);
     try {
-      File credentials = new File("./plugins/Vicky-s_Utilities/configs/db_credentials.properties");
+      File credentials = new File(PlatformPlugin.dataFolder(), "configs/db_credentials.properties");
       credentials.getParentFile().mkdirs();
       if (!credentials.exists()) {
         credentials.createNewFile();
@@ -99,7 +99,7 @@ public class SQLManager {
     Properties properties = new Properties();
 
     try (FileReader reader =
-        new FileReader("./plugins/Vicky-s_Utilities/configs/db_credentials.properties")) {
+                 new FileReader(new File(PlatformPlugin.dataFolder(), "configs/db_credentials.properties"))) {
       properties.load(reader);
     } catch (IOException var7) {
       logger.print("Default credentials are absent...recreating", true);
@@ -165,7 +165,7 @@ public class SQLManager {
   }
 
   public void createDatabase() throws Exception {
-    File parentFolder = new File("./plugins/Vicky-s_Utilities/databases/");
+    File parentFolder = new File(PlatformPlugin.dataFolder(), "databases/");
     parentFolder.mkdirs();
     String sqlitePath = new File(parentFolder, "global.db").getAbsolutePath();
     database = new DatabaseCreator.DatabaseBuilder().name(sqlitePath).build();
@@ -183,7 +183,7 @@ public class SQLManager {
 
   public void saveCredentials(String userName, String password) {
     try (FileWriter writer =
-        new FileWriter("./plugins/Vicky-s_Utilities/configs/db_credentials.properties")) {
+                 new FileWriter(new File(PlatformPlugin.dataFolder(), "db_credentials.properties"))) {
       Properties properties = new Properties();
       properties.setProperty("userName", userName);
       properties.setProperty("password", password);

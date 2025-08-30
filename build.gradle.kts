@@ -259,6 +259,8 @@ subprojects {
         tasks.named<ShadowJar>("shadowJar") {
             relocate("org.reflections", "org.vicky.shaded.reflections")
             relocate("com.google.code.gson", "org.vicky.google.gson")
+            relocate("jakarta.xml.bind", "org.vicky.xml.bind")
+            relocate("jakarta.xml.bind", "org.vicky.ws.rs")
             archiveBaseName.set("VickyE-Utils-${
                 when {
                     project.name.startsWith("paper") -> "Bukkit"
@@ -273,11 +275,14 @@ subprojects {
             )
             archiveClassifier.set("")
             mergeServiceFiles()
-            minimize()
+            minimize() {
+                exclude("org.vicky/**")
+            }
             exclude("META-INF/maven/**")
             exclude("META-INF/*.kotlin_module")
             exclude("META-INF/versions/**")
             exclude("module-info.class")
+            exclude("javax/**")
         }
         /*mavenPublishing {
             publishToMavenCentral()

@@ -10,13 +10,13 @@ repositories {
 }
 
 dependencies {
-    api("org.spongepowered:configurate-yaml:4.1.2")
-    api("org.spongepowered:configurate-jackson:4.1.2")
-    api("org.spongepowered:configurate-xml:4.1.2")
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
+    compileOnly("org.spongepowered:configurate-jackson:4.1.2")
+    compileOnly("org.spongepowered:configurate-xml:4.1.2")
+    compileOnly("org.jetbrains:annotations:24.0.1")
     implementation("com.google.code.gson:gson:2.13.1")
     add("downgrade", files("libs/jNBT-1.6.0-downgraded-17.jar"))
     testImplementation(kotlin("test"))
-    implementation("org.jetbrains:annotations:24.0.1")
     api("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
     api("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
     api("org.hibernate.orm:hibernate-core:6.4.1.Final")

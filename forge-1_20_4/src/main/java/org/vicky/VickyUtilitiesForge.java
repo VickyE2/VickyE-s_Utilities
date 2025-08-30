@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
@@ -14,9 +15,11 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -117,8 +120,6 @@ public class VickyUtilitiesForge implements PlatformPlugin {
                 .setPassword(generator.generatePassword(30)).setShowSql(false).setFormatSql(false)
                 .setDialect("org.hibernate.community.dialect.SQLiteDialect")
                 .setDdlAuto(Hbm2DdlAutoType.UPDATE).build();
-        sqlManager.configureSessionFactory();
-        sqlManager.startDatabase();
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::commonSetup);
         BLOCKS.register(modEventBus);
@@ -128,7 +129,6 @@ public class VickyUtilitiesForge implements PlatformPlugin {
         modEventBus.addListener(this::addCreative);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ForgeModConfig.SPEC);
         PacketHandler.register();
-        registerMusicBuiltins();
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -170,6 +170,16 @@ public class VickyUtilitiesForge implements PlatformPlugin {
         LOGGER.info("AHA... There is a server after all...");
         server = event.getServer();
         access = server.registryAccess();
+    }
+
+    @SubscribeEvent
+    public void onWorldGettingCreatedStarting(LevelEvent.Load event) {
+        if (event.getLevel() instanceof ServerLevel serverLevel) {
+            Path worldDir = serverLevel.getServer().getWorldPath(LevelResource.ROOT);
+            registerMusicBuiltins();
+            sqlManager.configureSessionFactory();
+            sqlManager.startDatabase();
+        }
     }
 
     private void registerMusicBuiltins() {

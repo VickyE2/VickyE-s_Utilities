@@ -55,6 +55,7 @@ public class GlobalListener {
             musicPlayer.addPiece(
                     new MusicPieceDAO().findById("vicky_utils_symphony1")
             );
+            musicPlayer.setDatabasePlayer(databasePlayer);
             mDao.save(musicPlayer);
         } else {
             Optional<DatabasePlayer> databasePlayer = dao.findById(player.getUUID());

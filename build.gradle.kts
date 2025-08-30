@@ -283,6 +283,8 @@ subprojects {
             exclude("META-INF/versions/**")
             exclude("module-info.class")
             exclude("javax/**")
+            exclude("org/slf4j/**")
+            exclude("org/jetbrains/**")
         }
         /*mavenPublishing {
             publishToMavenCentral()

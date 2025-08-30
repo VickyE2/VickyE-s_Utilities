@@ -1,3 +1,4 @@
+
 plugins {
     kotlin("jvm")
 }
@@ -13,7 +14,7 @@ dependencies {
     api("org.spongepowered:configurate-jackson:4.1.2")
     api("org.spongepowered:configurate-xml:4.1.2")
     implementation("com.google.code.gson:gson:2.13.1")
-    implementation(files("libs/jNBT-1.6.0.jar"))
+    add("downgrade", files("libs/jNBT-1.6.0-downgraded-17.jar"))
     testImplementation(kotlin("test"))
     implementation("org.jetbrains:annotations:24.0.1")
     api("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
@@ -26,6 +27,13 @@ dependencies {
     api("net.kyori:adventure-text-serializer-plain:4.14.0")
 }
 
+
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.register<xyz.wagyourtail.jvmdg.gradle.task.DowngradeJar>("downgrade") {
+    inputFile = file("libs/jNBT-1.6.0.jar")
+    downgradeTo = JavaVersion.VERSION_17
+    archiveClassifier = "downgraded-17"
 }

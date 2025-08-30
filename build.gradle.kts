@@ -15,6 +15,7 @@ plugins {
     kotlin("jvm") version "2.1.10" apply true
     id("com.diffplug.spotless") version "6.19.0" apply true
     id("io.github.goooler.shadow") version "8.1.8" apply true
+    id("xyz.wagyourtail.jvmdowngrader") version "1.0.0" apply true
     // id("org.jetbrains.dokka") version "1.9.10" apply true
 }
 
@@ -25,8 +26,9 @@ allprojects {
     }
 }
 
+
 allprojects {
-    val javaVersion = 21
+    val javaVersion = 17
     val YEAR = 2024;
     group = "io.github.vickye2"
     description = "VickyE's Utility Mod"
@@ -38,7 +40,21 @@ allprojects {
     apply(plugin = "maven-publish")
     apply(plugin = "com.diffplug.spotless")
     apply(plugin = "io.github.goooler.shadow")
+    apply(plugin = "xyz.wagyourtail.jvmdowngrader")
     // apply("org.jetbrains.dokka")
+
+
+    val downgrade = configurations.create("downgrade")
+    configurations.implementation {
+        extendsFrom(downgrade)
+    }
+    extensions.configure<xyz.wagyourtail.jvmdg.gradle.JVMDowngraderExtension> {
+        dg(downgrade)
+    }
+
+    tasks.named<xyz.wagyourtail.jvmdg.gradle.task.DowngradeJar>("downgradeJar") {
+        downgradeTo = JavaVersion.VERSION_11
+    }
 
     configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         ratchetFrom("origin/master")
@@ -242,6 +258,7 @@ subprojects {
 
         tasks.named<ShadowJar>("shadowJar") {
             relocate("org.reflections", "org.vicky.shaded.reflections")
+            relocate("com.google.code.gson", "org.vicky.google.gson")
             archiveBaseName.set("VickyE-Utils-${
                 when {
                     project.name.startsWith("paper") -> "Bukkit"

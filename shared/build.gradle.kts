@@ -40,6 +40,29 @@ tasks.jar {
     }
 }
 
+tasks.shadowJar {
+    // ✅ Use configuration by name
+    configurations = listOf(project.configurations.getByName("runtimeClasspath"))
+
+    relocate("org.antlr.v4", "org.vicky.shaded.antlr.v4")
+    dependencies {
+        exclude(dependency("org.spongepowered:.*"))
+        exclude(dependency("org.jetbrains:annotations"))
+        exclude(dependency("com.google.code.gson:.*"))
+        exclude(dependency("net.kyori:.*"))
+        exclude(dependency("jakarta.*:.*"))
+        exclude(dependency("org.xerial:sqlite-jdbc:.*"))
+    }
+
+    manifest {
+        attributes(
+            "Class-Path" to project.configurations.getByName("runtimeClasspath")
+                .files.joinToString(" ") { "libs/${it.name}" }
+        )
+    }
+}
+
+
 tasks.test {
     useJUnitPlatform()
 }

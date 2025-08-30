@@ -276,9 +276,6 @@ subprojects {
             )
             archiveClassifier.set("")
             mergeServiceFiles()
-            minimize() {
-                exclude("org.vicky/**")
-            }
             exclude("META-INF/maven/**")
             exclude("META-INF/*.kotlin_module")
             exclude("META-INF/versions/**")

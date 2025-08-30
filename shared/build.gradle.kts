@@ -20,7 +20,7 @@ dependencies {
     // Hibernate as internal implementation
     implementation("org.hibernate.orm:hibernate-core:6.4.1.Final")
     implementation("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final")
-    implementation("org.jboss.logging:jboss-logging:3.5.1.Final")
+    implementation("org.jboss.logging:jboss-logging:3.5.3.Final")
     implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
     implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
 

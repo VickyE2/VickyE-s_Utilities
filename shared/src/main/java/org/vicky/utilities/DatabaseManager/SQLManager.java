@@ -186,7 +186,7 @@ public class SQLManager {
 
   public void saveCredentials(String userName, String password) {
     try (FileWriter writer =
-                 new FileWriter(new File(PlatformPlugin.dataFolder(), "db_credentials.properties"))) {
+                 new FileWriter(new File(PlatformPlugin.dataFolder(), "configs/db_credentials.properties"))) {
       Properties properties = new Properties();
       properties.setProperty("userName", userName);
       properties.setProperty("password", password);

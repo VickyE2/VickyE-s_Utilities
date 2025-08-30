@@ -2,6 +2,7 @@
 plugins {
     id 'eclipse'
     id 'idea'
+    id 'java-library'
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
 }
 
@@ -136,7 +137,15 @@ dependencies {
     // If the group id is "net.minecraft" and the artifact id is one of ["client", "server", "joined"],
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    implementation "io.github.vickye2:vicky-utils-core:all-0.0.1-BETA"
+    api("io.github.vickye2:vicky-utils-core:all-0.0.1-BETA") {
+        transitive = false
+    }
+    implementation("org.hibernate.orm:hibernate-core:6.4.1.Final")
+    implementation("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final")
+    implementation("org.xerial:sqlite-jdbc:3.48.0.0")
+    implementation("net.kyori:adventure-api:4.17.0")
+    implementation("net.kyori:adventure-text-serializer-plain:4.17.0")
+    implementation("net.kyori:adventure-text-serializer-gson:4.17.0")
 
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

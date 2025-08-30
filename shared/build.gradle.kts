@@ -27,6 +27,18 @@ dependencies {
     api("net.kyori:adventure-text-serializer-plain:4.14.0")
 }
 
+tasks.jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from({
+        zipTree(file("libs/jNBT-1.6.0-downgraded-17.jar"))
+    })
+    manifest {
+        attributes(
+            "Class-Path" to configurations.runtimeClasspath.get()
+                .joinToString(" ") { "libs/${it.name}" }
+        )
+    }
+}
 
 tasks.test {
     useJUnitPlatform()

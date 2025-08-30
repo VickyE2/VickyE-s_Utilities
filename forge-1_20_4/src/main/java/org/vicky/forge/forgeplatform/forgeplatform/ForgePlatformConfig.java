@@ -8,11 +8,12 @@ import org.vicky.utilities.PermittedObject;
 public class ForgePlatformConfig implements PlatformConfig {
 
     private static ForgePlatformConfig INSTANCE;
-    private JsonConfigManager manager;
+    private final JsonConfigManager manager;
 
     private ForgePlatformConfig() {
         manager = new JsonConfigManager();
         manager.createConfig("configs/general.json");
+        manager.loadConfigValues();
     }
 
     public static ForgePlatformConfig getInstance() {

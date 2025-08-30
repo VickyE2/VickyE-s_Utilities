@@ -138,7 +138,7 @@ allprojects {
     }
 
     tasks.named<Jar>("jar") {
-        enabled = false
+        enabled = true
     }
 }
 
@@ -158,14 +158,15 @@ subprojects {
                     }"
                 }
                 create<MavenPublication>("maven") {
-                    if (tasks.findByName("shadowJar") != null) {
+                    /*if (tasks.findByName("shadowJar") != null) {
                         artifact(tasks.named("shadowJar").get()) {
                             classifier = null
                         }
                     } else {
                         from(components["java"])
-                    }
+                    }*/
                     artifact(tasks.named("javadocJar"))
+                    artifact(tasks.named("jar"))
                     artifact(tasks.named("sourcesJar"))
 
                     groupId = project.group as String

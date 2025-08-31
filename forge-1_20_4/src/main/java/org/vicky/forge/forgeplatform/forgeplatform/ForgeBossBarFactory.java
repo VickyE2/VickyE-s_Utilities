@@ -10,10 +10,15 @@ import org.vicky.platform.utils.BossBarDescriptor;
 public class ForgeBossBarFactory implements PlatformBossBarFactory {
     @Override
     public <T extends BossBarDescriptor> PlatformBossBar createBossBar(T descriptor) {
+        // System.out.println("[TRACE] Was requested to create bossbar");
         return switch (descriptor.context) {
             case "music" -> {
                 var image = descriptor.getInformation().get("icon");
-                @SuppressWarnings("deprection, removal")
+                if (image == null) {
+                    image = "null";
+                    // System.out.println("NOOOOOOOOOOOOO ITS NULLLLLLLLLLLLLL");
+                }
+                @SuppressWarnings("removal")
                 ResourceLocation resource = new ResourceLocation((String) image);
                 yield new MusicScreenSlidingBossBar(
                         descriptor,

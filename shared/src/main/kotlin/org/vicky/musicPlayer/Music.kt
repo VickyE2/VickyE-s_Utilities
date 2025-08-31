@@ -99,7 +99,7 @@ object MusicPlayer {
                         tickEvents.keys.max(),
                         0,
                         iconResourceLocation
-                    )
+                    ).toPlainBossBarDescriptor()
                 )
             )
         }
@@ -225,12 +225,11 @@ object MusicPlayer {
         val bossBar = playerStates[player.uniqueId()]?.bossBar ?: return
 
         // ⬇ Update descriptor if necessary
-        if (bossBar.descriptor is MusicBossBarDescriptor) {
-            val cloned = bossBar.getDescriptor().clone()
-            cloned as MusicBossBarDescriptor
-            cloned.isPaused = paused
+        if (bossBar.descriptor.information["type"] == "MusicBossBarDescriptor") {
+            val cloned = bossBar.descriptor.clone()
+            cloned.information["isPaused"] = paused
+            cloned.information["currentTick"] = tick
             cloned.progress = progress
-            cloned.currentTick = tick
             cloned.title = title
             bossBar.descriptor = cloned
             bossBar.updateFromDescriptor()
@@ -259,6 +258,7 @@ class MusicBossBarDescriptor(
             .context("music")
             .addData("isPaused", isPaused)
 
+        bossBar.addData("type", "MusicBossBarDescriptor")
         if (genre != null) bossBar.addData("genre", genre)
         if (trackDuration != null) bossBar.addData("trackDuration", trackDuration)
         if (currentTick != null) bossBar.addData("currentTick", currentTick)

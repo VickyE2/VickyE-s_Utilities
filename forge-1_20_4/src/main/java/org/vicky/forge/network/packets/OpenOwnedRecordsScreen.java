@@ -10,24 +10,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record OpenOwnedRecordsScreen(List<String> songs) {
-    public static OpenOwnedRecordsScreen decode(FriendlyByteBuf friendlyByteBuf) {
-        var songs = new ArrayList<String>();
-        var size = friendlyByteBuf.readInt();
-        for (var i = 0; i < size; i++) {
-            songs.add(friendlyByteBuf.readUtf());
+    public static OpenOwnedRecordsScreen decode(FriendlyByteBuf buf) {
+        int size = Math.min(buf.readVarInt(), 1000); // prevent abuse
+        var songs = new ArrayList<String>(size);
+        for (int i = 0; i < size; i++) {
+            songs.add(buf.readUtf(256));
         }
         return new OpenOwnedRecordsScreen(songs);
     }
 
     public static void handle(OpenOwnedRecordsScreen msg, CustomPayloadEvent.Context ctx) {
-        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientIncomingPacketHandler.proceedWithOpeningScoreScreen(msg, ctx)));
+        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+            // System.out.println("Yeah i received the packet... so what?");
+            ClientIncomingPacketHandler.proceedWithOpeningScoreScreen(msg);
+        }));
         ctx.setPacketHandled(true);
     }
 
-    public void encode(FriendlyByteBuf friendlyByteBuf) {
-        friendlyByteBuf.writeInt(songs.size());
+    public void encode(FriendlyByteBuf buf) {
+        buf.writeVarInt(songs.size());
         for (var song : songs) {
-            friendlyByteBuf.writeUtf(song);
+            buf.writeUtf(song, 256); // reasonable cap
         }
     }
 }

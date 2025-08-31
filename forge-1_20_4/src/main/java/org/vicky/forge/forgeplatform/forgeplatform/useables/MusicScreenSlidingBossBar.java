@@ -24,7 +24,7 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
     private Component title;
     private float progress;
     private String hex;
-    private final Set<PlatformPlayer> viewers = new HashSet<>();
+    private final Set<ForgePlatformPlayer> viewers = new HashSet<>();
     private BossBarDescriptor descriptor;
 
     public MusicScreenSlidingBossBar(BossBarDescriptor descriptor, Component title, Component subTitle, float progress, String color, @Nullable ResourceLocation image) {

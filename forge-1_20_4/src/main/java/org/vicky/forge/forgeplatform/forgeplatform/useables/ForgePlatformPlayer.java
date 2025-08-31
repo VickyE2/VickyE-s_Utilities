@@ -55,9 +55,8 @@ public class ForgePlatformPlayer implements PlatformPlayer {
 
     @Override
     public void showBossBar(PlatformBossBar bar) {
-        if (bar instanceof ForgeDefaultPlatformBossBar forgeBar) {
-            forgeBar.addViewer(ForgePlatformPlayer.adapt(player));
-        }
+        System.out.println("I was requested to put on a bossbar...");
+        bar.addViewer(ForgePlatformPlayer.adapt(player));
     }
 
     @Override

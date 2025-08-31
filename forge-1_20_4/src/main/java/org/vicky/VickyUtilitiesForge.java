@@ -12,6 +12,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -48,7 +49,6 @@ import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
-import org.vicky.utilities.DatabaseManager.HibernateDatabaseManager;
 import org.vicky.utilities.DatabaseManager.SQLManager;
 import org.vicky.utilities.DatabaseManager.SQLManagerBuilder;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
@@ -102,24 +102,12 @@ public class VickyUtilitiesForge implements PlatformPlugin {
             }).build());
 
     public static RegistryAccess access;
-    public static final HibernateDatabaseManager databaseManager = new HibernateDatabaseManager();
     private static final List<Class<?>> mappingClasses = new ArrayList<>();
     public static SQLManager sqlManager;
 
     public VickyUtilitiesForge() {
         PlatformPlugin.set(this);
         new MusicRegistry();
-        sqlManager = new SQLManagerBuilder()
-                .addMappingClass(DatabasePlayer.class)
-                .addMappingClass(MusicPlaylist.class)
-                .addMappingClass(MusicPlayer.class)
-                .addMappingClass(org.vicky.utilities.DatabaseManager.templates.MusicPiece.class)
-                .addMappingClass(ExtendedPlayerBase.class)
-                .addMappingClasses(mappingClasses)
-                .setUsername(generator.generate(20, true, true, true, false))
-                .setPassword(generator.generatePassword(30)).setShowSql(false).setFormatSql(false)
-                .setDialect("org.hibernate.community.dialect.SQLiteDialect")
-                .setDdlAuto(Hbm2DdlAutoType.UPDATE).build();
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::commonSetup);
         BLOCKS.register(modEventBus);
@@ -129,6 +117,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
         modEventBus.addListener(this::addCreative);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ForgeModConfig.SPEC);
         PacketHandler.register();
+        org.vicky.musicPlayer.MusicPlayer.INSTANCE.toggleLogging();
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -174,13 +163,35 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
     @SubscribeEvent
     public void onWorldGettingCreatedStarting(LevelEvent.Load event) {
-        if (event.getLevel() instanceof ServerLevel serverLevel) {
-            Path worldDir = serverLevel.getServer().getWorldPath(LevelResource.ROOT);
-            registerMusicBuiltins();
-            sqlManager.configureSessionFactory();
-            sqlManager.startDatabase();
-        }
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) return;
+        if (!serverLevel.dimension().equals(Level.OVERWORLD)) return;
+
+        Path worldDir = serverLevel.getServer().getWorldPath(LevelResource.ROOT);
+        String folderName = serverLevel.dimension().location().getPath();
+        // worldDir.getFileName().toString().replace(" ", "_").toLowerCase(Locale.ROOT);
+        LOGGER.info("Database folder, {}", folderName);
+
+        sqlManager = new SQLManagerBuilder()
+                .addMappingClass(DatabasePlayer.class)
+                .addMappingClass(MusicPlaylist.class)
+                .addMappingClass(MusicPlayer.class)
+                .addMappingClass(org.vicky.utilities.DatabaseManager.templates.MusicPiece.class)
+                .addMappingClass(ExtendedPlayerBase.class)
+                .addMappingClasses(mappingClasses)
+                .setUsername(generator.generate(20, true, true, true, false))
+                .setPassword(generator.generatePassword(30))
+                .setShowSql(false)
+                .setFormatSql(false)
+                .setDialect("org.hibernate.community.dialect.SQLiteDialect")
+                .setDatabaseFolder(worldDir.toString()) // ✅ use full path, not just folderName
+                .setDdlAuto(Hbm2DdlAutoType.UPDATE)
+                .build();
+
+        sqlManager.configureSessionFactory();
+        sqlManager.startDatabase();
+        registerMusicBuiltins();
     }
+
 
     private void registerMusicBuiltins() {
         var registry = MusicRegistry.getInstance(MusicRegistry.class);

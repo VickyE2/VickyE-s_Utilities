@@ -3,170 +3,241 @@ package org.vicky.forge.client.screen;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
+import org.vicky.forge.client.Theme;
 import org.vicky.forge.music.SongEntry;
 import org.vicky.forge.network.PacketHandler;
 import org.vicky.forge.network.packets.PlaySpecifyableSong;
 
 import java.util.List;
 
-import static org.vicky.forge.forgeplatform.forgeplatform.useables.ForgeHacks.fromVicky;
-
+/**
+ * Scrollable, themeable song library screen.
+ * - Responsive columns based on available GUI width
+ * - Smooth scroll with mouse wheel
+ * - Click slots via mouseClicked (no Button widgets so positions don't desync)
+ * - Theme values are simple ARGB ints for quick tweaking
+ */
 public class SongLibraryScreen extends Screen {
-    // GUI size like a 9x3 chest (vanilla) style
-    private static final int GUI_WIDTH = 176;
-    private static final int GUI_HEIGHT = 166;
+    // base GUI size (used for centering); internal layout adjusts to client size
+    private static final int BASE_GUI_WIDTH = 280;
+    private static final int BASE_GUI_HEIGHT = 220;
 
-    private static final int SLOTS_PER_ROW = 9;
-    private static final int ROWS = 3;
-    private static final int PAGE_SIZE = SLOTS_PER_ROW * ROWS;
+    // slot defaults (tweak in Theme if you want)
+    private final int slotSize = 36; // icon + small text area
+    private final int slotPaddingX = 6;
+    private final int slotPaddingY = 8;
 
     private final List<SongEntry> songs;
-    // layout metrics inside the GUI
-    private final int slotSize = 36; // area for the icon + text
-    private final int slotPaddingX = 4;
-    private final int slotPaddingY = 6;
-    private int page = 0;
-    private int left; // top-left of GUI on screen
+    private final Theme theme;
+
+    // layout state
+    private int left;
     private int top;
+    private int guiWidth = BASE_GUI_WIDTH;
+    private int guiHeight = BASE_GUI_HEIGHT;
+
+    // scrolling state
+    private int scrollY = 0;
+    private int contentHeight = 0;
+    private int innerHeight = 0;
 
     public SongLibraryScreen(List<String> songs) {
+        this(songs, Theme.DEFAULT);
+    }
+
+    public SongLibraryScreen(List<String> songs, Theme theme) {
         super(Component.literal("Your Songs"));
         this.songs = songs.stream().map(SongEntry::new).toList();
+        this.theme = theme == null ? Theme.DEFAULT : theme;
+    }
+
+    private static int clamp(int v, int a, int b) {
+        if (v < a) return a;
+        if (v > b) return b;
+        return v;
     }
 
     @Override
     protected void init() {
         super.init();
 
-        // center the GUI
-        left = (this.width - GUI_WIDTH) / 2;
-        top = (this.height - GUI_HEIGHT) / 2;
+        // adapt guiWidth to screen (max width)
+        guiWidth = Math.min(BASE_GUI_WIDTH, this.width - 40);
+        guiHeight = Math.min(BASE_GUI_HEIGHT, this.height - 40);
 
-        // clear previous widgets
-        this.clearWidgets();
+        left = (this.width - guiWidth) / 2;
+        top = (this.height - guiHeight) / 2;
 
-        // Add Prev/Next page buttons if needed
-        int buttonY = top + GUI_HEIGHT - 24;
-        int prevX = left + 10;
-        int nextX = left + GUI_WIDTH - 10 - 60;
-        if (page > 0) {
-            this.addRenderableWidget(Button.builder(Component.literal("< Prev"), b -> {
-                page--;
-                init(); // re-init to refresh buttons
-            }).bounds(prevX, buttonY, 60, 20).build());
-        }
-        if ((page + 1) * PAGE_SIZE < songs.size()) {
-            this.addRenderableWidget(Button.builder(Component.literal("Next >"), b -> {
-                page++;
-                init();
-            }).bounds(nextX, buttonY, 60, 20).build());
-        }
+        // inner height for content area (leave room for title and padding)
+        innerHeight = guiHeight - 40; // title + footer area
 
-        // Create clickable areas for each slot on this page
-        int startIndex = page * PAGE_SIZE;
-        for (int i = 0; i < PAGE_SIZE; i++) {
-            int idx = startIndex + i;
-            if (idx >= songs.size()) break;
+        // compute contentHeight based on columns/rows
+        int columns = computeColumns();
+        int rows = (int) Math.ceil((double) songs.size() / Math.max(1, columns));
+        contentHeight = rows * (slotSize + slotPaddingY) + 8;
 
-            int row = i / SLOTS_PER_ROW;
-            int col = i % SLOTS_PER_ROW;
+        // clamp scroll
+        scrollY = clamp(scrollY, 0, Math.max(0, contentHeight - innerHeight));
+    }
 
-            // compute slot top-left
-            int gridLeft = left + 8 + col * (slotSize + slotPaddingX);
-            int gridTop = top + 20 + row * (slotSize + slotPaddingY);
-
-            // add invisible button on top of the slot
-            SongEntry entry = songs.get(idx);
-            this.addRenderableWidget(Button.builder(Component.literal(""),
-                            btn -> {
-                                // when clicked, close UI and send play packet
-                                this.onClose();
-                                PacketHandler.sendToServer(new PlaySpecifyableSong(entry.id));
-                            })
-                    .bounds(gridLeft, gridTop, slotSize, slotSize)
-                    .build());
-        }
+    private int computeColumns() {
+        // use available width inside GUI (padding 16)
+        int available = guiWidth - 16;
+        int colWidth = slotSize + slotPaddingX;
+        int cols = Math.max(1, available / colWidth);
+        // limit to 12 or so to avoid extreme counts
+        return Math.min(cols, 12);
     }
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
-        // correct background call for MC 1.20+
+        // background dim
         this.renderBackground(graphics, mouseX, mouseY, partialTicks);
 
-        // draw a simple GUI background box (you can replace with textured background)
-        // semi-opaque dark rectangle
-        graphics.fill(left - 4, top - 4, left + GUI_WIDTH + 4, top + GUI_HEIGHT + 4, 0xC0101010);
-        graphics.fill(left, top, left + GUI_WIDTH, top + GUI_HEIGHT, 0xFF202020);
+        // panel background
+        drawRoundedPanel(graphics, left, top, guiWidth, guiHeight, theme.panelBackground());
 
         // title
-        graphics.drawCenteredString(this.font, this.title.getString(), left + GUI_WIDTH / 2, top + 6, 0xFFFFFF);
+        int titleX = left + guiWidth / 2;
+        graphics.drawCenteredString(this.font, this.title.getString(), titleX, top + 8, theme.titleColor());
 
-        // draw the slots for this page
-        int startIndex = page * PAGE_SIZE;
-        for (int i = 0; i < PAGE_SIZE; i++) {
-            int idx = startIndex + i;
-            if (idx >= songs.size()) break;
+        // content clip area (simple manual clipping by skipping draw outside area)
+        int contentLeft = left + 8;
+        int contentTop = top + 26;
+        int contentRight = left + guiWidth - 8;
+        int contentBottom = contentTop + innerHeight;
 
-            SongEntry entry = songs.get(idx);
+        // draw content background
+        graphics.fill(contentLeft - 2, contentTop - 2, contentRight + 2, contentBottom + 2, theme.contentBackground());
 
-            int row = i / SLOTS_PER_ROW;
-            int col = i % SLOTS_PER_ROW;
+        // draw slots
+        int columns = computeColumns();
+        int colWidth = slotSize + slotPaddingX;
 
-            int gridLeft = left + 8 + col * (slotSize + slotPaddingX);
-            int gridTop = top + 20 + row * (slotSize + slotPaddingY);
+        // visible range calculation to avoid drawing everything
+        int firstRow = Math.max(0, (scrollY) / (slotSize + slotPaddingY));
+        int lastRow = Math.min((int) Math.ceil((double) contentHeight / (slotSize + slotPaddingY)), firstRow + (innerHeight / (slotSize + slotPaddingY)) + 2);
 
-            // slot background (simple rounded-ish rectangle look)
-            graphics.fill(gridLeft - 2, gridTop - 2, gridLeft + slotSize + 2, gridTop + slotSize + 2, 0xFF101010);
-            graphics.fill(gridLeft - 1, gridTop - 1, gridLeft + slotSize + 1, gridTop + slotSize + 1, 0xFF2A2A2A);
+        for (int row = firstRow; row <= lastRow; row++) {
+            for (int col = 0; col < columns; col++) {
+                int idx = row * columns + col;
+                if (idx >= songs.size()) break;
 
-            // draw icon (centered on top portion)
-            int iconSize = 20;
-            int iconX = gridLeft + (slotSize - iconSize) / 2;
-            int iconY = gridTop + 2;
+                int x = contentLeft + col * colWidth;
+                int y = contentTop + row * (slotSize + slotPaddingY) - scrollY;
 
-            drawIcon(graphics, fromVicky(entry.icon), iconX, iconY, iconSize, iconSize);
+                // skip drawing if outside clip vertically
+                if (y + slotSize < contentTop || y > contentBottom) continue;
 
-            // draw title (truncate if too long)
-            String title = entry.title;
-            if (title.length() > 18) title = title.substring(0, 15) + "...";
-            int titleX = gridLeft + 4;
-            int titleY = gridTop + iconSize + 6;
-            graphics.drawString(this.font, Component.literal(title), titleX, titleY, 0xFFFFFF, false);
+                // slot background
+                graphics.fill(x - 2, y - 2, x + slotSize + 2, y + slotSize + 2, theme.slotBorder());
+                graphics.fill(x - 1, y - 1, x + slotSize + 1, y + slotSize + 1, theme.slotBackground());
 
-            // draw authors in gray underneath
-            String authors = entry.authors == null ? "" : entry.authors;
-            if (authors.length() > 20) authors = authors.substring(0, 17) + "...";
-            int authorsY = titleY + 10;
-            graphics.drawString(this.font, Component.literal(authors), titleX, authorsY, 0xAAAAAA, false);
+                SongEntry entry = songs.get(idx);
+
+                // draw icon centered in top area
+                int iconSize = Math.min(20, slotSize - 6);
+                int iconX = x + (slotSize - iconSize) / 2;
+                int iconY = y + 2;
+                drawIcon(graphics, entry.icon, iconX, iconY, iconSize, iconSize);
+
+                // draw labels
+                String title = entry.title.length() > 18 ? entry.title.substring(0, 15) + "..." : entry.title;
+                graphics.drawString(this.font, Component.literal(title), x + 4, y + iconSize + 6, theme.titleSmallColor(), false);
+
+                String authors = entry.authors == null ? "" : entry.authors;
+                if (authors.length() > 20) authors = authors.substring(0, 17) + "...";
+                graphics.drawString(this.font, Component.literal(authors), x + 4, y + iconSize + 16, theme.subliminalText(), false);
+
+                // hover highlight & tooltip
+                if (mouseX >= x && mouseX < x + slotSize && mouseY >= y && mouseY < y + slotSize) {
+                    graphics.fill(x - 1, y - 1, x + slotSize + 1, y + slotSize + 1, theme.hoverOverlay());
+                    // render tooltip as usual
+                    graphics.renderTooltip(Minecraft.getInstance().font, Component.literal(entry.title), mouseX, mouseY);
+                }
+            }
         }
+
+        // draw scrollbar if needed
+        if (contentHeight > innerHeight) {
+            drawScrollbar(graphics, contentRight + 4, contentTop, 8, innerHeight, scrollY, contentHeight);
+        }
+
+        // footer hint or page info
+        String hint = "Click an icon to play · Scroll to browse";
+        graphics.drawString(this.font, Component.literal(hint), left + 10, top + guiHeight - 18, theme.footerColor(), false);
 
         super.render(graphics, mouseX, mouseY, partialTicks);
     }
 
-    /**
-     * Draw a texture-based icon.
-     * NOTE: If your icons are item textures that live in item model atlas, you should use ItemRenderer instead.
-     * This example assumes the icon is a simple 1:1 texture PNG stored under assets/<ns>/textures/...
-     */
+    private void drawRoundedPanel(GuiGraphics graphics, int x, int y, int w, int h, int color) {
+        // simple rectangle for now (rounded requires texture); keep it small and efficient
+        graphics.fill(x, y, x + w, y + h, color);
+    }
+
     private void drawIcon(GuiGraphics graphics, ResourceLocation icon, int x, int y, int w, int h) {
         if (icon == null) return;
-
-        // bind the texture and draw a simple quad
         Minecraft mc = Minecraft.getInstance();
         RenderSystem.setShaderTexture(0, icon);
-
-        // The blit variant varies between mappings/versions; this should work in most 1.20 setups:
-        // draw the entire texture into the rectangle (assuming the texture is exactly w x h or will be scaled)
         graphics.blit(icon, x, y, w, h, 0, 0, w, h, w, h);
+    }
+
+    private void drawScrollbar(GuiGraphics graphics, int x, int y, int width, int height, int scroll, int totalContent) {
+        // background track
+        graphics.fill(x, y, x + width, y + height, theme.scrollTrack());
+
+        // compute thumb height and position
+        float visibleFrac = (float) innerHeight / (float) totalContent;
+        int thumbH = Math.max(16, (int) (height * visibleFrac));
+        float maxScroll = totalContent - innerHeight;
+        int thumbY = y + (int) ((scroll / (maxScroll <= 0 ? 1f : maxScroll)) * (height - thumbH));
+        graphics.fill(x, y + thumbY, x + width, y + thumbY + thumbH, theme.scrollThumb());
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta, double p_299502_) {
+        // wheel: delta positive = up, negative = down
+        int step = (int) Math.ceil(Math.abs(delta) * 20);
+        if (delta > 0) scrollY = clamp(scrollY - step, 0, Math.max(0, contentHeight - innerHeight));
+        else scrollY = clamp(scrollY + step, 0, Math.max(0, contentHeight - innerHeight));
+        return true;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button != 0) return false; // only left click
+        // check if click is inside content area and match a slot
+        int contentLeft = left + 8;
+        int contentTop = top + 26;
+        int columns = computeColumns();
+        int colWidth = slotSize + slotPaddingX;
+
+        // compute clicked relative to contentTop and scroll
+        double relX = mouseX - contentLeft;
+        double relY = mouseY - contentTop + scrollY;
+
+        if (relX < 0 || relY < 0) return false;
+        int col = (int) (relX / colWidth);
+        int row = (int) (relY / (slotSize + slotPaddingY));
+        if (col < 0 || col >= columns) return false;
+
+        int idx = row * columns + col;
+        if (idx >= 0 && idx < songs.size()) {
+            SongEntry entry = songs.get(idx);
+            // close and tell server to play
+            this.onClose();
+            PacketHandler.sendToServer(new PlaySpecifyableSong(entry.id));
+            return true;
+        }
+        return false;
     }
 
     @Override
     public boolean isPauseScreen() {
-        return false; // do not pause the game while open
+        return false;
     }
 }

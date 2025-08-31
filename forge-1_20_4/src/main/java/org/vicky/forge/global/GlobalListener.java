@@ -58,12 +58,25 @@ public class GlobalListener {
             musicPlayer.setDatabasePlayer(databasePlayer);
             mDao.save(musicPlayer);
         } else {
-            Optional<DatabasePlayer> databasePlayer = dao.findById(player.getUUID());
-            if (databasePlayer.isEmpty()) {
+            Optional<DatabasePlayer> db = dao.findById(player.getUUID());
+            if (db.isEmpty()) {
                 LOGGER.error("Database player for player {} does not exist...", player.getName());
+
+                DatabasePlayer databasePlayer = new DatabasePlayer();
+                databasePlayer.setId(player.getUUID());
+                databasePlayer.setFirstTime(true);
+                dao.save(databasePlayer);
+
+                MusicPlayer musicPlayer = new MusicPlayer();
+                musicPlayer.setId(player.getStringUUID());
+                musicPlayer.addPiece(
+                        new MusicPieceDAO().findById("vicky_utils_symphony1")
+                );
+                musicPlayer.setDatabasePlayer(databasePlayer);
+                mDao.save(musicPlayer);
             } else {
-                databasePlayer.get().setFirstTime(false);
-                dao.update(databasePlayer.get());
+                db.get().setFirstTime(false);
+                dao.update(db.get());
             }
         }
     }

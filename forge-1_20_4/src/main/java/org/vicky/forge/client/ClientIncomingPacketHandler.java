@@ -19,45 +19,38 @@ public class ClientIncomingPacketHandler {
 
 
     public static void proceedWithSSBossBar(CreateSSBossBar msg, CustomPayloadEvent.Context ctx) {
-        ctx.enqueueWork(() -> {
-            SimpleMusicSliderBossBar bar = new SimpleMusicSliderBossBar();
+        SimpleMusicSliderBossBar bar = new SimpleMusicSliderBossBar();
+        bar.setProgress(msg.progress());
+        bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
+        bar.setSubTitle(AdventureComponentConverter.toNative(msg.subTitle()));
+        bar.setColor(msg.hex());
+        bar.setImage(msg.image());
+        activeBars.put(msg.id(), bar);
+    }
+
+    public static void proceedWithOpeningScoreScreen(OpenOwnedRecordsScreen msg) {
+        Minecraft mc = Minecraft.getInstance();
+        mc.execute(() -> mc.setScreen(new SongLibraryScreen(msg.songs())));
+    }
+
+
+    public static void updateSSBossBar(UpdateSSBossBar msg, CustomPayloadEvent.Context ctx) {
+        SimpleMusicSliderBossBar bar = activeBars.get(msg.id());
+        if (bar != null) {
+            if (msg.title() != null) bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
             bar.setProgress(msg.progress());
             bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
             bar.setSubTitle(AdventureComponentConverter.toNative(msg.subTitle()));
             bar.setColor(msg.hex());
             bar.setImage(msg.image());
-            activeBars.put(msg.id(), bar);
-        });
-    }
-
-    public static void proceedWithOpeningScoreScreen(OpenOwnedRecordsScreen msg, CustomPayloadEvent.Context ctx) {
-        ctx.enqueueWork(() -> {
-            var screen = new SongLibraryScreen(msg.songs());
-            Minecraft.getInstance().setScreen(screen);
-        });
-    }
-
-    public static void updateSSBossBar(UpdateSSBossBar msg, CustomPayloadEvent.Context ctx) {
-        ctx.enqueueWork(() -> {
-            SimpleMusicSliderBossBar bar = activeBars.get(msg.id());
-            if (bar != null) {
-                if (msg.title() != null) bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
-                bar.setProgress(msg.progress());
-                bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
-                bar.setSubTitle(AdventureComponentConverter.toNative(msg.subTitle()));
-                bar.setColor(msg.hex());
-                bar.setImage(msg.image());
-            }
-        });
+        }
     }
 
     public static void removeSSBossBar(RemoveSSBossBar msg, CustomPayloadEvent.Context ctx) {
-        ctx.enqueueWork(() -> {
-            SimpleMusicSliderBossBar bar = activeBars.get(msg.id());
-            if (bar != null) {
-                bar.setVisible(false); // Let it slide out
-            }
-            activeBars.remove(msg.id());
-        });
+        SimpleMusicSliderBossBar bar = activeBars.get(msg.id());
+        if (bar != null) {
+            bar.setVisible(false); // Let it slide out
+        }
+        activeBars.remove(msg.id());
     }
 }

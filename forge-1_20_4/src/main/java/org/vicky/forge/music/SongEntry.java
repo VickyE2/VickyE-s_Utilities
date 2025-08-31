@@ -1,7 +1,7 @@
 package org.vicky.forge.music;
 
+import net.minecraft.resources.ResourceLocation;
 import org.vicky.music.MusicRegistry;
-import org.vicky.platform.utils.ResourceLocation;
 
 public final class SongEntry {
     public final String id;            // unique song id (used for play packet)
@@ -15,6 +15,6 @@ public final class SongEntry {
         this.id = id;
         this.title = piece.pieceName();
         this.authors = String.join(", ", piece.authors());
-        this.icon = ResourceLocation.from("vicky_music:icons/" + id + ".png");
+        this.icon = ResourceLocation.parse("vicky_music:icons/" + id + ".png");
     }
 }

@@ -34,7 +34,10 @@ public record CreateSSBossBar(UUID id, Component title, Component subTitle, floa
     }
 
     public static void handle(CreateSSBossBar msg, CustomPayloadEvent.Context ctx) {
-        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientIncomingPacketHandler.proceedWithSSBossBar(msg, ctx)));
+        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+            System.out.println("Yeah yeah. Im making a boss bar...sheesh");
+            ClientIncomingPacketHandler.proceedWithSSBossBar(msg, ctx);
+        }));
         ctx.setPacketHandled(true);
     }
 }

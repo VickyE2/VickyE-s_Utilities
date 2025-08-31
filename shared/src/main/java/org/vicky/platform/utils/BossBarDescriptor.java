@@ -118,18 +118,31 @@ public class BossBarDescriptor implements Cloneable {
         return context;
     }
 
-    public Map<String, Object> getInformation() {
-        return new HashMap<>(information);
+    public BossBarDescriptor(BossBarDescriptor other) {
+        this.title = other.title;
+        this.subTitle = other.subTitle;
+        this.progress = other.progress;
+        this.color = other.color;
+        this.overlay = other.overlay;
+        this.context = other.context;
+        // shallow copy of map keys; DO NOT deep-clone arbitrary objects
+        this.information = new HashMap<>(other.information);
     }
 
+    public Map<String, Object> getInformation() {
+        return information;
+    }
+
+    /**
+     * Convenient explicit copy method — preferred over clone()
+     */
+    public BossBarDescriptor copy() {
+        return new BossBarDescriptor(this);
+    }
+
+    // If you *must* keep clone() for compatibility:
     @Override
     public BossBarDescriptor clone() {
-        try {
-            BossBarDescriptor clone = (BossBarDescriptor) super.clone();
-            clone.information = new HashMap<>(this.information);
-            return clone;
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError();
-        }
+        return copy();
     }
 }

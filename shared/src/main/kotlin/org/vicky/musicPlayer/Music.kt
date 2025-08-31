@@ -184,25 +184,55 @@ object MusicPlayer {
     }
 
     fun tickAll() {
-        // log("Ticking ${playerStates.size} player(s).")
-        for ((uuid, state) in playerStates) {
-            if (state.paused) continue
-            PlatformPlugin.getPlayer(uuid)?.let { player ->
-                playTick(player.get())
-                state.tick++
+        // Use iterator so we can remove safely while iterating
+        val it = playerStates.entries.iterator()
+        while (it.hasNext()) {
+            val (uuid, state) = it.next()
 
-                if (state.tick >= state.track.totalDuration()) {
-                    if (state.queue.isNotEmpty()) {
-                        play(player.get(), state.queue.removeFirst())
-                    } else {
-                        player.get().hideBossBar(state.bossBar)
-                        playerStates.remove(uuid)
-                    }
-                } else {
-                    updateBossBar(player.get(), state.track, state.tick, false)
-                }
+            // If it's already paused, skip
+            if (state.paused) continue
+
+            // Try to get the platform player; if not present, pause this state
+            val optPlayer = PlatformPlugin.getPlayer(uuid)
+            if (optPlayer.isEmpty) {
+                // Player disconnected — pause their music state instead of dropping it
+                state.paused = true
+                log("Paused music for disconnected player: $uuid")
+                continue
             }
 
+            val player = optPlayer.get()
+
+            // Protect playTick from throwing and killing the loop
+            try {
+                playTick(player)
+            } catch (t: Throwable) {
+                t.printStackTrace()
+                log("playTick threw for $uuid: ${t.message}")
+                // optionally pause to avoid repeated exceptions
+                state.paused = true
+                continue
+            }
+
+            state.tick++
+
+            if (state.tick >= state.track.totalDuration()) {
+                if (state.queue.isNotEmpty()) {
+                    // start next queued track
+                    play(player, state.queue.removeFirst())
+                } else {
+                    // finished and no queue: hide bossbar and remove state safely via iterator
+                    try {
+                        player.hideBossBar(state.bossBar)
+                    } catch (t: Throwable) {
+                        t.printStackTrace()
+                        log("hideBossBar threw for $uuid: ${t.message}")
+                    }
+                    it.remove() // safe removal while iterating
+                }
+            } else {
+                updateBossBar(player, state.track, state.tick, false)
+            }
         }
     }
 
@@ -225,7 +255,7 @@ object MusicPlayer {
         val bossBar = playerStates[player.uniqueId()]?.bossBar ?: return
 
         // ⬇ Update descriptor if necessary
-        if (bossBar.descriptor.information["type"] == "MusicBossBarDescriptor") {
+        if (bossBar.descriptor.information["type"] === "MusicBossBarDescriptor") {
             val cloned = bossBar.descriptor.clone()
             cloned.information["isPaused"] = paused
             cloned.information["currentTick"] = tick

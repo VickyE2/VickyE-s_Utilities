@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform.adventure;
+package org.vicky.forge.forgeplatform.adventure;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;

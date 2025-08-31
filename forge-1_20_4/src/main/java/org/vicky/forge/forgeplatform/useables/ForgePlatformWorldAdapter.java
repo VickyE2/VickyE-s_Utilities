@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.useables;
 
 import de.pauleff.api.ICompoundTag;
 import net.minecraft.core.BlockPos;

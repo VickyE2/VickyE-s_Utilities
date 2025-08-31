@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.useables;
 
 import net.minecraftforge.eventbus.api.Event;
 import org.vicky.platform.events.PlatformEvent;

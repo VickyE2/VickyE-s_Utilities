@@ -46,13 +46,9 @@ public class SongLibraryScreen extends Screen {
     private int innerHeight = 0;
 
     public SongLibraryScreen(List<String> songs) {
-        this(songs, Theme.DEFAULT);
-    }
-
-    public SongLibraryScreen(List<String> songs, Theme theme) {
         super(Component.literal("Your Songs"));
         this.songs = songs.stream().map(SongEntry::new).toList();
-        this.theme = theme == null ? Theme.DEFAULT : theme;
+        this.theme = Theme.SELECTED;
     }
 
     private static int clamp(int v, int a, int b) {

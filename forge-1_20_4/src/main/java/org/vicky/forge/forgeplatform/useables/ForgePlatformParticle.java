@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.useables;
 
 import net.minecraft.core.particles.DustColorTransitionOptions;
 import net.minecraft.core.particles.DustParticleOptions;

@@ -1,7 +1,7 @@
-package org.vicky.forge.forgeplatform.forgeplatform;
+package org.vicky.forge.forgeplatform;
 
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgePlatformItem;
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgePlatformMaterial;
+import org.vicky.forge.forgeplatform.useables.ForgePlatformItem;
+import org.vicky.forge.forgeplatform.useables.ForgePlatformMaterial;
 import org.vicky.platform.PlatformItem;
 import org.vicky.platform.PlatformItemFactory;
 import org.vicky.platform.world.PlatformMaterial;

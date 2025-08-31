@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.useables;
 
 import net.kyori.adventure.text.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -8,7 +8,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
-import org.vicky.forge.forgeplatform.forgeplatform.adventure.AdventureComponentConverter;
+import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.platform.PlatformBossBar;
 import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.world.PlatformLocation;
@@ -61,9 +61,8 @@ public class ForgePlatformPlayer implements PlatformPlayer {
 
     @Override
     public void hideBossBar(PlatformBossBar bar) {
-        if (bar instanceof ForgeDefaultPlatformBossBar forgeBar) {
-            forgeBar.removeViewer(ForgePlatformPlayer.adapt(player));
-        }
+        System.out.println("I was requested to remove a bossbar...");
+        bar.removeViewer(ForgePlatformPlayer.adapt(player));
     }
 
 

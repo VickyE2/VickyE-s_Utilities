@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform;
+package org.vicky.forge.forgeplatform;
 
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;

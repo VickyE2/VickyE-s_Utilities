@@ -23,4 +23,5 @@ public record Theme(int panelBackground, int contentBackground, int titleColor, 
             0xFFCCCCCC  // footer
     );
 
+    public static Theme SELECTED = Theme.DEFAULT;
 }

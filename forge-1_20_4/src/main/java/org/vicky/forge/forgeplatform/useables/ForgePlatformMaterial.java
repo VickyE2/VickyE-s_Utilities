@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.useables;
 
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;

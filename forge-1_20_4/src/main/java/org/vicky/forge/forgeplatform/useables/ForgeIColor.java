@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.useables;
 
 import org.vicky.platform.IColor;
 
@@ -60,6 +60,10 @@ public class ForgeIColor implements IColor {
 
     @Override
     public String toHex() {
-        return String.format("#%02X%02X%02X", red, green, blue);
+        return String.format("#%02X%02X%02X",
+                (int) (red * 255),
+                (int) (green * 255),
+                (int) (blue * 255)
+        );
     }
 }

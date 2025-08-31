@@ -1,10 +1,10 @@
-package org.vicky.forge.forgeplatform.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.useables;
 
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.BossEvent;
-import org.vicky.forge.forgeplatform.forgeplatform.adventure.AdventureComponentConverter;
+import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.platform.IColor;
 import org.vicky.platform.PlatformBossBar;
 import org.vicky.platform.PlatformPlayer;

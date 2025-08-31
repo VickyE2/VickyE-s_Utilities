@@ -1,10 +1,11 @@
 package org.vicky.forge.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraftforge.event.network.CustomPayloadEvent;
 import org.vicky.forge.client.screen.SimpleMusicSliderBossBar;
 import org.vicky.forge.client.screen.SongLibraryScreen;
-import org.vicky.forge.forgeplatform.forgeplatform.adventure.AdventureComponentConverter;
+import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.forge.network.packets.CreateSSBossBar;
 import org.vicky.forge.network.packets.OpenOwnedRecordsScreen;
 import org.vicky.forge.network.packets.RemoveSSBossBar;
@@ -18,14 +19,22 @@ public class ClientIncomingPacketHandler {
     static final Map<UUID, SimpleMusicSliderBossBar> activeBars = new HashMap<>();
 
 
-    public static void proceedWithSSBossBar(CreateSSBossBar msg, CustomPayloadEvent.Context ctx) {
-        SimpleMusicSliderBossBar bar = new SimpleMusicSliderBossBar();
-        bar.setProgress(msg.progress());
-        bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
-        bar.setSubTitle(AdventureComponentConverter.toNative(msg.subTitle()));
-        bar.setColor(msg.hex());
-        bar.setImage(msg.image());
-        activeBars.put(msg.id(), bar);
+    public static void proceedWithSSBossBar(CreateSSBossBar msg) {
+        try {
+            SimpleMusicSliderBossBar bar = new SimpleMusicSliderBossBar();
+
+            // null-safe conversions — fallback to empty component / default image
+            bar.setProgress(msg.progress());
+            bar.setTitle(msg.title() == null ? Component.empty() : AdventureComponentConverter.toNative(msg.title()));
+            bar.setSubTitle(msg.subTitle() == null ? Component.empty() : AdventureComponentConverter.toNative(msg.subTitle()));
+            bar.setColor(msg.hex() == null ? "#FFFFFF" : msg.hex());
+            bar.setImage(msg.image()); // image may be null — let bar handle null gracefully
+
+            activeBars.put(msg.id(), bar);
+            System.out.println("[client] Created bossbar: " + msg.id() + " activeBars=" + activeBars.size());
+        } catch (Throwable t) {
+            t.printStackTrace();
+        }
     }
 
     public static void proceedWithOpeningScoreScreen(OpenOwnedRecordsScreen msg) {

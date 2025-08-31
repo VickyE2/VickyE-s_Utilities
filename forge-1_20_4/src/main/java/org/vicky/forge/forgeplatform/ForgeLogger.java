@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform;
+package org.vicky.forge.forgeplatform;
 
 import org.vicky.VickyUtilitiesForge;
 import org.vicky.platform.PlatformLogger;

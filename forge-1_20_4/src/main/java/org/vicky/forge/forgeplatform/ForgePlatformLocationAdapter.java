@@ -1,8 +1,8 @@
-package org.vicky.forge.forgeplatform.forgeplatform;
+package org.vicky.forge.forgeplatform;
 
 import net.minecraft.world.level.Level;
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgePlatformWorldAdapter;
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgeVec3;
+import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
+import org.vicky.forge.forgeplatform.useables.ForgeVec3;
 import org.vicky.platform.PlatformLocationAdapter;
 import org.vicky.platform.world.PlatformLocation;
 

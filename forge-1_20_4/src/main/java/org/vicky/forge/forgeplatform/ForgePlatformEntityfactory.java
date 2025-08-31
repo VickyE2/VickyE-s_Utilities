@@ -1,11 +1,11 @@
-package org.vicky.forge.forgeplatform.forgeplatform;
+package org.vicky.forge.forgeplatform;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.level.Level;
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgeVec3;
+import org.vicky.forge.forgeplatform.useables.ForgeVec3;
 import org.vicky.platform.PlatformEntityFactory;
 import org.vicky.platform.entity.PlatformArrow;
 import org.vicky.platform.utils.Vec3;

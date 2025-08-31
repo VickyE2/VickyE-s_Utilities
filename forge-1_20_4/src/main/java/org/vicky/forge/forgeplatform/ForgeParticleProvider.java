@@ -1,12 +1,12 @@
-package org.vicky.forge.forgeplatform.forgeplatform;
+package org.vicky.forge.forgeplatform;
 
 import net.minecraft.core.particles.DustColorTransitionOptions;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgePlatformParticle;
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgeVec3;
+import org.vicky.forge.forgeplatform.useables.ForgePlatformParticle;
+import org.vicky.forge.forgeplatform.useables.ForgeVec3;
 import org.vicky.platform.IColor;
 import org.vicky.platform.PlatformParticleProvider;
 import org.vicky.platform.PlatformPlugin;

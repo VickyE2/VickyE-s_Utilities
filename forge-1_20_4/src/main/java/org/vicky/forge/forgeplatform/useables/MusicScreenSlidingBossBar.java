@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.useables;
 
 import net.kyori.adventure.text.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -27,12 +27,12 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
     private final Set<ForgePlatformPlayer> viewers = new HashSet<>();
     private BossBarDescriptor descriptor;
 
-    public MusicScreenSlidingBossBar(BossBarDescriptor descriptor, Component title, Component subTitle, float progress, String color, @Nullable ResourceLocation image) {
+    public MusicScreenSlidingBossBar(BossBarDescriptor descriptor, @Nullable ResourceLocation image) {
         this.descriptor = descriptor;
-        this.title = title;
-        this.subTitle = subTitle;
-        this.hex = color;
-        this.progress = progress;
+        this.title = descriptor.title;
+        this.subTitle = descriptor.subTitle;
+        this.hex = descriptor.color.toHex();
+        this.progress = descriptor.progress;
         this.image = image;
     }
 
@@ -110,11 +110,11 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
 
     @Override
     public void updateFromDescriptor() {
-        this.title = descriptor.title;
+        // this.title = descriptor.title;
         this.hex = descriptor.color.toHex();
-        this.subTitle = descriptor.subTitle;
+        // this.subTitle = descriptor.subTitle;
         this.progress = descriptor.progress;
-        this.image = new ResourceLocation((String) descriptor.getInformation().getOrDefault("icon", "minecraft:dirt"));
+        // this.image = new ResourceLocation((String) descriptor.getInformation().getOrDefault("icon", "minecraft:dirt"));
         updateAll();
     }
 

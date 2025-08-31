@@ -5,7 +5,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import org.vicky.VickyUtilitiesForge;
-import org.vicky.forge.forgeplatform.forgeplatform.ForgePlatformConfig;
+import org.vicky.forge.forgeplatform.ForgePlatformConfig;
 
 @Mod.EventBusSubscriber(modid = VickyUtilitiesForge.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ForgeModConfig {

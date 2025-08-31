@@ -1,6 +1,6 @@
-package org.vicky.forge.forgeplatform.forgeplatform;
+package org.vicky.forge.forgeplatform;
 
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgeIColor;
+import org.vicky.forge.forgeplatform.useables.ForgeIColor;
 import org.vicky.platform.PlatformChatFormatter;
 
 public class ForgeChatFormatter implements PlatformChatFormatter {

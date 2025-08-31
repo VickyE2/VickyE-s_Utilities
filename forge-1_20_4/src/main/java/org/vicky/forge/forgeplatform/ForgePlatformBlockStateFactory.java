@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform;
+package org.vicky.forge.forgeplatform;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -7,7 +7,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgePlatformBlockStateAdapter;
+import org.vicky.forge.forgeplatform.useables.ForgePlatformBlockStateAdapter;
 import org.vicky.platform.world.PlatformBlockState;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 

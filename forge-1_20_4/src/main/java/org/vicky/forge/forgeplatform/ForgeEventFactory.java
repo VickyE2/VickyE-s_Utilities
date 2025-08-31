@@ -1,7 +1,7 @@
-package org.vicky.forge.forgeplatform.forgeplatform;
+package org.vicky.forge.forgeplatform;
 
 import net.minecraftforge.common.MinecraftForge;
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgeEvent;
+import org.vicky.forge.forgeplatform.useables.ForgeEvent;
 import org.vicky.platform.events.PlatformEvent;
 import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.exceptions.UnsupportedEventException;

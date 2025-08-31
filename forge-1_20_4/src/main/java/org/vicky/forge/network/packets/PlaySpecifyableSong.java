@@ -3,7 +3,7 @@ package org.vicky.forge.network.packets;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.event.network.CustomPayloadEvent;
-import org.vicky.forge.forgeplatform.forgeplatform.useables.ForgePlatformPlayer;
+import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.music.MusicRegistry;
 import org.vicky.music.utils.MusicPiece;
 import org.vicky.musicPlayer.MusicPlayer;

@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.forgeplatform;
+package org.vicky.forge.forgeplatform;
 
 import org.vicky.forge.utilities.ForgeModConfig;
 import org.vicky.platform.PlatformConfig;

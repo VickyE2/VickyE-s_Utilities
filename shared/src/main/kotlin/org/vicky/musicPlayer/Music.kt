@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
 import net.kyori.adventure.text.format.TextDecoration
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.vicky.music.MusicRegistry.genreColors
 import org.vicky.music.utils.MusicBuilder
 import org.vicky.music.utils.MusicEvent
@@ -55,7 +56,8 @@ object MusicPlayer {
     }
     private fun log(player: PlatformPlayer, message: String) {
         if (loggingEnabled) {
-            PlatformPlugin.logger().info("[MusicPlayer] [${player.name()}] $message")
+            PlatformPlugin.logger()
+                .info("[MusicPlayer] [${PlainTextComponentSerializer.plainText().serialize(player.name())}] $message")
         }
     }
 
@@ -105,7 +107,14 @@ object MusicPlayer {
         state.track = track
         state.tick = 0
         state.paused = false
-        player.showBossBar(state.bossBar)
+        log("[MusicPlayer.trace] about to call player.showBossBar for ${player.uniqueId()} bossbar=${state.bossBar}")
+        try {
+            player.showBossBar(state.bossBar)
+            log("[MusicPlayer.trace] player.showBossBar returned normally")
+        } catch (t: Throwable) {
+            t.printStackTrace()
+            log("[MusicPlayer.trace] player.showBossBar threw: " + t.message)
+        }
         playTick(player)
     }
 

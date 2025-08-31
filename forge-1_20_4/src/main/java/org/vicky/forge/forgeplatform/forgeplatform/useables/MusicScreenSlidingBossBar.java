@@ -114,7 +114,7 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
         this.hex = descriptor.color.toHex();
         this.subTitle = descriptor.subTitle;
         this.progress = descriptor.progress;
-        this.image = new ResourceLocation((String) descriptor.getInformation().get("icon"));
+        this.image = new ResourceLocation((String) descriptor.getInformation().getOrDefault("icon", "minecraft:dirt"));
         updateAll();
     }
 

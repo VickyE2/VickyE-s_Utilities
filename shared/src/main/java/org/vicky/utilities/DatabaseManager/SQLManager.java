@@ -123,11 +123,11 @@ public class SQLManager {
       configuration.setProperty("hibernate.connection.username", username);
       configuration.setProperty("hibernate.connection.password", password);
       configuration.setProperty("hibernate.dialect", dialect);
-      configuration.setProperty("org.hibernate.SQL", "DEBUG");
+        configuration.setProperty("org.hibernate.SQL", "WARN");
       configuration.setProperty("hibernate.show_sql", Boolean.toString(showSql));
       configuration.setProperty("hibernate.format_sql", Boolean.toString(formatSql));
       configuration.setProperty("hibernate.hbm2ddl.auto", ddlAuto);
-      configuration.setProperty("org.hibernate.type.descriptor.sql.BasicBinder", "TRACE");
+        configuration.setProperty("org.hibernate.type.descriptor.sql.BasicBinder", "WARN");
       configuration.setProperty("hibernate.jdbc.fetch_size", Integer.toString(50));
 
       for (Map.Entry<String, String> pack : PlatformPlugin.getPendingDBTemplatesUtils().entrySet()) {

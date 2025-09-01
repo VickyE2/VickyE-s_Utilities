@@ -21,11 +21,10 @@ public class ClientSynthManager {
 
     public void noteOn(NoteOnPacket pkt) {
         int[] bankProg = pkt.midiId(); // map enum → bank/program
-        int midiNote = (int) (69 + 12 * (Math.log(pkt.freqHz() / 440.0) / Math.log(2))); // convert Hz → MIDI note
         int velocity = (int) (pkt.velocity() * 127);
 
-        MidiSynthManager.getInstance().noteOn(bankProg[0], bankProg[1], midiNote, velocity, 0);
-        activeVoices.put(pkt.uid(), midiNote);
+        MidiSynthManager.getInstance().noteOn(bankProg[0], bankProg[1], pkt.midiNote(), velocity, 0);
+        activeVoices.put(pkt.uid(), pkt.midiNote());
     }
 
     public void noteOff(UUID uid) {

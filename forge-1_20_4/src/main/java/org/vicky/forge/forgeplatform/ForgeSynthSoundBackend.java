@@ -34,7 +34,7 @@ public class ForgeSynthSoundBackend implements PlatformSoundBackend {
         int[] midiId = event.sound() != null ? InstrumentMapper.getBankAndProgram(event.sound()) : new int[]{0, 0};
 
         // convert pitch -> frequency
-        float freqHz = 440.0f * event.pitch();
+        Integer midiNote = event.pitch();
 
         float vibratoRate = 5.0f;
         float vibratoDepth = 5.0f;
@@ -42,7 +42,7 @@ public class ForgeSynthSoundBackend implements PlatformSoundBackend {
         NoteOnPacket noteOn = new NoteOnPacket(
                 event.sound() != null ? event.sound().name() : "inst",
                 midiId,
-                freqHz,
+                midiNote,
                 event.volume(),
                 adsr.getA(),
                 adsr.getD(),
@@ -59,7 +59,7 @@ public class ForgeSynthSoundBackend implements PlatformSoundBackend {
     }
 
     @Override
-    public void stopNote(PlatformPlayer player, UUID uid) {
+    public void stopNote(@NotNull PlatformPlayer player, UUID uid) {
         ForgePlatformPlayer serverPlayer = asServerPlayer(player);
         if (serverPlayer == null) {
             return;
@@ -70,13 +70,13 @@ public class ForgeSynthSoundBackend implements PlatformSoundBackend {
     }
 
     @Override
-    public void playNamed(PlatformPlayer player, String soundName, SoundCategory category, float volume, float pitch) {
+    public void playNamed(PlatformPlayer player, @NotNull String soundName, SoundCategory category, float volume, int pitch) {
         player.playSound(
                 player.getLocation(),
                 soundName,
                 category != null ? category : "master",
                 volume,
-                pitch
+                (float) (440.0 * Math.pow(2.0, (pitch - 69) / 12.0))
         );
     }
 

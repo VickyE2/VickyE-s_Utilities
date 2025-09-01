@@ -9,22 +9,22 @@ import java.util.UUID;
 
 /**
  * @param instId       short instrument id, optional use
- * @param wave         0=sine,1=square,2=saw,3=triangle,4=noise
- * @param freqHz       frequency in Hz (or compute from midi)
+ * @param midiId       The key in the midi
+ * @param midiNote     THe Pitch
  * @param velocity     0..1
  * @param release      ADSR seconds (release used on noteOff)
  * @param sustainLoop  if true, client will hold sustain until NoteOff
  * @param vibratoDepth rate in Hz, depth in cents
  * @param uid          unique note id to match noteOff
  */
-public record NoteOnPacket(String instId, int[] midiId, float freqHz, float velocity, float attack, float decay,
+public record NoteOnPacket(String instId, int[] midiId, Integer midiNote, float velocity, float attack, float decay,
                            float sustain, float release, boolean sustainLoop, float vibratoRate, float vibratoDepth,
                            UUID uid) implements SynthPacket {
 
     public static void encode(NoteOnPacket pkt, FriendlyByteBuf buf) {
         buf.writeUtf(pkt.instId, 64);
         buf.writeVarIntArray(pkt.midiId);
-        buf.writeFloat(pkt.freqHz);
+        buf.writeVarInt(pkt.midiNote);
         buf.writeFloat(pkt.velocity);
         buf.writeFloat(pkt.attack);
         buf.writeFloat(pkt.decay);
@@ -44,7 +44,7 @@ public record NoteOnPacket(String instId, int[] midiId, float freqHz, float velo
     public static NoteOnPacket decode(FriendlyByteBuf buf) {
         String inst = buf.readUtf(64);
         int[] midiId = buf.readVarIntArray();
-        float f = buf.readFloat();
+        Integer midiNote = buf.readVarInt();
         float vel = buf.readFloat();
         float a = buf.readFloat();
         float d = buf.readFloat();
@@ -57,7 +57,7 @@ public record NoteOnPacket(String instId, int[] midiId, float freqHz, float velo
         if (buf.readBoolean()) {
             uid = buf.readUUID();
         }
-        return new NoteOnPacket(inst, midiId, f, vel, a, d, s, r, sl, vr, vd, uid);
+        return new NoteOnPacket(inst, midiId, midiNote, vel, a, d, s, r, sl, vr, vd, uid);
     }
 
     public static void handle(NoteOnPacket pkt, CustomPayloadEvent.Context ctx) {

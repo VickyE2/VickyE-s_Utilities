@@ -239,9 +239,9 @@ public class VickyUtilitiesForge implements PlatformPlugin {
                                 (236 * 9), 1),
                         symphony1Builder.ofScore(Sound.VIOLIN,
                                 "C+->@cello1,B+->@cello2,A+->@cello3,G+->@cello4,.->@instrujoin,[G,C+,G,D+,G,F+]*2,.->@dinstru,[G,A,G,C+,G,D]*2,.->@cinstru,A,B,C,.->@ginstru,B,C,D",
-                                (12 * 9), 0.8f),
+                                (12 * 9), 0.5f),
                         symphony1Builder.ofScore(Sound.BRASS, ".->@instrujoin,C-->@dinstru,D-->@cinstru,G--->@ginstru",
-                                (236 * 9), 0.9f)),
+                                (236 * 9), 0.5f)),
                         new String[]{"VickyE2"}, "BLUES", 0xBB004D)
         ));
 

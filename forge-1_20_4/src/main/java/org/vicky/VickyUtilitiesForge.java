@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 import org.vicky.forge.forgeplatform.*;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.forge.forgeplatform.useables.ForgeVec3;
+import org.vicky.forge.kotlin.forgeplatform.ForgeSynthSoundBackend;
 import org.vicky.forge.network.PacketHandler;
 import org.vicky.forge.utilities.ForgeModConfig;
 import org.vicky.music.MusicRegistry;

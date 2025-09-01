@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform
+package org.vicky.forge.kotlin.forgeplatform
 
 // package org.vicky.musicPlayer.audio
 
@@ -23,6 +23,7 @@ class ForgeSynthSoundBackend(
 ) : PlatformSoundBackend {
 
     override fun playNote(player: PlatformPlayer, event: MusicEvent): UUID? {
+        println("Trying to play note")
         // Only valid for actual server players; PlatformPlayer must expose a way to get server player.
         val serverPlayer = player.asServerPlayer().orElse(null) ?: return null
 

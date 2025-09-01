@@ -2,7 +2,6 @@ plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
-group = "org.vicky"
 version = "all-0.0.1-BETA"
 
 repositories {

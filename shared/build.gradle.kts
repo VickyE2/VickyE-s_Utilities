@@ -67,6 +67,8 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
     dependencies {
         exclude("org/eclipse/**")
         // exclude("module-info.class")
+        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib"))
+        exclude(dependency("org.jetbrains.kotlin:kotlin-reflect"))
         exclude(dependency("org.spongepowered:.*"))
         exclude(dependency("org.jetbrains:annotations"))
         exclude(dependency("com.google.code.gson:.*"))

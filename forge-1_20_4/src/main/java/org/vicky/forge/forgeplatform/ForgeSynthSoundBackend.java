@@ -6,6 +6,7 @@ import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.forge.network.PacketHandler;
 import org.vicky.forge.network.registeredpackets.NoteOffPacket;
 import org.vicky.forge.network.registeredpackets.NoteOnPacket;
+import org.vicky.music.utils.MusicBuilder;
 import org.vicky.music.utils.MusicEvent;
 import org.vicky.musicPlayer.DefaultAdsrMapper;
 import org.vicky.musicPlayer.PlatformSoundBackend;
@@ -13,10 +14,13 @@ import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.utils.SoundCategory;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 public class ForgeSynthSoundBackend implements PlatformSoundBackend {
+    private static final Map<UUID, MusicBuilder.NotePart> keys = new HashMap<>();
 
     @Override
     public UUID playNote(@NotNull PlatformPlayer player, @NotNull MusicEvent event) {
@@ -29,6 +33,13 @@ public class ForgeSynthSoundBackend implements PlatformSoundBackend {
 
         var adsr = DefaultAdsrMapper.INSTANCE.map(event);
         UUID uid = event.noteId();
+        if (keys.containsKey(uid) && event.part() == keys.get(uid)) {
+            return uid;
+        } else if (keys.get(uid) == MusicBuilder.NotePart.IN && event.part() == MusicBuilder.NotePart.MAIN) {
+            stopNote(player, uid);
+        } else {
+            keys.put(uid, event.part());
+        }
 
         // map wave choice
         int[] midiId = event.sound() != null ? InstrumentMapper.getBankAndProgram(event.sound()) : new int[]{0, 0};
@@ -65,6 +76,7 @@ public class ForgeSynthSoundBackend implements PlatformSoundBackend {
             return;
         }
 
+        keys.remove(uid);
         NoteOffPacket off = new NoteOffPacket(uid);
         PacketHandler.sendToClient(serverPlayer.getHandle(), off);
     }

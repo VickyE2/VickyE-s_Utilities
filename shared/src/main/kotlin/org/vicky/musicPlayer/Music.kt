@@ -141,42 +141,26 @@ object MusicPlayer {
         for ((tickOffset, events) in arrangedEvents) {
             PlatformPlugin.scheduler().runScheduled(Runnable {
                 for (event in events) {
-                    // --- NEW: use SoundBackend ---
-                    val logical = event.noteId
                     val key = NoteKey(player.uniqueId(), event.sound?.name ?: "unknown", event.pitch, event.volume)
-                    when (event.part) {
-                        MusicBuilder.NotePart.IN -> {
-                            // short attack-like sound
-                            val uid = PlatformPlugin.soundBackend().playNote(player, event)
-                            // store for potential OUT if it becomes sustained
-                            if (uid != null) noteUidMap[key] = uid
-                        }
+                    if (event.part != null) {
+                        when (event.part) {
+                            MusicBuilder.NotePart.OUT -> {
+                                // find previously started uid and stop it
+                                val uid = noteUidMap.remove(key)
+                                if (uid != null) PlatformPlugin.soundBackend().stopNote(player, uid)
+                                else {
+                                    val name = resolveCustomSound(event)
+                                    PlatformPlugin.soundBackend()
+                                        .playNamed(player, name, event.category, event.volume, event.pitch)
+                                }
+                            }
 
-                        MusicBuilder.NotePart.MAIN -> {
-                            // primary sustain: start synth with sustain loop (mapper sets sustainLoop true)
-                            val uid = PlatformPlugin.soundBackend().playNote(player, event)
-                            if (uid != null) noteUidMap[key] = uid
-                        }
-
-                        MusicBuilder.NotePart.OUT -> {
-                            // find previously started uid and stop it
-                            val uid = noteUidMap.remove(key)
-                            if (uid != null) PlatformPlugin.soundBackend().stopNote(player, uid)
-                            else {
-                                // fallback: play the "out" sample as named sound for vanilla behavior
-                                val name = resolveCustomSound(event)
-                                PlatformPlugin.soundBackend()
-                                    .playNamed(player, name, event.category, event.volume, event.pitch)
+                            else -> {
+                                val uid = PlatformPlugin.soundBackend().playNote(player, event)
+                                if (uid != null) noteUidMap[key] = uid
                             }
                         }
-
-                        else -> {
-                            // Unknown part: fallback to legacy single-shot named sound
-                            val name = resolveCustomSound(event)
-                            PlatformPlugin.soundBackend()
-                                .playNamed(player, name, event.category, event.volume, event.pitch)
-                        }
-                    }
+                    } else PlatformPlugin.soundBackend().playNote(player, event)
                 }
             }, tickOffset)
         }
@@ -278,7 +262,26 @@ object MusicPlayer {
         val events = state.tickEvents[state.tick.toLong()] ?: return
         events.forEach { event ->
             log(player, "volume: ${event.volume}")
-            player.playSound(player.location, resolveCustomSound(event), event.category, event.volume, 1f)
+            val key = NoteKey(player.uniqueId(), event.sound?.name ?: "unknown", event.pitch, event.volume)
+            if (event.part != null) {
+                when (event.part) {
+                    MusicBuilder.NotePart.OUT -> {
+                        // find previously started uid and stop it
+                        val uid = noteUidMap.remove(key)
+                        if (uid != null) PlatformPlugin.soundBackend().stopNote(player, uid)
+                        else {
+                            val name = resolveCustomSound(event)
+                            PlatformPlugin.soundBackend()
+                                .playNamed(player, name, event.category, event.volume, event.pitch)
+                        }
+                    }
+
+                    else -> {
+                        val uid = PlatformPlugin.soundBackend().playNote(player, event)
+                        if (uid != null) noteUidMap[key] = uid
+                    }
+                }
+            } else PlatformPlugin.soundBackend().playNote(player, event)
         }
     }
 

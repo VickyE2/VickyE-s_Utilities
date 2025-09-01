@@ -1,7 +1,8 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.bukkitplatform.useables;
 
-import net.kyori.adventure.text.Component;
+import java.util.UUID;
+
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -9,7 +10,7 @@ import org.vicky.platform.PlatformBossBar;
 import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.world.PlatformLocation;
 
-import java.util.UUID;
+import net.kyori.adventure.text.Component;
 
 public class BukkitPlatformPlayer implements PlatformPlayer {
 

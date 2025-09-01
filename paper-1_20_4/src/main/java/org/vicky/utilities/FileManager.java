@@ -1,9 +1,6 @@
 /* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.utilities;
 
-import org.bukkit.plugin.java.JavaPlugin;
-import org.vicky.utilities.ContextLogger.ContextLogger;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -13,6 +10,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
+import org.bukkit.plugin.java.JavaPlugin;
+import org.vicky.utilities.ContextLogger.ContextLogger;
 
 public class FileManager {
 

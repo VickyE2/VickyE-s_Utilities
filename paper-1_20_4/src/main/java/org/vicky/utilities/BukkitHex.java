@@ -1,12 +1,12 @@
 /* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.utilities;
 
-import org.bukkit.ChatColor;
-
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import org.bukkit.ChatColor;
 
 /**
  * This is a helper class for making strings enriched with Bukkit color codes
@@ -361,8 +361,8 @@ public class BukkitHex {
             String hexColor = interpolateColor(startColor, endColor, ratio);
             String ansiColor = HexGenerator.of(hexColor);
             sb.append(ansiColor).append(text.charAt(i));
-        }
-        sb.append(RESET);
+		}
+		sb.append(RESET);
 		return sb.toString();
     }
 

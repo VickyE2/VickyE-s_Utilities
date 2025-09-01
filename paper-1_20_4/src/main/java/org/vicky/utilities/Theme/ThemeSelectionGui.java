@@ -12,13 +12,13 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.vicky.guiparent.BaseGui;
 import org.vicky.guiparent.ButtonAction;
 import org.vicky.guiparent.GuiCreator;
+import org.vicky.shaded.jakarta.persistence.NoResultException;
 import org.vicky.utilities.DatabaseManager.dao_s.DatabasePlayerDAO;
 import org.vicky.utilities.DatabaseManager.dao_s.ThemeDAO;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
 import org.vicky.utilities.DatabaseManager.templates.Theme;
 import org.vicky.utilities.SmallCapsConverter;
 
-import jakarta.persistence.NoResultException;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;

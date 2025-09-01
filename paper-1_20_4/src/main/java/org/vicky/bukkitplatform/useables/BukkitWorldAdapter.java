@@ -1,7 +1,9 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.bukkitplatform.useables;
 
-import de.pauleff.api.ICompoundTag;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -12,8 +14,7 @@ import org.vicky.platform.world.PlatformBlock;
 import org.vicky.platform.world.PlatformBlockState;
 import org.vicky.platform.world.PlatformWorld;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import de.pauleff.api.ICompoundTag;
 
 public class BukkitWorldAdapter implements PlatformWorld<BlockData, World> {
 	private final World world;

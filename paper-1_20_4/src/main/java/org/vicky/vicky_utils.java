@@ -1,14 +1,20 @@
 /* Licensed under Apache-2.0 2024-2025. */
 package org.vicky;
 
-import dev.jorel.commandapi.CommandAPICommand;
-import dev.jorel.commandapi.CommandPermission;
-import dev.jorel.commandapi.arguments.ArgumentSuggestions;
-import dev.jorel.commandapi.arguments.EntitySelectorArgument;
-import dev.jorel.commandapi.arguments.IntegerArgument;
-import dev.jorel.commandapi.arguments.StringArgument;
-import jakarta.persistence.EntityManager;
-import net.luckperms.api.LuckPerms;
+import static org.vicky.global.Global.*;
+import static org.vicky.kotlinUtils.UtilsKt.mortalise;
+import static org.vicky.utilities.DatabaseManager.SQLManager.generator;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.stream.Collectors;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;
@@ -40,10 +46,12 @@ import org.vicky.music.MusicRegistry;
 import org.vicky.music.utils.MusicBuilder;
 import org.vicky.music.utils.MusicPiece;
 import org.vicky.music.utils.Sound;
+import org.vicky.musicPlayer.PlatformSoundBackend;
 import org.vicky.mythic.MythicRegistrar;
 import org.vicky.platform.*;
 import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
+import org.vicky.shaded.jakarta.persistence.EntityManager;
 import org.vicky.utilities.*;
 import org.vicky.utilities.ContextLogger.ContextLogger;
 import org.vicky.utilities.DatabaseManager.HibernateDatabaseManager;
@@ -57,19 +65,13 @@ import org.vicky.utilities.Theme.ThemeSelectionGuiListener;
 import org.vicky.utilities.Theme.ThemeStorer;
 import org.vicky.utilities.Theme.ThemeUnzipper;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.*;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-import java.util.stream.Collectors;
-
-import static org.vicky.global.Global.*;
-import static org.vicky.kotlinUtils.UtilsKt.mortalise;
-import static org.vicky.utilities.DatabaseManager.SQLManager.generator;
+import dev.jorel.commandapi.CommandAPICommand;
+import dev.jorel.commandapi.CommandPermission;
+import dev.jorel.commandapi.arguments.ArgumentSuggestions;
+import dev.jorel.commandapi.arguments.EntitySelectorArgument;
+import dev.jorel.commandapi.arguments.IntegerArgument;
+import dev.jorel.commandapi.arguments.StringArgument;
+import net.luckperms.api.LuckPerms;
 
 @SuppressWarnings({"deprecation", "UnstableApiUsage"})
 public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
@@ -640,7 +642,12 @@ public final class vicky_utils extends JavaPlugin implements PlatformPlugin {
 
 	@Override
 	public PlatformEventFactory getEventFactory() {
-		return null;
+		return new BukkitEventFactory();
+	}
+
+	@Override
+	public PlatformSoundBackend getSoundBackend() {
+		return new BukkitSoundBackend();
 	}
 
 	@Override

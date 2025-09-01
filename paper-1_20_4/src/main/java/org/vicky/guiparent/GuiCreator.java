@@ -1,18 +1,15 @@
 /* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.guiparent;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import dev.lone.LoneLibs.nbt.nbtapi.NBT;
-import dev.lone.LoneLibs.nbt.nbtapi.NBTCompound;
-import dev.lone.LoneLibs.nbt.nbtapi.NBTItem;
-import dev.lone.itemsadder.api.CustomStack;
-import dev.lone.itemsadder.api.FontImages.FontImageWrapper;
-import dev.lone.itemsadder.api.FontImages.TexturedInventoryWrapper;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.wesjd.anvilgui.AnvilGUI;
+import static org.vicky.utilities.FileManager.getCallerFrame;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -38,14 +35,19 @@ import org.vicky.utilities.Denoations.UnstableRecommended;
 import org.vicky.utilities.PermittedObject;
 import org.vicky.utilities.TriFunction;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
-import static org.vicky.utilities.FileManager.getCallerFrame;
+import dev.lone.LoneLibs.nbt.nbtapi.NBT;
+import dev.lone.LoneLibs.nbt.nbtapi.NBTCompound;
+import dev.lone.LoneLibs.nbt.nbtapi.NBTItem;
+import dev.lone.itemsadder.api.CustomStack;
+import dev.lone.itemsadder.api.FontImages.FontImageWrapper;
+import dev.lone.itemsadder.api.FontImages.TexturedInventoryWrapper;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.wesjd.anvilgui.AnvilGUI;
 
 /**
  * GuiCreator is a utility class responsible for creating and opening both GUI
@@ -464,7 +466,7 @@ public class GuiCreator {
 	 *            positions, names, lore, etc.).
 	 */
 	public void simple(Player player, int height, int width, String title, boolean textured, String textureKey,
-					   int offset, ItemConfig... itemConfigs) {
+                       int offset, ItemConfig... itemConfigs) {
 
 		if (height < 1 || width < 1 || width > 9) {
 			if (player.isOp()) {
@@ -563,8 +565,8 @@ public class GuiCreator {
 	 *            The vertical texture offset.
 	 */
 	public void paginated(Player player, int height, ArrowGap spacing, List<GuiCreator.ItemConfig> mainItems,
-						  List<GuiCreator.ItemConfig> pageItems, String slotRangeStr, int page, int itemsPerPage, String title,
-						  boolean maintainPersistentButtons, boolean textured, String textureKey, int offset) {
+                          List<GuiCreator.ItemConfig> pageItems, String slotRangeStr, int page, int itemsPerPage, String title,
+                          boolean maintainPersistentButtons, boolean textured, String textureKey, int offset) {
 		paginated(player, height, spacing, mainItems, pageItems, slotRangeStr, page, itemsPerPage, title,
 				maintainPersistentButtons, textured, textureKey, offset, false);
 	}
@@ -606,9 +608,9 @@ public class GuiCreator {
 	 *            the player. <b>Undergoing serious development and tweaking :O</b>
 	 */
 	public void paginated(Player player, int height, ArrowGap spacing, List<GuiCreator.ItemConfig> mainItems,
-						  List<GuiCreator.ItemConfig> pageItems, String slotRangeStr, int page, int itemsPerPage, String title,
-						  boolean maintainPersistentButtons, boolean textured, String textureKey, int offset,
-						  @UnstableRecommended(reason = "Undergoing serious development and tweaking") boolean fluent) {
+                          List<GuiCreator.ItemConfig> pageItems, String slotRangeStr, int page, int itemsPerPage, String title,
+                          boolean maintainPersistentButtons, boolean textured, String textureKey, int offset,
+                          @UnstableRecommended(reason = "Undergoing serious development and tweaking") boolean fluent) {
 
 		Optional<DatabasePlayer> opt = new DatabasePlayerDAO().findById(player.getUniqueId());
 		if (opt.isEmpty()) {
@@ -783,8 +785,8 @@ public class GuiCreator {
 	 *            the vertical texture offset.
 	 */
 	public void paginated(Player player, int height, int page, ArrowGap spacing, List<ItemConfig> mainItems,
-						  List<ItemConfigClass> classes, int itemsPerPage, String title, boolean maintainPersistentButtons,
-						  boolean textured, String textureKey, int offset) {
+                          List<ItemConfigClass> classes, int itemsPerPage, String title, boolean maintainPersistentButtons,
+                          boolean textured, String textureKey, int offset) {
 
 		Optional<DatabasePlayer> opt = new DatabasePlayerDAO().findById(player.getUniqueId());
 		if (opt.isEmpty()) {
@@ -952,10 +954,10 @@ public class GuiCreator {
 	 *            GUI's behavior upon a click.
 	 */
 	public void anvil(Player player, String initialText, boolean textured, String textureKey, int offset,
-					  @NotNull ItemConfig leftItemConfig, ItemConfig rightItemConfig, ItemConfig outputItemConfig, String title,
-					  boolean canClickLeft, boolean canClickRight,
-					  @NotNull TriFunction<Player, AnvilGUI.StateSnapshot, Integer, List<AnvilGUI.ResponseAction>> completionAction,
-					  @NotNull Consumer<AnvilGUI.StateSnapshot> onCLose) {
+                      @NotNull ItemConfig leftItemConfig, ItemConfig rightItemConfig, ItemConfig outputItemConfig, String title,
+                      boolean canClickLeft, boolean canClickRight,
+                      @NotNull TriFunction<Player, AnvilGUI.StateSnapshot, Integer, List<AnvilGUI.ResponseAction>> completionAction,
+                      @NotNull Consumer<AnvilGUI.StateSnapshot> onCLose) {
 		ItemStack leftItem = null;
 		ItemStack rightItem = null;
 		ItemStack outputItem = null;
@@ -1009,7 +1011,7 @@ public class GuiCreator {
 	 * buttons and arrow buttons intact.
 	 */
 	private void renderScrollableWindow(Plugin plugin, Inventory inventory, List<GuiCreator.ItemConfig> itemsSource,
-										List<Integer> allowedSlots) {
+                                        List<Integer> allowedSlots) {
 		// ensure we run on main thread
 		Bukkit.getScheduler().runTask(plugin, () -> {
 			if (inventory == null)
@@ -1067,13 +1069,13 @@ public class GuiCreator {
 	 * calls renderScrollableWindow.
 	 */
 	public void scrollable(Player player, Plugin plugin, int height, ArrowGap spacing,
-						   List<GuiCreator.ItemConfig> mainItems, List<GuiCreator.ItemConfig> itemsSource, String slotRangeStr, // optional:
-						   // if
-						   // null
-						   // ->
-						   // derive
-						   int initialOffset, ScrollOrientation orientation, ArrowBarMode arrowMode, String title,
-						   boolean maintainPersistentButtons, boolean textured, String textureKey, int offsetTexture) {
+                           List<GuiCreator.ItemConfig> mainItems, List<GuiCreator.ItemConfig> itemsSource, String slotRangeStr, // optional:
+                           // if
+                           // null
+                           // ->
+                           // derive
+                           int initialOffset, ScrollOrientation orientation, ArrowBarMode arrowMode, String title,
+                           boolean maintainPersistentButtons, boolean textured, String textureKey, int offsetTexture) {
 
 		// derive allowedSlots (fall back to deriveContentSlots if slotRangeStr
 		// null/blank)
@@ -1570,10 +1572,10 @@ public class GuiCreator {
 		 */
 		@Deprecated
 		public ItemConfig(@NotNull Material material, String name, @Nullable Rarity rarity, String slotRange,
-						  boolean clickable, Integer customModelData, String itemsAdderName, @NotNull List<String> lore,
-						  @Nullable Map<String, Object> nbtData, ButtonAction<?> buttonAction, @Nullable OfflinePlayer headOwner,
-						  PotionData basePotionData, List<PotionEffect> customPotionEffects, Color potionColor,
-						  boolean hasEnchantmentEffect, Function<ItemMeta, Void> itemMetaFunction) {
+                          boolean clickable, Integer customModelData, String itemsAdderName, @NotNull List<String> lore,
+                          @Nullable Map<String, Object> nbtData, ButtonAction<?> buttonAction, @Nullable OfflinePlayer headOwner,
+                          PotionData basePotionData, List<PotionEffect> customPotionEffects, Color potionColor,
+                          boolean hasEnchantmentEffect, Function<ItemMeta, Void> itemMetaFunction) {
 			this.material = material;
 			this.name = name;
 			this.rarity = rarity;

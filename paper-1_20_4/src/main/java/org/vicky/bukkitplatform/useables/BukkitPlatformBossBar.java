@@ -1,8 +1,8 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.bukkitplatform.useables;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import static org.vicky.bukkitplatform.useables.BukkitBossBarDescriptor.mapToBarStyle;
+
 import org.bukkit.boss.BossBar;
 import org.vicky.bukkitplatform.BukkitBossBarFactory;
 import org.vicky.platform.IColor;
@@ -11,7 +11,8 @@ import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.defaults.BossBarOverlay;
 import org.vicky.platform.utils.BossBarDescriptor;
 
-import static org.vicky.bukkitplatform.useables.BukkitBossBarDescriptor.mapToBarStyle;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 public class BukkitPlatformBossBar implements PlatformBossBar {
 	private final BossBar bar;

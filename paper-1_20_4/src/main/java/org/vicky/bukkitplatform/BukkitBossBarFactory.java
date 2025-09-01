@@ -1,8 +1,10 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.bukkitplatform;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import static org.vicky.bukkitplatform.useables.BukkitBossBarDescriptor.*;
+
+import java.lang.reflect.Method;
+
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -16,9 +18,8 @@ import org.vicky.platform.PlatformBossBarFactory;
 import org.vicky.platform.defaults.BossBarOverlay;
 import org.vicky.platform.utils.BossBarDescriptor;
 
-import java.lang.reflect.Method;
-
-import static org.vicky.bukkitplatform.useables.BukkitBossBarDescriptor.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 public class BukkitBossBarFactory implements PlatformBossBarFactory {
     public static BarColor adaptColor(IColor color) {

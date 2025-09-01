@@ -1,12 +1,12 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.bukkitplatform.useables;
 
+import java.util.Map;
+
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.vicky.platform.world.PlatformBlockState;
 import org.vicky.platform.world.PlatformMaterial;
-
-import java.util.Map;
 
 public class BukkitBlockState implements PlatformBlockState<BlockData> {
 

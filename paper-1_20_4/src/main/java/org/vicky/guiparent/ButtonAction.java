@@ -1,18 +1,7 @@
 /* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.guiparent;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.java.JavaPlugin;
-import org.vicky.ecosystem.utils.ItemSerializer;
-import org.vicky.guiparent.subGui.PagedGui;
-import org.vicky.listeners.BaseGuiListener;
+import static org.vicky.guiparent.GuiCreator.parseSlots;
 
 import java.lang.reflect.Constructor;
 import java.util.List;
@@ -26,7 +15,19 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static org.vicky.guiparent.GuiCreator.parseSlots;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.vicky.ecosystem.utils.ItemSerializer;
+import org.vicky.guiparent.subGui.PagedGui;
+import org.vicky.listeners.BaseGuiListener;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 
 /**
  * ButtonAction represents an action that can be triggered by a GUI button.
@@ -97,8 +98,8 @@ public class ButtonAction<T> {
 
 	/**
 	 * Constructs a ButtonAction with an action type, action data, and closeGui
-     * flag.
-     *
+	 * flag.
+	 *
      * @param actionType
      *            The type of action.
      * @param actionData

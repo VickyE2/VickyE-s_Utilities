@@ -1,6 +1,11 @@
 /* Licensed under Apache-2.0 2024-2025. */
 package org.vicky.guiparent;
 
+import static org.vicky.guiparent.GuiCreator.createItem;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -8,11 +13,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.vicky.listeners.BaseGuiListener;
-
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-
-import static org.vicky.guiparent.GuiCreator.createItem;
 
 /**
  * BaseGui is an abstract class providing the core functionality for creating
@@ -52,7 +52,7 @@ public abstract class BaseGui {
         guiType = type;
 
 		// Register the listener for GUI actions
-        plugin.getServer().getPluginManager().registerEvents(this.listener, plugin);
+		plugin.getServer().getPluginManager().registerEvents(this.listener, plugin);
     }
 
     public BaseGui(JavaPlugin plugin, BaseGuiListener listener) {

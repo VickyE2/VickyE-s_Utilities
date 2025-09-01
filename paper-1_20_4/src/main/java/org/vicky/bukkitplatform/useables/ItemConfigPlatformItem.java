@@ -1,10 +1,10 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.bukkitplatform.useables;
 
+import java.util.UUID;
+
 import org.vicky.guiparent.GuiCreator;
 import org.vicky.platform.PlatformItem;
-
-import java.util.UUID;
 
 public class ItemConfigPlatformItem implements PlatformItem {
 

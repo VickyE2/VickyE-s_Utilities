@@ -1,8 +1,10 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.bukkitplatform.useables;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Map;
+
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -12,9 +14,8 @@ import org.vicky.platform.IColor;
 import org.vicky.platform.defaults.BossBarOverlay;
 import org.vicky.platform.utils.BossBarDescriptor;
 
-import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.Map;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 /**
  * Bukkit-specific extension of BossBarDescriptor that can convert itself into
@@ -283,7 +284,7 @@ public class BukkitBossBarDescriptor extends BossBarDescriptor {
             return (BukkitBossBarDescriptor) c;
         // otherwise, create a new instance preserving data
         BukkitBossBarDescriptor d = new BukkitBossBarDescriptor(c.getTitle(), c.getSubTitle(), c.getProgress(),
-                c.getColor(), c.getOverlay(), c.getContext(), c.getInformation());
+				c.getColor(), c.getOverlay(), c.getContext(), c.getInformation());
 		return d;
 	}
 }

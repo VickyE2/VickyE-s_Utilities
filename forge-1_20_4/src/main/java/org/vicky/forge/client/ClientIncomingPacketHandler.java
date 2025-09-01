@@ -6,10 +6,10 @@ import net.minecraftforge.event.network.CustomPayloadEvent;
 import org.vicky.forge.client.screen.SimpleMusicSliderBossBar;
 import org.vicky.forge.client.screen.SongLibraryScreen;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
-import org.vicky.forge.network.packets.CreateSSBossBar;
-import org.vicky.forge.network.packets.OpenOwnedRecordsScreen;
-import org.vicky.forge.network.packets.RemoveSSBossBar;
-import org.vicky.forge.network.packets.UpdateSSBossBar;
+import org.vicky.forge.network.registeredpackets.CreateSSBossBar;
+import org.vicky.forge.network.registeredpackets.OpenOwnedRecordsScreen;
+import org.vicky.forge.network.registeredpackets.RemoveSSBossBar;
+import org.vicky.forge.network.registeredpackets.UpdateSSBossBar;
 
 import java.util.HashMap;
 import java.util.Map;

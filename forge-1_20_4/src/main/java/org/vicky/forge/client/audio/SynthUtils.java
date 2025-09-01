@@ -4,7 +4,6 @@ package org.vicky.forge.client.audio;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.openal.AL10;
-import org.vicky.forge.network.packets.NoteOnPacket;
 
 import java.nio.ShortBuffer;
 import java.util.Random;
@@ -84,11 +83,6 @@ public final class SynthUtils {
         return out;
     }
 
-    public static short[] synthFragment(NoteOnPacket spec, int fragmentSamples, int sampleRate) {
-        // convenience - not shown; similar to synthFull but creates a fixed-length fragment
-        return synthFragment(spec.wave(), spec.freqHz(), fragmentSamples, sampleRate, spec.velocity(), spec.attack(), spec.decay(), spec.sustain(), spec.release(), spec.vibratoRate(), spec.vibratoDepth());
-    }
-
     public static short[] synthFragment(byte wave, double freqHz, int fragmentSamples, int sampleRate, double velocity,
                                         double a, double d, double s, double r, double vibratoRate, double vibratoDepth) {
         // render a short looped fragment representing the sustain region (optionally applying partial ADS)
@@ -107,6 +101,10 @@ public final class SynthUtils {
         sb.flip();
         int buf = AL10.alGenBuffers();
         AL10.alBufferData(buf, AL10.AL_FORMAT_MONO16, sb, sampleRate);
+        int err = AL10.alGetError();
+        if (err != AL10.AL_NO_ERROR) {
+            System.err.println("[AL ERROR] alBufferData error " + err);
+        }
         return buf;
     }
 

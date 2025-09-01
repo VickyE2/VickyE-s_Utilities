@@ -7,7 +7,7 @@ import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.SimpleChannel;
 import org.vicky.VickyUtilitiesForge;
-import org.vicky.forge.network.packets.*;
+import org.vicky.forge.network.registeredpackets.*;
 
 public class PacketHandler {
     private static final int PROTOCOL_VERSION = 1;
@@ -26,6 +26,7 @@ public class PacketHandler {
             .simpleChannel();
 
     private static int packetId = 0;
+    private static int synthPacketId = 0;
 
     public static void register() {
         INSTANCE.messageBuilder(CreateSSBossBar.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
@@ -53,27 +54,28 @@ public class PacketHandler {
                 .decoder(PlaySpecifyableSong::decode)
                 .consumerMainThread(PlaySpecifyableSong::handle)
                 .add();
-        SYNTH_CHANNEL.messageBuilder(NoteOnPacket.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+        SYNTH_CHANNEL.messageBuilder(NoteOnPacket.class, synthPacketId++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(NoteOnPacket::encode)
                 .decoder(NoteOnPacket::decode)
                 .consumerMainThread(NoteOnPacket::handle)
                 .add();
-        SYNTH_CHANNEL.messageBuilder(NoteOffPacket.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+        SYNTH_CHANNEL.messageBuilder(NoteOffPacket.class, synthPacketId++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(NoteOffPacket::encode)
                 .decoder(NoteOffPacket::decode)
                 .consumerMainThread(NoteOffPacket::handle)
                 .add();
     }
 
-    public static void sendToServer(Object packet) {
+    public static void sendToServer(Packetable packet) {
         INSTANCE.send(packet, PacketDistributor.SERVER.noArg());
     }
 
-    public static void sendToClient(ServerPlayer player, Object packet) {
-        INSTANCE.send(packet, PacketDistributor.PLAYER.with(player));
+    public static void sendToClient(ServerPlayer player, Packetable packet) {
+        // System.out.println("SynthPacket.class loader = " + org.vicky.forge.network.SynthPacket.class.getClassLoader());
+        packet.channel().send(packet, PacketDistributor.PLAYER.with(player));
     }
 
-    public static void sendToAllClient(Object packet) {
+    public static void sendToAllClient(Packetable packet) {
         INSTANCE.send(packet, PacketDistributor.ALL.noArg());
     }
 }

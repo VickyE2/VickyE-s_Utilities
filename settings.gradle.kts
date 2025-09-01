@@ -5,7 +5,7 @@
  */
 
 rootProject.name = "v-utls"
-include("forge-1_20_4")
+include(":forge-1_20_4")
 
 pluginManagement {
     repositories {

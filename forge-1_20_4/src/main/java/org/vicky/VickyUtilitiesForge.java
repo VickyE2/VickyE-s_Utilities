@@ -34,15 +34,11 @@ import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
-import org.lwjgl.openal.AL;
-import org.lwjgl.openal.ALC;
-import org.lwjgl.openal.ALC10;
-import org.lwjgl.openal.ALCCapabilities;
 import org.slf4j.Logger;
+import org.vicky.forge.client.audio.MidiSynthManager;
 import org.vicky.forge.forgeplatform.*;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.forge.forgeplatform.useables.ForgeVec3;
-import org.vicky.forge.kotlin.forgeplatform.ForgeSynthSoundBackend;
 import org.vicky.forge.network.PacketHandler;
 import org.vicky.forge.utilities.ForgeModConfig;
 import org.vicky.music.MusicRegistry;
@@ -66,8 +62,6 @@ import org.vicky.utilities.DatabaseTemplate;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -142,25 +136,14 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     }
 
     private void clientSetup(final FMLClientSetupEvent event) {
-        device = ALC10.alcOpenDevice((ByteBuffer) null);
-        if (device == 0L) {
-            throw new IllegalStateException("Failed to open default audio device.");
+        try {
+            MidiSynthManager.createInstance(Minecraft.getInstance().getResourceManager());
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                MidiSynthManager.getInstance().close();
+            }));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-
-        ALCCapabilities deviceCaps = ALC.createCapabilities(device);
-
-        context = ALC10.alcCreateContext(device, (IntBuffer) null);
-        if (context == 0L) {
-            ALC10.alcCloseDevice(device);
-            throw new IllegalStateException("Failed to create OpenAL context.");
-        }
-
-        ALC10.alcMakeContextCurrent(context);
-        AL.createCapabilities(deviceCaps);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            ALC10.alcDestroyContext(context);
-            ALC10.alcCloseDevice(device);
-        }));
     }
 
     // Add the example block item to the building blocks tab
@@ -324,7 +307,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
     @Override
     public PlatformSoundBackend getSoundBackend() {
-        return new ForgeSynthSoundBackend(PacketHandler::sendToClient);
+        return new ForgeSynthSoundBackend();
     }
 
     @Override

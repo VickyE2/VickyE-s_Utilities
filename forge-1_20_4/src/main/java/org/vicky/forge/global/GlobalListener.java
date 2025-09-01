@@ -14,7 +14,7 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.vicky.forge.network.PacketHandler;
-import org.vicky.forge.network.packets.OpenOwnedRecordsScreen;
+import org.vicky.forge.network.registeredpackets.OpenOwnedRecordsScreen;
 import org.vicky.utilities.DatabaseManager.dao_s.DatabasePlayerDAO;
 import org.vicky.utilities.DatabaseManager.dao_s.MusicPieceDAO;
 import org.vicky.utilities.DatabaseManager.dao_s.MusicPlayerDAO;

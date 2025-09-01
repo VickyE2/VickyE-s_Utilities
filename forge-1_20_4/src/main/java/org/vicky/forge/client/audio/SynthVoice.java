@@ -22,10 +22,12 @@ public class SynthVoice {
         source = AL10.alGenSources();
     }
 
+    // inside SynthVoice
     public void playBufferLoop(int bufferId) {
         stopIfPlaying();
         AL10.alSourcei(source, AL10.AL_BUFFER, bufferId);
         AL10.alSourcei(source, AL10.AL_LOOPING, AL10.AL_TRUE);
+        AL10.alSourcef(source, AL10.AL_GAIN, (float) Math.max(0.0, Math.min(1.0, velocity))); // apply velocity->gain
         AL10.alSourcePlay(source);
         looping = true;
         cachedBufferId = bufferId;
@@ -35,10 +37,12 @@ public class SynthVoice {
         stopIfPlaying();
         AL10.alSourcei(source, AL10.AL_BUFFER, bufferId);
         AL10.alSourcei(source, AL10.AL_LOOPING, AL10.AL_FALSE);
+        AL10.alSourcef(source, AL10.AL_GAIN, (float) Math.max(0.0, Math.min(1.0, velocity))); // apply gain
         AL10.alSourcePlay(source);
         looping = false;
         cachedBufferId = bufferId;
     }
+
 
     public boolean isLooping() {
         return looping;

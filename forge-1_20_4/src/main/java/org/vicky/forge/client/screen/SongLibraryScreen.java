@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import org.vicky.forge.client.Theme;
 import org.vicky.forge.music.SongEntry;
 import org.vicky.forge.network.PacketHandler;
-import org.vicky.forge.network.packets.PlaySpecifyableSong;
+import org.vicky.forge.network.registeredpackets.PlaySpecifyableSong;
 
 import java.util.List;
 

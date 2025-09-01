@@ -23,7 +23,6 @@ import org.vicky.utilities.DatabaseManager.dao_s.MusicPlayerDAO
 import java.util.*
 import java.util.function.Consumer
 import kotlin.math.abs
-import kotlin.math.pow
 
 object MusicPlayer {
     private val playerStates = mutableMapOf<UUID, PlayerState>()
@@ -44,12 +43,6 @@ object MusicPlayer {
                 }
                 put(key, midi)
             }
-        }
-    }
-    val NOTE_TO_PITCH: Map<String, Float> = buildMap {
-        for ((k, midi) in NOTE_TO_MIDI) {
-            val multiplier = 2.0.pow((midi - 69) / 12.0).toFloat()
-            put(k, multiplier)
         }
     }
 
@@ -190,7 +183,7 @@ object MusicPlayer {
     }
 
     private fun resolvePitchName(pitch: Int): String {
-        return NOTE_TO_PITCH
+        return NOTE_TO_MIDI
             .entries
             .associate { it.value to it.key } // Flip to Map<Float, String>
             .minByOrNull { abs(it.key - pitch) } // Compare keys (the pitch floats)

@@ -31,17 +31,25 @@ object MusicPlayer {
     // Java-style static map for reverse lookup (pitch → name)
     private val NOTE_ORDER = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
     private val OCTAVE_SHIFTS = mapOf("--" to 2, "-" to 3, "" to 4, "+" to 5, "++" to 6)
-    private val NOTE_TO_PITCH: Map<String, Float> = buildMap {
+    val NOTE_TO_MIDI: Map<String, Int> = buildMap {
         for ((octaveSuffix, octave) in OCTAVE_SHIFTS) {
             for ((index, noteName) in NOTE_ORDER.withIndex()) {
-                val semitoneIndex = (octave * 12) + index
-                val halfStepsFromA4 = semitoneIndex - 57 // A4 = 57
-                val pitch = 2.0.pow(halfStepsFromA4 / 12.0).toFloat()
-                if (noteName.length > 1 || noteName.contains("#"))
-                    put(noteName[0] + octaveSuffix + noteName[1], pitch)
-                else
-                    put(noteName + octaveSuffix, pitch)
+                val midi = octave * 12 + index
+                val key = if (noteName.length > 1) {
+                    // noteName like "C#": build "C{suffix}#"
+                    "${noteName[0]}$octaveSuffix${noteName[1]}"
+                } else {
+                    // noteName like "C": build "C{suffix}"
+                    "${noteName}$octaveSuffix"
+                }
+                put(key, midi)
             }
+        }
+    }
+    val NOTE_TO_PITCH: Map<String, Float> = buildMap {
+        for ((k, midi) in NOTE_TO_MIDI) {
+            val multiplier = 2.0.pow((midi - 69) / 12.0).toFloat()
+            put(k, multiplier)
         }
     }
 
@@ -181,7 +189,7 @@ object MusicPlayer {
         return "vicky_music:vicky_note_${instrument}_${pitchName.lowercase()}$partSuffix"
     }
 
-    private fun resolvePitchName(pitch: Float): String {
+    private fun resolvePitchName(pitch: Int): String {
         return NOTE_TO_PITCH
             .entries
             .associate { it.value to it.key } // Flip to Map<Float, String>
@@ -359,14 +367,14 @@ interface PlatformSoundBackend {
      * Fallback to play an already-resolved sound name (useful for Bukkit/playSound usage).
      * Delegates to player.playSound or equivalent.
      */
-    fun playNamed(player: PlatformPlayer, soundName: String, category: SoundCategory?, volume: Float, pitch: Float)
+    fun playNamed(player: PlatformPlayer, soundName: String, category: SoundCategory?, volume: Float, pitch: Int)
 }
 
 /**
  * Key used to correlate IN/MAIN -> OUT events when MusicEvent doesn't provide a unique id.
  * You can extend with more fields if your MusicEvent has a channel/voice id.
  */
-data class NoteKey(val playerId: UUID, val instrument: String, val pitch: Float, val volume: Float)
+data class NoteKey(val playerId: UUID, val instrument: String, val pitch: Int, val volume: Float)
 
 data class ADSR(val a: Float, val d: Float, val s: Float, val r: Float, val sustainLoop: Boolean = false)
 

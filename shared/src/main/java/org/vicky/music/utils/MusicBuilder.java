@@ -1,7 +1,6 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.music.utils;
 
-import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.utils.SoundCategory;
 
 import java.util.*;
@@ -139,6 +138,123 @@ public class MusicBuilder {
     return tokens;
   }
 
+  private static long handleSmoothProgression(
+      String token,
+      Sound sound,
+      float volume,
+      MusicBuilder builder,
+      float tempo,
+      long currentTime) {
+    String[] parts = token.split(">");
+    int duration = (int) (extractProgressionTime(parts[0]) / tempo);
+    Integer start = noteSymbolToMidi(parts[0].replaceAll("\\d+", ""));
+    Integer end = noteSymbolToMidi(parts[1]);
+    builder.addSmoothProgression(currentTime, sound, start, end, duration, SoundCategory.MUSIC);
+    return currentTime + duration;
+  }
+
+  private long handleBlock(
+      String token,
+      long interval,
+      float baseVolume,
+      Sound sound,
+      MusicBuilder builder,
+      float tempo,
+      long currentTime) {
+    Matcher m = BLOCK_MATCHER.matcher(token);
+    if (!m.matches()) return currentTime;
+
+    String content = m.group(1);
+
+    List<String> innerTokens = tokenizeScore(content);
+    long totalBlockTime = (long) ((innerTokens.size() * interval) / tempo);
+    long innerInterval = !innerTokens.isEmpty() ? totalBlockTime / innerTokens.size() : interval;
+
+    parseAndSchedule(
+        innerTokens, 0, innerTokens.size(), innerInterval, baseVolume, sound, builder, currentTime);
+
+    return currentTime + totalBlockTime;
+  }
+
+  private static long handleChord(
+      String token,
+      Sound sound,
+      float volume,
+      MusicBuilder builder,
+      long currentTime,
+      float tempo,
+      long interval) {
+    String[] notes = token.split("—");
+    List<Integer> pitches = Arrays.stream(notes).map(MusicBuilder::noteSymbolToMidi).toList();
+    switch (pitches.size()) {
+      case 2 ->
+          builder.addDuo(
+              currentTime, sound, pitches.get(0), pitches.get(1), volume, SoundCategory.MUSIC);
+      case 3 ->
+          builder.addTriple(
+              currentTime,
+              sound,
+              pitches.get(0),
+              pitches.get(1),
+              pitches.get(2),
+              volume,
+              SOUND_CATEGORY);
+      case 4 ->
+          builder.addQuad(
+              currentTime,
+              sound,
+              pitches.get(0),
+              pitches.get(1),
+              pitches.get(2),
+              pitches.get(3),
+              volume,
+              SoundCategory.MUSIC);
+      default -> builder.addSingle(currentTime, sound, pitches.get(0), volume, SoundCategory.MUSIC);
+    }
+    return (long) (currentTime + (interval / tempo));
+  }
+
+  /**
+   * Convert a note token like "C", "C+", "A-#", "G++" to a MIDI note number.
+   * Uses the same +/- octave suffixes as your builder:
+   *  -- -> octave 2, - -> octave 3, "" -> octave 4, + -> octave 5, ++ -> octave 6
+   */
+  public static int noteSymbolToMidi(String noteSymbol) {
+    if (noteSymbol == null || noteSymbol.isEmpty()) throw new IllegalArgumentException("noteSymbol null/empty");
+    noteSymbol = noteSymbol.toUpperCase();
+
+    // Count octave shift suffix characters (+ or - repeated)
+    int idx = 1;
+    char noteChar = noteSymbol.charAt(0);
+    if (!BASE_NOTE_INDEX.containsKey(noteChar)) {
+      throw new IllegalArgumentException("Invalid note: " + noteSymbol);
+    }
+
+    int semitone = BASE_NOTE_INDEX.get(noteChar);
+    int octave = 4; // default (matches your current builder)
+    // parse rest of string for sharps and octave markers
+    while (idx < noteSymbol.length()) {
+      char c = noteSymbol.charAt(idx++);
+      switch (c) {
+        case '#':
+          semitone += 1;
+          break;
+        case '+':
+          octave += 1;
+          break;
+        case '-':
+          octave -= 1;
+          break;
+        default:
+          // ignore unknown characters or throw
+      }
+    }
+
+    int noteIndex = semitone + (octave * 12);           // your internal half-step index
+    int midi = noteIndex - A4_INDEX + 69;               // map A4-index -> MIDI 69
+    return midi;
+  }
+
   private void parseAndSchedule(
       List<String> tokens,
       int start,
@@ -184,34 +300,11 @@ public class MusicBuilder {
         currentTime = handleChord(token, sound, volume, builder, currentTime, tempo, interval);
 
       } else {
-        float pitch = pitchFor(token);
+        Integer pitch = noteSymbolToMidi(token);
         builder.addSingle(currentTime, sound, pitch, volume, SoundCategory.MUSIC);
         currentTime += (long) (interval / tempo);
       }
     }
-  }
-
-  private long handleBlock(
-      String token,
-      long interval,
-      float baseVolume,
-      Sound sound,
-      MusicBuilder builder,
-      float tempo,
-      long currentTime) {
-    Matcher m = BLOCK_MATCHER.matcher(token);
-    if (!m.matches()) return currentTime;
-
-    String content = m.group(1);
-
-    List<String> innerTokens = tokenizeScore(content);
-    long totalBlockTime = (long) ((innerTokens.size() * interval) / tempo);
-    long innerInterval = !innerTokens.isEmpty() ? totalBlockTime / innerTokens.size() : interval;
-
-    parseAndSchedule(
-        innerTokens, 0, innerTokens.size(), innerInterval, baseVolume, sound, builder, currentTime);
-
-    return currentTime + totalBlockTime;
   }
 
   private long handleSustainedNote(
@@ -235,85 +328,9 @@ public class MusicBuilder {
     if (fromNote.equals(".")) {
       return currentTime + duration;
     }
-    float pitch = pitchFor(fromNote);
+    Integer pitch = noteSymbolToMidi(fromNote);
     builder.addSustainedNote(currentTime, sound, pitch, volume, duration, SoundCategory.MUSIC);
     return currentTime + duration;
-  }
-
-  private long handleSustainedChord(
-      String token,
-      Sound sound,
-      float volume,
-      MusicBuilder builder,
-      float tempo,
-      long currentTime) {
-    String[] parts = token.split("->");
-    String toTarget = parts[1];
-    int duration;
-    if (toTarget.startsWith("@")) {
-      Long markerTime = markerMap.get(toTarget.substring(1));
-      if (markerTime == null) throw new IllegalStateException("Marker @" + toTarget + " not found");
-      duration = (int) (markerTime - currentTime);
-    } else {
-      duration = (int) (Integer.parseInt(toTarget) / tempo);
-    }
-    String[] notes = parts[0].split("—");
-    List<Float> pitches = Arrays.stream(notes).map(MusicBuilder::pitchFor).toList();
-    builder.addSustainedChord(currentTime, sound, pitches, volume, duration, SoundCategory.MUSIC);
-    return currentTime + duration;
-  }
-
-  private static long handleSmoothProgression(
-      String token,
-      Sound sound,
-      float volume,
-      MusicBuilder builder,
-      float tempo,
-      long currentTime) {
-    String[] parts = token.split(">");
-    int duration = (int) (extractProgressionTime(parts[0]) / tempo);
-    float start = pitchFor(parts[0].replaceAll("\\d+", ""));
-    float end = pitchFor(parts[1]);
-    builder.addSmoothProgression(currentTime, sound, start, end, duration, SoundCategory.MUSIC);
-    return currentTime + duration;
-  }
-
-  private static long handleChord(
-      String token,
-      Sound sound,
-      float volume,
-      MusicBuilder builder,
-      long currentTime,
-      float tempo,
-      long interval) {
-    String[] notes = token.split("—");
-    List<Float> pitches = Arrays.stream(notes).map(MusicBuilder::pitchFor).toList();
-    switch (pitches.size()) {
-      case 2 ->
-          builder.addDuo(
-              currentTime, sound, pitches.get(0), pitches.get(1), volume, SoundCategory.MUSIC);
-      case 3 ->
-          builder.addTriple(
-              currentTime,
-              sound,
-              pitches.get(0),
-              pitches.get(1),
-              pitches.get(2),
-              volume,
-              SOUND_CATEGORY);
-      case 4 ->
-          builder.addQuad(
-              currentTime,
-              sound,
-              pitches.get(0),
-              pitches.get(1),
-              pitches.get(2),
-              pitches.get(3),
-              volume,
-              SoundCategory.MUSIC);
-      default -> builder.addSingle(currentTime, sound, pitches.get(0), volume, SoundCategory.MUSIC);
-    }
-    return (long) (currentTime + (interval / tempo));
   }
 
   private static long computeDefaultInterval(List<String> tokens, int totalTime) {
@@ -346,55 +363,27 @@ public class MusicBuilder {
       Map.of('C', 0, 'D', 2, 'E', 4, 'F', 5, 'G', 7, 'A', 9, 'B', 11);
   private static final int A4_INDEX = 9 + (4 * 12); // A4 in half-step index
 
-  /**
-   * Returns a pitch value based on the given note symbol.
-   * <p>
-   * Supports standard musical notes:
-   * </p>
-   * <ul>
-   *   <li>C – base pitch 0.5f</li>
-   *   <li>D – base pitch 0.6f</li>
-   *   <li>E – base pitch 0.7f</li>
-   *   <li>F – base pitch 0.8f</li>
-   *   <li>G – base pitch 0.9f</li>
-   *   <li>A – base pitch 1.0f</li>
-   *   <li>B – base pitch 1.1f</li>
-   *   <li>C+ – base pitch 1.2f (octave up)</li>
-   * </ul>
-   * <p>
-   * The '+' modifier increases octave by 1 and '-' decreases it by 1.
-   * </p>
-   *
-   * @param noteSymbol the note symbol.
-   * @return the computed pitch.
-   */
-  public static float pitchFor(String noteSymbol) {
-    noteSymbol = noteSymbol.toUpperCase();
-
-    char noteChar = noteSymbol.charAt(0);
-    if (!BASE_NOTE_INDEX.containsKey(noteChar)) {
-      PlatformPlugin.logger().warn("Invalid note: " + noteChar + " will use base C...");
-      return 0;
+  private long handleSustainedChord(
+      String token,
+      Sound sound,
+      float volume,
+      MusicBuilder builder,
+      float tempo,
+      long currentTime) {
+    String[] parts = token.split("->");
+    String toTarget = parts[1];
+    int duration;
+    if (toTarget.startsWith("@")) {
+      Long markerTime = markerMap.get(toTarget.substring(1));
+      if (markerTime == null) throw new IllegalStateException("Marker @" + toTarget + " not found");
+      duration = (int) (markerTime - currentTime);
+    } else {
+      duration = (int) (Integer.parseInt(toTarget) / tempo);
     }
-
-    int semitone = BASE_NOTE_INDEX.get(noteChar);
-    int octave = 4; // default to octave 4
-    int index = 1;
-
-    while (index < noteSymbol.length()) {
-      char c = noteSymbol.charAt(index++);
-      switch (c) {
-        case '#' -> semitone += 1;
-        // case 'B' -> semitone -= 1; // Optional: if you want to support 'B' for flat
-        case '+' -> octave += 1;
-        case '-' -> octave -= 1;
-      }
-    }
-
-    int noteIndex = semitone + (octave * 12);
-    int halfStepsFromA4 = noteIndex - A4_INDEX;
-
-    return (float) Math.pow(2.0, halfStepsFromA4 / 12.0);
+    String[] notes = parts[0].split("—");
+    List<Integer> pitches = Arrays.stream(notes).map(MusicBuilder::noteSymbolToMidi).toList();
+    builder.addSustainedChord(currentTime, sound, pitches, volume, duration, SoundCategory.MUSIC);
+    return currentTime + duration;
   }
 
   /**
@@ -408,7 +397,7 @@ public class MusicBuilder {
    * @return this builder for chaining.
    */
   public MusicBuilder addSingle(
-      long timeOffset, Sound sound, float pitch, float volume, SoundCategory category) {
+          long timeOffset, Sound sound, Integer pitch, float volume, SoundCategory category) {
     track.addEvent(new MusicEvent(timeOffset, sound, pitch, volume, category));
     return this;
   }
@@ -416,7 +405,7 @@ public class MusicBuilder {
   public MusicBuilder addSustainedNote(
           long startTime,
           Sound sound,
-          float pitch,
+          Integer pitch,
           float volume,
           long durationTicks,
           SoundCategory category) {
@@ -454,7 +443,7 @@ public class MusicBuilder {
   public MusicBuilder addSustainedChord(
           long startTime,
           Sound sound,
-          List<Float> pitches,
+          List<Integer> pitches,
           float volume,
           long duration,
           SoundCategory category) {
@@ -465,7 +454,7 @@ public class MusicBuilder {
     // if too short for sustain, addSingle for each note
     final int segmentSize = 8;
     if (duration < 3 * segmentSize) {
-      for (float p : pitches) addSingle(startTime, sound, p, volume, category);
+      for (Integer p : pitches) addSingle(startTime, sound, p, volume, category);
       return this;
     }
 
@@ -473,19 +462,19 @@ public class MusicBuilder {
     long outStart = startTime + duration - segmentSize;
 
     // Add IN events for each pitch with the same chordUuid
-    for (float p : pitches) {
+    for (Integer p : pitches) {
       track.addEvent(new MusicEvent(startTime, sound, p, volume, category, NotePart.IN, chordUuid));
     }
 
     // MAIN events
     for (long tick = inEnd; tick < outStart; tick += segmentSize) {
-      for (float p : pitches) {
+      for (Integer p : pitches) {
         track.addEvent(new MusicEvent(tick, sound, p, volume, category, NotePart.MAIN, chordUuid));
       }
     }
 
     // OUT events
-    for (float p : pitches) {
+    for (Integer p : pitches) {
       track.addEvent(new MusicEvent(outStart, sound, p, volume, category, NotePart.OUT, chordUuid));
     }
 
@@ -497,8 +486,8 @@ public class MusicBuilder {
   private void addSmoothProgression(
       long startTime,
       Sound sound,
-      float startPitch,
-      float endPitch,
+      Integer startPitch,
+      Integer endPitch,
       int duration,
       SoundCategory category) {
     // For example, you might break the duration into smaller steps and call addSingle for each.
@@ -506,7 +495,7 @@ public class MusicBuilder {
     long stepDuration = duration / steps;
     for (int i = 0; i < steps; i++) {
       double t = i / (double) (steps - 1);
-      float pitch = (float) (startPitch + t * (endPitch - startPitch));
+      Integer pitch = Math.toIntExact(Math.round(startPitch + t * (endPitch - startPitch)));
       addSingle(startTime + i * stepDuration, sound, pitch, 1.0f, category);
     }
   }
@@ -525,8 +514,8 @@ public class MusicBuilder {
    * @return this builder for chaining.
    */
   public MusicBuilder smoothProgress(
-      double startPitch,
-      double endPitch,
+          Integer startPitch,
+          Integer endPitch,
       long duration,
       Sound sound,
       float volume,
@@ -534,15 +523,15 @@ public class MusicBuilder {
       int steps,
       long startTime) {
     if (steps <= 1) {
-      addSingle(startTime, sound, (float) startPitch, volume, category);
+      addSingle(startTime, sound, startPitch, volume, category);
       return this;
     }
     long stepDuration = duration / (steps - 1);
     for (int i = 0; i < steps; i++) {
       double t = i / (double) (steps - 1);
-      double pitch = startPitch + t * (endPitch - startPitch);
+      Integer pitch = (int) (startPitch + t * (endPitch - startPitch));
       long eventTime = startTime + i * stepDuration;
-      addSingle(eventTime, sound, (float) pitch, volume, category);
+      addSingle(eventTime, sound, pitch, volume, category);
     }
     return this;
   }
@@ -562,8 +551,8 @@ public class MusicBuilder {
    * @return this builder for chaining.
    */
   public MusicBuilder progress(
-      double startPitch,
-      double endPitch,
+          Integer startPitch,
+          Integer endPitch,
       long duration,
       Sound sound,
       float volume,
@@ -572,16 +561,16 @@ public class MusicBuilder {
       Function<Double, Double> progression,
       long startTime) {
     if (steps <= 1) {
-      addSingle(startTime, sound, (float) startPitch, volume, category);
+      addSingle(startTime, sound, startPitch, volume, category);
       return this;
     }
     long stepDuration = duration / (steps - 1);
     for (int i = 0; i < steps; i++) {
       double t = i / (double) (steps - 1);
       double adjusted = progression.apply(t);
-      double pitch = startPitch + adjusted * (endPitch - startPitch);
+      Integer pitch = (int) (startPitch + adjusted * (endPitch - startPitch));
       long eventTime = startTime + i * stepDuration;
-      addSingle(eventTime, sound, (float) pitch, volume, category);
+      addSingle(eventTime, sound, pitch, volume, category);
     }
     return this;
   }
@@ -600,8 +589,8 @@ public class MusicBuilder {
   public MusicBuilder addDuo(
       long timeOffset,
       Sound sound,
-      float pitch1,
-      float pitch2,
+      Integer pitch1,
+      Integer pitch2,
       float volume,
       SoundCategory category) {
     addSingle(timeOffset, sound, pitch1, volume, category);
@@ -624,9 +613,9 @@ public class MusicBuilder {
   public MusicBuilder addTriple(
       long timeOffset,
       Sound sound,
-      float pitch1,
-      float pitch2,
-      float pitch3,
+      Integer pitch1,
+      Integer pitch2,
+      Integer pitch3,
       float volume,
       SoundCategory category) {
     addSingle(timeOffset, sound, pitch1, volume, category);
@@ -651,10 +640,10 @@ public class MusicBuilder {
   public MusicBuilder addQuad(
       long timeOffset,
       Sound sound,
-      float pitch1,
-      float pitch2,
-      float pitch3,
-      float pitch4,
+      Integer pitch1,
+      Integer pitch2,
+      Integer pitch3,
+      Integer pitch4,
       float volume,
       SoundCategory category) {
     addSingle(timeOffset, sound, pitch1, volume, category);

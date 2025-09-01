@@ -13,7 +13,7 @@ import java.util.UUID;
 public record MusicEvent(
     long timeOffset,
     Sound sound,
-    float pitch,
+    Integer pitch,
     float volume,
     SoundCategory category,
     MusicBuilder.NotePart part,
@@ -28,7 +28,7 @@ public record MusicEvent(
    * @param category   the sound category.
    */
   public MusicEvent(
-      long timeOffset, Sound sound, float pitch, float volume, SoundCategory category) {
+          long timeOffset, Sound sound, Integer pitch, float volume, SoundCategory category) {
     this(timeOffset, sound, pitch, volume, category, null, null);
   }
 }

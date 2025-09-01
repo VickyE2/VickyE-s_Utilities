@@ -11,12 +11,19 @@ import org.vicky.forge.network.packets.*;
 
 public class PacketHandler {
     private static final int PROTOCOL_VERSION = 1;
+    public static final ResourceLocation CHANNEL_NAME = new ResourceLocation(VickyUtilitiesForge.MODID, "synth");
     public static final SimpleChannel INSTANCE =
             ChannelBuilder.named(new ResourceLocation(VickyUtilitiesForge.MODID, "main"))
                     .serverAcceptedVersions(((status, version) -> version == PROTOCOL_VERSION))
                     .clientAcceptedVersions(((status, version) -> version == PROTOCOL_VERSION))
                     .networkProtocolVersion(PROTOCOL_VERSION)
                     .simpleChannel();
+    private static final int SYNTH_PROTOCOL_VERSION = 1;
+    public static final SimpleChannel SYNTH_CHANNEL = ChannelBuilder.named(CHANNEL_NAME)
+            .serverAcceptedVersions(((status, version) -> version == SYNTH_PROTOCOL_VERSION))
+            .clientAcceptedVersions(((status, version) -> version == SYNTH_PROTOCOL_VERSION))
+            .networkProtocolVersion(SYNTH_PROTOCOL_VERSION)
+            .simpleChannel();
 
     private static int packetId = 0;
 
@@ -46,13 +53,23 @@ public class PacketHandler {
                 .decoder(PlaySpecifyableSong::decode)
                 .consumerMainThread(PlaySpecifyableSong::handle)
                 .add();
+        SYNTH_CHANNEL.messageBuilder(NoteOnPacket.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(NoteOnPacket::encode)
+                .decoder(NoteOnPacket::decode)
+                .consumerMainThread(NoteOnPacket::handle)
+                .add();
+        SYNTH_CHANNEL.messageBuilder(NoteOffPacket.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(NoteOffPacket::encode)
+                .decoder(NoteOffPacket::decode)
+                .consumerMainThread(NoteOffPacket::handle)
+                .add();
     }
 
     public static void sendToServer(Object packet) {
         INSTANCE.send(packet, PacketDistributor.SERVER.noArg());
     }
 
-    public static void sendToClient(Object packet, ServerPlayer player) {
+    public static void sendToClient(ServerPlayer player, Object packet) {
         INSTANCE.send(packet, PacketDistributor.PLAYER.with(player));
     }
 

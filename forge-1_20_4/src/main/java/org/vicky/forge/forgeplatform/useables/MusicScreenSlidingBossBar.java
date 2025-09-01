@@ -53,12 +53,12 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
         if (!(viewer instanceof ForgePlatformPlayer player)) return;
         if (visible) {
             viewers.add(player);
-            PacketHandler.sendToClient(new CreateSSBossBar(id, title, subTitle, progress, hex, image), player.getHandle());
+            PacketHandler.sendToClient(player.getHandle(), new CreateSSBossBar(id, title, subTitle, progress, hex, image));
         }
         else {
             var output = viewers.remove(player);
             if (output) {
-                PacketHandler.sendToClient(new RemoveSSBossBar(id), player.getHandle());
+                PacketHandler.sendToClient(player.getHandle(), new RemoveSSBossBar(id));
 
             }
         }
@@ -94,7 +94,7 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
     public void hideAll() {
         viewers.forEach(v -> {
             if (!(v instanceof ForgePlatformPlayer player)) return;
-            PacketHandler.sendToClient(new RemoveSSBossBar(id), player.getHandle());
+            PacketHandler.sendToClient(player.getHandle(), new RemoveSSBossBar(id));
         });
     }
 
@@ -121,7 +121,7 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
     private void updateAll() {
         for (PlatformPlayer viewer : viewers) {
             if (!(viewer instanceof ForgePlatformPlayer player)) return;
-            PacketHandler.sendToClient(new UpdateSSBossBar(id, title, subTitle, progress, hex, image), player.getHandle());
+            PacketHandler.sendToClient(player.getHandle(), new UpdateSSBossBar(id, title, subTitle, progress, hex, image));
         }
     }
 }

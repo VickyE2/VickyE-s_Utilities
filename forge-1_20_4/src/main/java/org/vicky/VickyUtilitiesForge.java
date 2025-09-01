@@ -44,6 +44,7 @@ import org.vicky.music.MusicRegistry;
 import org.vicky.music.utils.MusicBuilder;
 import org.vicky.music.utils.MusicPiece;
 import org.vicky.music.utils.Sound;
+import org.vicky.musicPlayer.PlatformSoundBackend;
 import org.vicky.platform.*;
 import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
@@ -287,6 +288,11 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     @Override
     public PlatformEventFactory getEventFactory() {
         return new ForgeEventFactory();
+    }
+
+    @Override
+    public PlatformSoundBackend getSoundBackend() {
+        return new ForgeSynthSoundBackend(PacketHandler::sendToClient);
     }
 
     @Override

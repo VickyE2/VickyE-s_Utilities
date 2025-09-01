@@ -103,7 +103,7 @@ public class GlobalListener {
                                     throw new IllegalArgumentException("The music player should exist....");
                                 }
                                 var packet = new OpenOwnedRecordsScreen(musicPlayer.get().getOwnedPieces().stream().map(MusicPiece::getId).toList());
-                                PacketHandler.sendToClient(packet, player);
+                                PacketHandler.sendToClient(player, packet);
                             } else {
                                 context.getSource().sendSuccess(() -> Component.literal("You cant do that in a console ;-;"), false);
                             }

@@ -92,7 +92,7 @@ public class SongLibraryScreen extends Screen {
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         // background dim
-        this.renderBackground(graphics, mouseX, mouseY, partialTicks);
+        // this.renderBackground(graphics, mouseX, mouseY, partialTicks);
 
         // panel background
         drawRoundedPanel(graphics, left, top, guiWidth, guiHeight, theme.panelBackground());

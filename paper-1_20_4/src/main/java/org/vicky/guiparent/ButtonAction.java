@@ -100,7 +100,7 @@ public class ButtonAction<T> {
 	 * Constructs a ButtonAction with an action type, action data, and closeGui
 	 * flag.
 	 *
-     * @param actionType
+	 * @param actionType
      *            The type of action.
      * @param actionData
      *            The data associated with the action.

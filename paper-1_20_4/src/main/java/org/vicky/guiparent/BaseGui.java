@@ -53,9 +53,9 @@ public abstract class BaseGui {
 
 		// Register the listener for GUI actions
 		plugin.getServer().getPluginManager().registerEvents(this.listener, plugin);
-    }
+	}
 
-    public BaseGui(JavaPlugin plugin, BaseGuiListener listener) {
+	public BaseGui(JavaPlugin plugin, BaseGuiListener listener) {
         this(plugin, listener, GuiType.NORMAL);
     }
 

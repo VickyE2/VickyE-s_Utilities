@@ -27,7 +27,7 @@ import kotlin.math.pow
 
 object MusicPlayer {
     private val playerStates = mutableMapOf<UUID, PlayerState>()
-    private val noteUidMap = mutableMapOf<NoteKey, UUID>()
+    private val noteUidMap = mutableMapOf<NoteKey, Integer>()
     // Java-style static map for reverse lookup (pitch → name)
     private val NOTE_ORDER = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
     private val OCTAVE_SHIFTS = mapOf("--" to 2, "-" to 3, "" to 4, "+" to 5, "++" to 6)
@@ -168,7 +168,7 @@ object MusicPlayer {
                                 if (uid != null) noteUidMap[key] = uid
                             }
                         }
-                    } else PlatformPlugin.soundBackend().playNote(player, event)
+                    } else PlatformPlugin.soundBackend().playNoteFor(player, event, 0.3)
                 }
             }, tickOffset)
         }
@@ -283,13 +283,12 @@ object MusicPlayer {
                                 .playNamed(player, name, event.category, event.volume, event.pitch)
                         }
                     }
-
                     else -> {
                         val uid = PlatformPlugin.soundBackend().playNote(player, event)
                         if (uid != null) noteUidMap[key] = uid
                     }
                 }
-            } else PlatformPlugin.soundBackend().playNote(player, event)
+            } else PlatformPlugin.soundBackend().playNoteFor(player, event, 0.3)
         }
     }
 
@@ -355,13 +354,18 @@ interface PlatformSoundBackend {
     /**
      * Play the given MusicEvent for this player. Return the event given uid for the note or your own logic.
      */
-    fun playNote(player: PlatformPlayer, event: MusicEvent): UUID?
+    fun playNote(player: PlatformPlayer, event: MusicEvent): Integer?
+
+    /**
+     * Play the given MusicEvent for this player for a given time in seconds.
+     */
+    fun playNoteFor(player: PlatformPlayer, event: MusicEvent, time: Double)
 
     /**
      * Stop a previously started note identified by uid.
      * If a backend doesn't use uids, it's fine to ignore or best-effort.
      */
-    fun stopNote(player: PlatformPlayer, uid: UUID?)
+    fun stopNote(player: PlatformPlayer, uid: Integer?)
 
     /**
      * Fallback to play an already-resolved sound name (useful for Bukkit/playSound usage).
@@ -376,7 +380,13 @@ interface PlatformSoundBackend {
  */
 data class NoteKey(val playerId: UUID, val instrument: String, val pitch: Int, val volume: Float)
 
-data class ADSR(val a: Float, val d: Float, val s: Float, val r: Float, val sustainLoop: Boolean = false)
+data class ADSR(
+    val attack: Float,
+    val decay: Float,
+    val sustain: Float,
+    val release: Float,
+    val sustainLoop: Boolean = false
+)
 
 /**
  * Very small mapping from MusicEvent.part to ADSR defaults.
@@ -385,10 +395,41 @@ data class ADSR(val a: Float, val d: Float, val s: Float, val r: Float, val sust
 object DefaultAdsrMapper {
     fun map(event: MusicEvent): ADSR {
         return when (event.part) {
-            MusicBuilder.NotePart.IN -> ADSR(0.005f, 0.02f, 0.9f, 0.01f, sustainLoop = false)
-            MusicBuilder.NotePart.MAIN -> ADSR(0.01f, 0.12f, 0.8f, 0.6f, sustainLoop = true)
-            MusicBuilder.NotePart.OUT -> ADSR(0.005f, 0.01f, 1.0f, 0.3f, sustainLoop = false)
-            else -> ADSR(0.01f, 0.05f, 0.8f, 0.2f, sustainLoop = false)
+            // Quick attack, short decay, high sustain, short release
+            MusicBuilder.NotePart.IN -> ADSR(
+                attack = 0.005f,
+                decay = 0.02f,
+                sustain = 0.9f,
+                release = 0.01f,
+                sustainLoop = true // sustain until OUT arrives
+            )
+
+            // MAIN shouldn't retrigger, so minimal/no envelope change
+            MusicBuilder.NotePart.MAIN -> ADSR(
+                attack = 0.0f,
+                decay = 0.0f,
+                sustain = 1.0f,
+                release = 0.0f,
+                sustainLoop = true
+            )
+
+            // OUT kills off with short release
+            MusicBuilder.NotePart.OUT -> ADSR(
+                attack = 0.0f,
+                decay = 0.0f,
+                sustain = 0.0f,
+                release = 0.3f,
+                sustainLoop = false
+            )
+
+            // fallback for non-part notes
+            else -> ADSR(
+                attack = 0.01f,
+                decay = 0.05f,
+                sustain = 0.8f,
+                release = 0.2f,
+                sustainLoop = false
+            )
         }
     }
 }

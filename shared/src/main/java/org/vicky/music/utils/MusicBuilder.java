@@ -4,6 +4,7 @@ package org.vicky.music.utils;
 import org.vicky.platform.utils.SoundCategory;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,6 +22,7 @@ public class MusicBuilder {
   private final Map<String, Long> markerMap = new HashMap<>();
   private static final Pattern BLOCK_MATCHER = Pattern.compile("^\\[(.*?)]$");
   private static final Pattern MARKER_PATTERN = Pattern.compile("@\\[([a-zA-Z0-9_]+)]\\[(.*?)]");
+  private final AtomicInteger uid = new AtomicInteger(0);
 
   // ===========================================================================
   // Inner helper class for volume parsing.
@@ -398,7 +400,7 @@ public class MusicBuilder {
    */
   public MusicBuilder addSingle(
           long timeOffset, Sound sound, Integer pitch, float volume, SoundCategory category) {
-    track.addEvent(new MusicEvent(timeOffset, sound, pitch, volume, category));
+    track.addEvent(new MusicEvent(timeOffset, sound, pitch, volume, category, uid.getAndIncrement()));
     return this;
   }
 
@@ -421,7 +423,7 @@ public class MusicBuilder {
     long outStart = startTime + durationTicks - segmentSize;
 
     // create a stable UUID for this sustained note so IN/MAIN/OUT can be correlated
-    UUID noteUuid = UUID.randomUUID();
+    Integer noteUuid = uid.getAndIncrement();
 
     // create IN event with the noteId
     MusicEvent inEvent = new MusicEvent(startTime, sound, pitch, volume, category, NotePart.IN, noteUuid);
@@ -449,7 +451,7 @@ public class MusicBuilder {
           SoundCategory category) {
 
     // Create a single UUID for the chord so OUT stops the whole chord at once
-    UUID chordUuid = UUID.randomUUID();
+    Integer chordUuid = uid.getAndIncrement();
 
     // if too short for sustain, addSingle for each note
     final int segmentSize = 8;

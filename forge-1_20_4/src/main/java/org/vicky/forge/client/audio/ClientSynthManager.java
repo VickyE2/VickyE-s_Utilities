@@ -3,14 +3,12 @@ package org.vicky.forge.client.audio;
 import org.vicky.forge.network.registeredpackets.NoteOnPacket;
 
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientSynthManager {
     private static final ClientSynthManager INSTANCE = new ClientSynthManager();
     private final int sampleRate = 44100;
-    private final Map<UUID, Integer> activeVoices = new ConcurrentHashMap<>();
-    private final Map<Long, Integer> bufferCache = new ConcurrentHashMap<>();
+    private final Map<Integer, Integer> activeVoices = new ConcurrentHashMap<>();
 
     private ClientSynthManager() {
     }
@@ -27,7 +25,7 @@ public class ClientSynthManager {
         activeVoices.put(pkt.uid(), pkt.midiNote());
     }
 
-    public void noteOff(UUID uid) {
+    public void noteOff(Integer uid) {
         Integer midiNote = activeVoices.remove(uid);
         if (midiNote != null) {
             MidiSynthManager.getInstance().noteOff(midiNote, 0);

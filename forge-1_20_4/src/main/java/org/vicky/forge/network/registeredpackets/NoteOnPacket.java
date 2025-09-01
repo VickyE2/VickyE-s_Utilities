@@ -5,8 +5,6 @@ import net.minecraftforge.event.network.CustomPayloadEvent;
 import org.vicky.forge.client.audio.ClientSynthManager;
 import org.vicky.forge.network.SynthPacket;
 
-import java.util.UUID;
-
 /**
  * @param instId       short instrument id, optional use
  * @param midiId       The key in the midi
@@ -19,7 +17,7 @@ import java.util.UUID;
  */
 public record NoteOnPacket(String instId, int[] midiId, Integer midiNote, float velocity, float attack, float decay,
                            float sustain, float release, boolean sustainLoop, float vibratoRate, float vibratoDepth,
-                           UUID uid) implements SynthPacket {
+                           Integer uid) implements SynthPacket {
 
     public static void encode(NoteOnPacket pkt, FriendlyByteBuf buf) {
         buf.writeUtf(pkt.instId, 64);
@@ -35,7 +33,7 @@ public record NoteOnPacket(String instId, int[] midiId, Integer midiNote, float 
         buf.writeFloat(pkt.vibratoDepth);
         if (pkt.uid != null) {
             buf.writeBoolean(true);
-            buf.writeUUID(pkt.uid);
+            buf.writeVarInt(pkt.uid);
         } else {
             buf.writeBoolean(false);
         }
@@ -53,9 +51,9 @@ public record NoteOnPacket(String instId, int[] midiId, Integer midiNote, float 
         boolean sl = buf.readBoolean();
         float vr = buf.readFloat();
         float vd = buf.readFloat();
-        UUID uid = null;
+        Integer uid = null;
         if (buf.readBoolean()) {
-            uid = buf.readUUID();
+            uid = buf.readVarInt();
         }
         return new NoteOnPacket(inst, midiId, midiNote, vel, a, d, s, r, sl, vr, vd, uid);
     }

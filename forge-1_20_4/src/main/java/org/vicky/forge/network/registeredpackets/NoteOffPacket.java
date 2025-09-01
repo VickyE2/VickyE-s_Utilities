@@ -5,17 +5,15 @@ import net.minecraftforge.event.network.CustomPayloadEvent;
 import org.vicky.forge.client.audio.ClientSynthManager;
 import org.vicky.forge.network.SynthPacket;
 
-import java.util.UUID;
 
-
-public record NoteOffPacket(UUID uid) implements SynthPacket {
+public record NoteOffPacket(Integer uid) implements SynthPacket {
 
     public static void encode(NoteOffPacket pkt, FriendlyByteBuf buf) {
-        buf.writeUUID(pkt.uid);
+        buf.writeVarInt(pkt.uid);
     }
 
     public static NoteOffPacket decode(FriendlyByteBuf buf) {
-        return new NoteOffPacket(buf.readUUID());
+        return new NoteOffPacket(buf.readVarInt());
     }
 
     public static void handle(NoteOffPacket pkt, CustomPayloadEvent.Context ctx) {

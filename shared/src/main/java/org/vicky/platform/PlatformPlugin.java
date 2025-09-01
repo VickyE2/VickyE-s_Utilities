@@ -1,5 +1,6 @@
 package org.vicky.platform;
 
+import org.vicky.musicPlayer.PlatformSoundBackend;
 import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 
@@ -78,6 +79,10 @@ public interface PlatformPlugin {
         return get().getEventFactory();
     }
 
+    static PlatformSoundBackend soundBackend() {
+        return get().getSoundBackend();
+    }
+
     static void registerTemplateUtilityPackage(String jarName, String packageName) {
         Holder.pendingDBTemplatesUtils.put(packageName, jarName);
     }
@@ -126,6 +131,8 @@ public interface PlatformPlugin {
     PlatformEntityFactory getPlatformEntityFactory();
 
     PlatformEventFactory getEventFactory();
+
+    PlatformSoundBackend getSoundBackend();
 
     PlatformLocationAdapter<?> getPlatformLocationAdapter();
     File getPlatformDataFolder();

@@ -414,15 +414,16 @@ public class MusicBuilder {
   }
 
   public MusicBuilder addSustainedNote(
-      long startTime,
-      Sound sound,
-      float pitch,
-      float volume,
-      long durationTicks,
-      SoundCategory category) {
-    final int segmentSize = 8; // Each part is 9 ticks but 1 tick loop
+          long startTime,
+          Sound sound,
+          float pitch,
+          float volume,
+          long durationTicks,
+          SoundCategory category) {
 
-    // If too short, fallback to original behavior
+    final int segmentSize = 8; // keep your segmentation
+
+    // If too short, fallback to original single-shot behavior
     if (durationTicks < 3 * segmentSize) {
       return addSingle(startTime, sound, pitch, volume, category);
     }
@@ -430,32 +431,67 @@ public class MusicBuilder {
     long inEnd = startTime + segmentSize;
     long outStart = startTime + durationTicks - segmentSize;
 
-    // Schedule IN every 7 ticks
-    track.addEvent(new MusicEvent(startTime, sound, pitch, volume, category, NotePart.IN));
+    // create a stable UUID for this sustained note so IN/MAIN/OUT can be correlated
+    UUID noteUuid = UUID.randomUUID();
 
-    // Schedule MAIN every 7 ticks between inEnd and outStart
+    // create IN event with the noteId
+    MusicEvent inEvent = new MusicEvent(startTime, sound, pitch, volume, category, NotePart.IN, noteUuid);
+    track.addEvent(inEvent);
+
+    // MAIN events: reuse same noteId
     for (long tick = inEnd; tick < outStart; tick += segmentSize) {
-      track.addEvent(new MusicEvent(tick, sound, pitch, volume, category, NotePart.MAIN));
+      MusicEvent mainEvent = new MusicEvent(tick, sound, pitch, volume, category, NotePart.MAIN, noteUuid);
+      track.addEvent(mainEvent);
     }
 
-    // Schedule OUT at the end
-    track.addEvent(new MusicEvent(outStart, sound, pitch, volume, category, NotePart.OUT));
+    // OUT event with same noteId
+    MusicEvent outEvent = new MusicEvent(outStart, sound, pitch, volume, category, NotePart.OUT, noteUuid);
+    track.addEvent(outEvent);
 
     return this;
   }
 
   public MusicBuilder addSustainedChord(
-      long startTime,
-      Sound sound,
-      List<Float> pitches,
-      float volume,
-      long duration,
-      SoundCategory category) {
-    for (float pitch : pitches) {
-      addSustainedNote(startTime, sound, pitch, volume, duration, category);
+          long startTime,
+          Sound sound,
+          List<Float> pitches,
+          float volume,
+          long duration,
+          SoundCategory category) {
+
+    // Create a single UUID for the chord so OUT stops the whole chord at once
+    UUID chordUuid = UUID.randomUUID();
+
+    // if too short for sustain, addSingle for each note
+    final int segmentSize = 8;
+    if (duration < 3 * segmentSize) {
+      for (float p : pitches) addSingle(startTime, sound, p, volume, category);
+      return this;
     }
+
+    long inEnd = startTime + segmentSize;
+    long outStart = startTime + duration - segmentSize;
+
+    // Add IN events for each pitch with the same chordUuid
+    for (float p : pitches) {
+      track.addEvent(new MusicEvent(startTime, sound, p, volume, category, NotePart.IN, chordUuid));
+    }
+
+    // MAIN events
+    for (long tick = inEnd; tick < outStart; tick += segmentSize) {
+      for (float p : pitches) {
+        track.addEvent(new MusicEvent(tick, sound, p, volume, category, NotePart.MAIN, chordUuid));
+      }
+    }
+
+    // OUT events
+    for (float p : pitches) {
+      track.addEvent(new MusicEvent(outStart, sound, p, volume, category, NotePart.OUT, chordUuid));
+    }
+
     return this;
   }
+
 
   // Placeholder: smooth progression method – implement as needed.
   private void addSmoothProgression(

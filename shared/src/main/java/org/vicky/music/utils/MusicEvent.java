@@ -3,6 +3,8 @@ package org.vicky.music.utils;
 
 import org.vicky.platform.utils.SoundCategory;
 
+import java.util.UUID;
+
 /**
  * Represents a single sound event in a music track.
  *
@@ -14,7 +16,8 @@ public record MusicEvent(
     float pitch,
     float volume,
     SoundCategory category,
-    MusicBuilder.NotePart part) {
+    MusicBuilder.NotePart part,
+    UUID noteId) {
   /**
    * Constructs a MusicEvent.
    *
@@ -26,6 +29,6 @@ public record MusicEvent(
    */
   public MusicEvent(
       long timeOffset, Sound sound, float pitch, float volume, SoundCategory category) {
-    this(timeOffset, sound, pitch, volume, category, null);
+    this(timeOffset, sound, pitch, volume, category, null, null);
   }
 }

@@ -17,6 +17,7 @@ import org.vicky.platform.PlatformPlugin
 import org.vicky.platform.defaults.BossBarOverlay
 import org.vicky.platform.defaults.VanillaColor
 import org.vicky.platform.utils.BossBarDescriptor
+import org.vicky.platform.utils.SoundCategory
 import org.vicky.utilities.DatabaseManager.dao_s.MusicPieceDAO
 import org.vicky.utilities.DatabaseManager.dao_s.MusicPlayerDAO
 import java.util.*
@@ -26,6 +27,7 @@ import kotlin.math.pow
 
 object MusicPlayer {
     private val playerStates = mutableMapOf<UUID, PlayerState>()
+    private val noteUidMap = mutableMapOf<NoteKey, UUID>()
     // Java-style static map for reverse lookup (pitch → name)
     private val NOTE_ORDER = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
     private val OCTAVE_SHIFTS = mapOf("--" to 2, "-" to 3, "" to 4, "+" to 5, "++" to 6)
@@ -139,14 +141,49 @@ object MusicPlayer {
         for ((tickOffset, events) in arrangedEvents) {
             PlatformPlugin.scheduler().runScheduled(Runnable {
                 for (event in events) {
-                    val soundName = resolveCustomSound(event)
-                    player.playSound(player.location, soundName, event.category, event.volume, event.pitch)
+                    // --- NEW: use SoundBackend ---
+                    val logical = event.noteId
+                    val key = NoteKey(player.uniqueId(), event.sound?.name ?: "unknown", event.pitch, event.volume)
+                    when (event.part) {
+                        MusicBuilder.NotePart.IN -> {
+                            // short attack-like sound
+                            val uid = PlatformPlugin.soundBackend().playNote(player, event)
+                            // store for potential OUT if it becomes sustained
+                            if (uid != null) noteUidMap[key] = uid
+                        }
+
+                        MusicBuilder.NotePart.MAIN -> {
+                            // primary sustain: start synth with sustain loop (mapper sets sustainLoop true)
+                            val uid = PlatformPlugin.soundBackend().playNote(player, event)
+                            if (uid != null) noteUidMap[key] = uid
+                        }
+
+                        MusicBuilder.NotePart.OUT -> {
+                            // find previously started uid and stop it
+                            val uid = noteUidMap.remove(key)
+                            if (uid != null) PlatformPlugin.soundBackend().stopNote(player, uid)
+                            else {
+                                // fallback: play the "out" sample as named sound for vanilla behavior
+                                val name = resolveCustomSound(event)
+                                PlatformPlugin.soundBackend()
+                                    .playNamed(player, name, event.category, event.volume, event.pitch)
+                            }
+                        }
+
+                        else -> {
+                            // Unknown part: fallback to legacy single-shot named sound
+                            val name = resolveCustomSound(event)
+                            PlatformPlugin.soundBackend()
+                                .playNamed(player, name, event.category, event.volume, event.pitch)
+                        }
+                    }
                 }
             }, tickOffset)
         }
+
     }
 
-    private fun resolveCustomSound(event: MusicEvent): String {
+    fun resolveCustomSound(event: MusicEvent): String {
         val instrument = event.sound.name.lowercase() // e.g., "piano"
         val pitchName = resolvePitchName(event.pitch) // e.g., "c_plus_plus"
         val partSuffix = when (event.part) {
@@ -296,5 +333,51 @@ class MusicBossBarDescriptor(
         if (subTitle != null) bossBar.addData("subTitle", subTitle)
 
         return bossBar
+    }
+}
+
+/**
+ * Small abstraction for how we actually *play* notes.
+ * playNote returns an Int uid you can later pass to stopNote (for synth/backends that need it).
+ */
+interface PlatformSoundBackend {
+    /**
+     * Play the given MusicEvent for this player. Return the event given uid for the note or your own logic.
+     */
+    fun playNote(player: PlatformPlayer, event: MusicEvent): UUID?
+
+    /**
+     * Stop a previously started note identified by uid.
+     * If a backend doesn't use uids, it's fine to ignore or best-effort.
+     */
+    fun stopNote(player: PlatformPlayer, uid: UUID?)
+
+    /**
+     * Fallback to play an already-resolved sound name (useful for Bukkit/playSound usage).
+     * Delegates to player.playSound or equivalent.
+     */
+    fun playNamed(player: PlatformPlayer, soundName: String, category: SoundCategory?, volume: Float, pitch: Float)
+}
+
+/**
+ * Key used to correlate IN/MAIN -> OUT events when MusicEvent doesn't provide a unique id.
+ * You can extend with more fields if your MusicEvent has a channel/voice id.
+ */
+data class NoteKey(val playerId: UUID, val instrument: String, val pitch: Float, val volume: Float)
+
+data class ADSR(val a: Float, val d: Float, val s: Float, val r: Float, val sustainLoop: Boolean = false)
+
+/**
+ * Very small mapping from MusicEvent.part to ADSR defaults.
+ * You can replace this with per-instrument tables later.
+ */
+object DefaultAdsrMapper {
+    fun map(event: MusicEvent): ADSR {
+        return when (event.part) {
+            MusicBuilder.NotePart.IN -> ADSR(0.005f, 0.02f, 0.9f, 0.01f, sustainLoop = false)
+            MusicBuilder.NotePart.MAIN -> ADSR(0.01f, 0.12f, 0.8f, 0.6f, sustainLoop = true)
+            MusicBuilder.NotePart.OUT -> ADSR(0.005f, 0.01f, 1.0f, 0.3f, sustainLoop = false)
+            else -> ADSR(0.01f, 0.05f, 0.8f, 0.2f, sustainLoop = false)
+        }
     }
 }

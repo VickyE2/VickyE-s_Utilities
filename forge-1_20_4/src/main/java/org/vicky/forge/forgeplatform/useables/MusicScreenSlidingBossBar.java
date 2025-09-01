@@ -93,8 +93,7 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
     @Override
     public void hideAll() {
         viewers.forEach(v -> {
-            if (!(v instanceof ForgePlatformPlayer player)) return;
-            PacketHandler.sendToClient(player.getHandle(), new RemoveSSBossBar(id));
+            PacketHandler.sendToClient(v.getHandle(), new RemoveSSBossBar(id));
         });
     }
 

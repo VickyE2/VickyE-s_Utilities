@@ -34,6 +34,10 @@ import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import org.lwjgl.openal.AL;
+import org.lwjgl.openal.ALC;
+import org.lwjgl.openal.ALC10;
+import org.lwjgl.openal.ALCCapabilities;
 import org.slf4j.Logger;
 import org.vicky.forge.forgeplatform.*;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
@@ -62,6 +66,8 @@ import org.vicky.utilities.DatabaseTemplate;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -106,12 +112,15 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     public static RegistryAccess access;
     private static final List<Class<?>> mappingClasses = new ArrayList<>();
     public static SQLManager sqlManager;
+    public static long context;
+    public static long device;
 
     public VickyUtilitiesForge() {
         PlatformPlugin.set(this);
         new MusicRegistry();
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(this::clientSetup);
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
@@ -130,6 +139,28 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 					\\ \\/ / )(( (__  )  (  )  /   \\___ \\  ) \\/ (  )(   )( / (_/\\ )(   )(   )(  ) _) \\___ \\
 					 \\__/ (__)\\___)(__\\_)(__/    (____/  \\____/ (__) (__)\\____/(__) (__) (__)(____)(____/]
 					                                                                         dark_gray[0.0.1-BETA]"""));
+    }
+
+    private void clientSetup(final FMLClientSetupEvent event) {
+        device = ALC10.alcOpenDevice((ByteBuffer) null);
+        if (device == 0L) {
+            throw new IllegalStateException("Failed to open default audio device.");
+        }
+
+        ALCCapabilities deviceCaps = ALC.createCapabilities(device);
+
+        context = ALC10.alcCreateContext(device, (IntBuffer) null);
+        if (context == 0L) {
+            ALC10.alcCloseDevice(device);
+            throw new IllegalStateException("Failed to create OpenAL context.");
+        }
+
+        ALC10.alcMakeContextCurrent(context);
+        AL.createCapabilities(deviceCaps);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            ALC10.alcDestroyContext(context);
+            ALC10.alcCloseDevice(device);
+        }));
     }
 
     // Add the example block item to the building blocks tab

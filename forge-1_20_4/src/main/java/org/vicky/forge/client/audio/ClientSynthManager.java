@@ -38,6 +38,7 @@ public class ClientSynthManager {
 
         activeVoices.put(pkt.uid(), voice);
         voice.uid = pkt.uid();
+        voice.velocity = pkt.velocity();
 
         // If sustainLoop = true, we render a short loop buffer for sustain region and play it looped,
         // then when noteOff arrives we transition to release via a fresh buffer.

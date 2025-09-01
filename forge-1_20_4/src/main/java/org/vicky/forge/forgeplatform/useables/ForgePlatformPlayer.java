@@ -68,7 +68,6 @@ public class ForgePlatformPlayer implements PlatformPlayer {
 
     @Override
     public void playSound(PlatformLocation location, String soundName, Object category, Float volume, Float pitch) {
-        if (!(player instanceof ServerPlayer player)) return;
         ResourceLocation soundId = new ResourceLocation(soundName);
         SoundEvent event = ForgeRegistries.SOUND_EVENTS.getValue(soundId);
         if (event == null) return;

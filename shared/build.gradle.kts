@@ -2,7 +2,7 @@ plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
-version = "all-0.0.1-BETA"
+version = "0.0.1"
 
 repositories {
     mavenCentral()

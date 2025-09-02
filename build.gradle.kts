@@ -122,17 +122,11 @@ subprojects {
                     }"
                 }
                 create<MavenPublication>("maven") {
-                    if (tasks.findByName("jar") != null) {
-                        artifact(tasks.named("jar").get()) {
-                            classifier = null
-                        }
-                    } else {
-                        from(components["java"])
-                    }
+                    from(components["java"])
                     artifact(tasks.named("javadocJar"))
                     artifact(tasks.named("sourcesJar"))
 
-                    groupId = project.group as String
+                    groupId = "io.github.vickye2"
 
                     artifactId = when {
                         project.name.startsWith("paper") -> "vicky-utils-bukkit"
@@ -143,8 +137,23 @@ subprojects {
                     }
 
                     version = project.version.toString()
-
                     pom {
+                        /*withXml {
+                            val root = asNode()
+                            val dependenciesNode = root.children().find { it is groovy.util.Node && it.name() == "dependencies" }
+                                    as? groovy.util.Node ?: root.appendNode("dependencies")
+
+                            configurations.implementation.get().dependencies.forEach {
+                                if (it.group != null && it.version != null) {
+                                    val depNode = dependenciesNode.appendNode("dependency")
+                                    depNode.appendNode("groupId", it.group)
+                                    depNode.appendNode("artifactId", it.name)
+                                    depNode.appendNode("version", it.version)
+                                    depNode.appendNode("scope", "compile")
+                                }
+                            }
+                        }*/
+
                         name.set("Vicky's Utilities ${
                             when {
                                 project.name.startsWith("paper") -> "Bukkit"
@@ -157,9 +166,9 @@ subprojects {
                         description.set(
                             "Custom utilities for Minecraft ${
                                 when {
-                                    project.name.startsWith("paper") -> "Bukkit Plugin"
-                                    project.name.startsWith("fabric") -> "Fabric Mod"
-                                    project.name.startsWith("forge") -> "Forge Mod"
+                                    project.name.startsWith("paper") -> "Bukkit Plugins"
+                                    project.name.startsWith("fabric") -> "Fabric Mods"
+                                    project.name.startsWith("forge") -> "Forge Mods"
                                     project.name == "shared" -> "Core"
                                     else -> project.name
                                 }

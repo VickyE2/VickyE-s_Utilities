@@ -139,6 +139,14 @@ configurations.configureEach {
 }
 
 jarJar.enable()
+tasks.named('jarJar').configure {
+    finalizedBy 'reobfJar'
+}
+
+// Make 'build' also include the jarJar'd jar
+tasks.named('build').configure {
+    dependsOn 'jarJar'
+}
 
 dependencies {
     // Specify the version of Minecraft to use.
@@ -147,15 +155,14 @@ dependencies {
     // If the group id is "net.minecraft" and the artifact id is one of ["client", "server", "joined"],
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    implementation(group: 'io.github.vickye2', name: 'vicky-utils-core', version: 'all-0.0.1-BETA')
-    jarJar(group: 'io.github.vickye2', name: 'vicky-utils-core', version: 'all-0.0.1-BETA')
-    implementation(group: 'org.xerial', name: 'sqlite-jdbc', version: '3.48.0.0')
-    implementation(group: 'net.kyori', name: 'adventure-api', version: '4.17.0')
-    implementation(group: 'net.kyori', name: 'adventure-text-serializer-plain', version: '4.17.0')
-    implementation(group: 'net.kyori', name: 'adventure-text-serializer-gson', version: '4.17.0')
-    implementation(group: 'org.spongepowered', name: 'configurate-yaml', version: '4.1.2')
-    implementation(group: 'org.spongepowered', name: 'configurate-jackson', version: '4.1.2')
-    implementation(group: 'org.spongepowered', name: 'configurate-xml', version: '4.1.2')
+    api(group: 'io.github.vickye2', name: 'vicky-utils-core', version: '[0.0.1]')
+    api(group: 'org.xerial', name: 'sqlite-jdbc', version: '3.48.0.0')
+    api(group: 'net.kyori', name: 'adventure-api', version: '4.17.0')
+    api(group: 'net.kyori', name: 'adventure-text-serializer-plain', version: '4.17.0')
+    api(group: 'net.kyori', name: 'adventure-text-serializer-gson', version: '4.17.0')
+    api(group: 'org.spongepowered', name: 'configurate-yaml', version: '4.1.2')
+    api(group: 'org.spongepowered', name: 'configurate-jackson', version: '4.1.2')
+    api(group: 'org.spongepowered', name: 'configurate-xml', version: '4.1.2')
 
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

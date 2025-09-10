@@ -181,6 +181,22 @@ subprojects {
                     version = project.version.toString()
 
                     pom {
+                        withXml {
+                            val root = asNode()
+                            val dependenciesNode =
+                                root.children().find { it is groovy.util.Node && it.name() == "dependencies" }
+                                        as? groovy.util.Node ?: root.appendNode("dependencies")
+
+                            configurations.compileOnly.get().dependencies.forEach {
+                                if (it.group != null && it.version != null) {
+                                    val depNode = dependenciesNode.appendNode("dependency")
+                                    depNode.appendNode("groupId", it.group)
+                                    depNode.appendNode("artifactId", it.name)
+                                    depNode.appendNode("version", it.version)
+                                    depNode.appendNode("scope", "compile")
+                                }
+                            }
+                        }
                         name.set("Vicky's Utilities ${
                             when {
                                 project.name.startsWith("paper") -> "Bukkit"

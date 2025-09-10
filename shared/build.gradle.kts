@@ -24,10 +24,10 @@ dependencies {
     implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
 
     // Other runtime dependencies
-    implementation("org.xerial:sqlite-jdbc:3.48.0.0")
-    implementation("net.kyori:adventure-api:4.14.0")
-    implementation("net.kyori:adventure-text-serializer-gson:4.14.0")
-    implementation("net.kyori:adventure-text-serializer-plain:4.14.0")
+    compileOnly("org.xerial:sqlite-jdbc:3.48.0.0")
+    compileOnly("net.kyori:adventure-api:4.14.0")
+    compileOnly("net.kyori:adventure-text-serializer-gson:4.14.0")
+    compileOnly("net.kyori:adventure-text-serializer-plain:4.14.0")
     compileOnly("com.google.code.gson:gson:2.13.1")
     add("downgrade", files("libs/jNBT-1.6.0-downgraded-17.jar"))
 

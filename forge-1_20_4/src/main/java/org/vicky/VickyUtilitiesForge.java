@@ -82,32 +82,10 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     public static final Logger LOGGER = LogUtils.getLogger();
     public static final ContextLogger CONTEXT_LOGGER =
             new ContextLogger(ContextLogger.ContextType.SYSTEM, "V-UTLS");
-    // Create a Deferred Register to hold Blocks which will all be registered under the "v_utls" namespace
-    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
-    // Creates a new Block with the id "v_utls:example_block", combining the namespace and path
-    public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.STONE)));
-    // Create a Deferred Register to hold Items which will all be registered under the "v_utls" namespace
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
-    // Creates a new BlockItem with the id "v_utls:example_block", combining the namespace and path
-    public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block", () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties()));
-    // Creates a new food item with the id "v_utls:example_id", nutrition 1 and saturation 2
-    public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register("example_item", () -> new Item(new Item.Properties().food(new FoodProperties.Builder()
-            .alwaysEat().nutrition(1).saturationMod(2f).build())));
-    // Create a Deferred Register to hold CreativeModeTabs which will all be registered under the "v_utls" namespace
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
-    // Creates a creative tab with the id "v_utls:example_tab" for the example item, that is placed after the combat tab
-    public static final RegistryObject<CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("example_tab", () -> CreativeModeTab.builder()
-            .withTabsBefore(CreativeModeTabs.COMBAT)
-            .icon(() -> EXAMPLE_ITEM.get().getDefaultInstance())
-            .displayItems((parameters, output) -> {
-            output.accept(EXAMPLE_ITEM.get()); // Add the example item to the tab. For your own tabs, this method is preferred over the event
-            }).build());
 
     public static RegistryAccess access;
     private static final List<Class<?>> mappingClasses = new ArrayList<>();
     public static SQLManager sqlManager;
-    public static long context;
-    public static long device;
 
     public VickyUtilitiesForge() {
         PlatformPlugin.set(this);
@@ -115,11 +93,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::clientSetup);
-        BLOCKS.register(modEventBus);
-        ITEMS.register(modEventBus);
-        CREATIVE_MODE_TABS.register(modEventBus);
         MinecraftForge.EVENT_BUS.register(this);
-        modEventBus.addListener(this::addCreative);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ForgeModConfig.SPEC);
         PacketHandler.register();
         org.vicky.musicPlayer.MusicPlayer.INSTANCE.toggleLogging();
@@ -144,13 +118,6 @@ public class VickyUtilitiesForge implements PlatformPlugin {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    // Add the example block item to the building blocks tab
-    private void addCreative(BuildCreativeModeTabContentsEvent event)
-    {
-        if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS)
-            event.accept(EXAMPLE_BLOCK_ITEM);
     }
 
     public static void addTemplateClass(Class<? extends DatabaseTemplate> clazz) {

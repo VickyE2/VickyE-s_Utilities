@@ -3,15 +3,14 @@
  *
  * This project uses @Incubating APIs which are subject to change.
  */
+import java.text.SimpleDateFormat
+import java.util.*
 
 plugins {
     `java-library` apply true
     `maven-publish` apply true
-    //id("com.vanniktech.maven.publish.base") version "0.34.0" apply true
     signing apply true
-    // kotlin("jvm") version "2.1.10"
     id("com.diffplug.spotless") version "6.19.0" apply true
-    // id("org.jetbrains.dokka") version "1.9.10" apply true
 }
 
 allprojects {
@@ -30,11 +29,9 @@ allprojects {
 
     apply(plugin = "java")
     apply(plugin = "signing")
-    // apply(plugin = "kotlin")
     apply(plugin = "java-library")
     apply(plugin = "maven-publish")
     apply(plugin = "com.diffplug.spotless")
-    // apply("org.jetbrains.dokka")
 
     configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         ratchetFrom("origin/master")
@@ -77,12 +74,6 @@ allprojects {
         options.encoding = "UTF-8"
     }
 
-    /*
-    tasks.dokkaHtml {
-        outputDirectory.set(buildDir.resolve("dokka"))
-    }
-     */
-
     tasks.register<Jar>("sourcesJar") {
         archiveClassifier.set("sources")
         from(sourceSets.main.get().allSource)
@@ -107,6 +98,46 @@ allprojects {
 }
 
 subprojects {
+    tasks.register<Jar>("noObfJar") {
+        archiveClassifier.set("") // no classifier, your “normal” jar
+        from(sourceSets.main.get().output)
+
+        manifest {
+            attributes(
+                mapOf(
+                    "Specification-Title" to project.findProperty("mod_id"),
+                    "Specification-Vendor" to project.findProperty("mod_authors"),
+                    "Specification-Version" to "1", // We are version 1 of ourselves
+                    "Implementation-Title" to project.name,
+                    "Implementation-Version" to archiveVersion.get(),
+                    "Implementation-Vendor" to project.findProperty("mod_authors"),
+                    "Implementation-Timestamp" to SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(Date())
+                )
+            )
+        }
+    }
+    tasks.register<Jar>("obfJar") {
+        archiveClassifier.set("mapped_official")
+        from(sourceSets.main.get().output)
+
+        manifest {
+            attributes(
+                mapOf(
+                    "Specification-Title" to project.findProperty("mod_id"),
+                    "Specification-Vendor" to project.findProperty("mod_authors"),
+                    "Implementation-Vendor" to project.findProperty("mod_authors"),
+                    "Specification-Version" to "1",
+                    "Implementation-Title" to project.name,
+                    "Implementation-Version" to archiveVersion.get(),
+                    "Implementation-Timestamp" to SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(Date())
+                )
+            )
+        }
+    }
+    tasks.jar {
+        enabled = false
+    }
+
     afterEvaluate {
         publishing {
             publications {
@@ -121,8 +152,10 @@ subprojects {
                         }
                     }"
                 }
-                create<MavenPublication>("maven") {
-                    from(components["java"])
+                create<MavenPublication>("mavenNormal") {
+                    artifact(tasks.named("noObfJar")) {
+                        builtBy(tasks.named("noObfJar"))
+                    }
                     artifact(tasks.named("javadocJar"))
                     artifact(tasks.named("sourcesJar"))
 
@@ -138,22 +171,31 @@ subprojects {
 
                     version = project.version.toString()
                     pom {
-                        /*withXml {
-                            val root = asNode()
-                            val dependenciesNode = root.children().find { it is groovy.util.Node && it.name() == "dependencies" }
-                                    as? groovy.util.Node ?: root.appendNode("dependencies")
+                        packaging = "jar"
+                        withXml {
+                            val dependenciesNode = asNode().appendNode("dependencies")
+                            val seen = mutableSetOf<String>()
 
-                            configurations.implementation.get().dependencies.forEach {
-                                if (it.group != null && it.version != null) {
+                            fun addDep(scope: String, dep: Dependency) {
+                                val gid = dep.group.orEmpty()
+                                val aid = dep.name
+                                val ver = dep.version.orEmpty()
+                                val key = "$gid:$aid:$ver"
+
+                                if (seen.add(key)) {
                                     val depNode = dependenciesNode.appendNode("dependency")
-                                    depNode.appendNode("groupId", it.group)
-                                    depNode.appendNode("artifactId", it.name)
-                                    depNode.appendNode("version", it.version)
-                                    depNode.appendNode("scope", "compile")
+                                    depNode.appendNode("groupId", gid)
+                                    depNode.appendNode("artifactId", aid)
+                                    depNode.appendNode("version", ver)
+                                    depNode.appendNode("scope", scope)
                                 }
                             }
-                        }*/
 
+                            configurations.api.get().dependencies.forEach { addDep("compile", it) }
+                            configurations.implementation.get().dependencies.forEach { addDep("compile", it) }
+                            configurations.compileOnly.get().dependencies.forEach { addDep("provided", it) }
+                            configurations.runtimeOnly.get().dependencies.forEach { addDep("runtime", it) }
+                        }
                         name.set("Vicky's Utilities ${
                             when {
                                 project.name.startsWith("paper") -> "Bukkit"
@@ -197,24 +239,108 @@ subprojects {
                         }
                     }
                 }
+                create<MavenPublication>("mavenObfMapped") {
+                    artifact(tasks.named("obfJar")) {
+                        builtBy(tasks.named("obfJar"))
+                    }
+                    artifact(tasks.named("javadocJar"))
+                    artifact(tasks.named("sourcesJar"))
+
+                    groupId = "io.github.vickye2"
+
+                    artifactId = when {
+                        project.name.startsWith("paper") -> "vicky-utils-bukkit"
+                        project.name.startsWith("fabric") -> "vicky-utils-fabric"
+                        project.name.startsWith("forge") -> "vicky-utils-forge"
+                        project.name == "shared" -> "vicky-utils-core"
+                        else -> project.name
+                    }
+
+                    version =
+                        project.version.toString() + "_mapped_official_" + (project.findProperty("minecraft_version")
+                            ?: "1.20.4").toString()
+                    pom {
+                        packaging = "jar"
+                        withXml {
+                            val dependenciesNode = asNode().appendNode("dependencies")
+                            val seen = mutableSetOf<String>()
+
+                            fun addDep(scope: String, dep: Dependency) {
+                                val gid = dep.group.orEmpty()
+                                val aid = dep.name
+                                val ver = dep.version.orEmpty()
+                                val key = "$gid:$aid:$ver"
+
+                                if (seen.add(key)) {
+                                    val depNode = dependenciesNode.appendNode("dependency")
+                                    depNode.appendNode("groupId", gid)
+                                    depNode.appendNode("artifactId", aid)
+                                    depNode.appendNode("version", ver)
+                                    depNode.appendNode("scope", scope)
+                                }
+                            }
+
+                            configurations.api.get().dependencies.forEach { addDep("compile", it) }
+                            configurations.implementation.get().dependencies.forEach { addDep("compile", it) }
+                            configurations.compileOnly.get().dependencies.forEach { addDep("provided", it) }
+                            configurations.runtimeOnly.get().dependencies.forEach { addDep("runtime", it) }
+                        }
+                        name.set(
+                            "Vicky's Utilities ${
+                                when {
+                                    project.name.startsWith("paper") -> "Bukkit"
+                                    project.name.startsWith("fabric") -> "Fabric"
+                                    project.name.startsWith("forge") -> "Forge"
+                                    project.name == "shared" -> "Core"
+                                    else -> "Defaulted"
+                                }
+                            }"
+                        )
+                        description.set(
+                            "Custom utilities for Minecraft ${
+                                when {
+                                    project.name.startsWith("paper") -> "Bukkit Plugins"
+                                    project.name.startsWith("fabric") -> "Fabric Mods"
+                                    project.name.startsWith("forge") -> "Forge Mods"
+                                    project.name == "shared" -> "Core"
+                                    else -> project.name
+                                }
+                            }."
+                        )
+                        inceptionYear.set("2024")
+                        url.set("https://github.com/VickyE2/VickyE-s_Utilities")
+                        licenses {
+                            license {
+                                name.set("MIT License")
+                                url.set("https://opensource.org/licenses/MIT")
+                            }
+                        }
+                        developers {
+                            developer {
+                                id.set("vickye")
+                                name.set("VickyE2")
+                                url.set("https://github.com/VickyE2/")
+                                email.set("f.b.cgamingco@gmail.com")
+                            }
+                        }
+                        scm {
+                            connection.set("scm:git:git://github.com/VickyE2/VickyE-s_Utilities.git")
+                            developerConnection.set("scm:git:ssh://github.com/VickyE2/VickyE-s_Utilities.git")
+                            url.set("https://github.com/VickyE2/VickyE-s_Utilities")
+                        }
+                    }
+                }
             }
 
             repositories {
                 mavenLocal()
+                /*
                 maven {
                     name = "GitHubPackages"
                     url = uri("https://maven.pkg.github.com/VickyE2/VickyE-s_Utilities")
                     credentials {
                         username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
                         password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
-                    }
-                }
-                /*maven {
-                    name = "OSSRH"
-                    url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-                    credentials {
-                        username = findProperty("ossrhUsername") as String? ?: System.getenv("ossrhUsername")
-                        password = findProperty("ossrhPassword") as String? ?: System.getenv("ossrhPassword")
                     }
                 }*/
             }
@@ -226,102 +352,8 @@ subprojects {
                 project.findProperty("signing.SIGNING_PASSWORD") as String?
                     ?: System.getenv("SIGNING_PASSWORD") as String
             )
-            sign(the<PublishingExtension>().publications["maven"])
+            sign(the<PublishingExtension>().publications["mavenNormal"])
+            sign(the<PublishingExtension>().publications["mavenObfMapped"])
         }
-
-        /*mavenPublishing {
-            publishToMavenCentral()
-            signAllPublications()
-            configure(JavaLibrary(JavadocJar.Javadoc()))
-            coordinates(
-                project.group as String,
-                when {
-                    project.name.startsWith("paper") -> "vicky-utils-bukkit"
-                    project.name.startsWith("fabric") -> "vicky-utils-fabric"
-                    project.name.startsWith("forge") -> "vicky-utils-forge"
-                    project.name == "shared" -> "vicky-utils-core"
-                    else -> project.name
-                },
-                project.version.toString()
-            )
-
-            pom {
-                name.set("Vicky's Utilities ${when {
-                    project.name.startsWith("paper") -> "Bukkit"
-                    project.name.startsWith("fabric") -> "Fabric"
-                    project.name.startsWith("forge") -> "Forge"
-                    project.name == "shared" -> "Core"
-                    else -> "Defaulted"
-                }}")
-                description.set("Custom utilities for Minecraft ${when {
-                    project.name.startsWith("paper") -> "Bukkit Plugin"
-                    project.name.startsWith("fabric") -> "Fabric Mod"
-                    project.name.startsWith("forge") -> "Forge Mod"
-                    project.name == "shared" -> "Core"
-                    else -> project.name
-                }}.")
-                inceptionYear.set("2024")
-                url.set("https://github.com/VickyE2/VickyE-s_Utilities")
-                licenses {
-                    license {
-                        name.set("MIT License")
-                        url.set("https://opensource.org/licenses/MIT")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("vickye")
-                        name.set("VickyE2")
-                        url.set("https://github.com/VickyE2/")
-                        email.set("f.b.cgamingco@gmail.com")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://github.com/VickyE2/VickyE-s_Utilities.git")
-                    developerConnection.set("scm:git:ssh://github.com/VickyE2/VickyE-s_Utilities.git")
-                    url.set("https://github.com/VickyE2/VickyE-s_Utilities")
-                }
-            }
-        }*/
-        /*
-        publishing {
-            publications {
-                create<MavenPublication>("gpr") {
-
-                }
-            }
-            repositories {
-                // mavenLocal()
-                maven {
-                    name = "Central"
-                    url = uri("https://central.sonatype.com/api/v1/publish")
-                    credentials {
-                        username = project.findProperty("centralUsername") as String
-                        password = project.findProperty("centralPassword") as String
-                    }
-                }
-                /*
-                maven {
-                    name = "GitHubPackages"
-                    url = uri("https://maven.pkg.github.com/VickyE2/VickyE-s_Utilities")
-                    credentials {
-                        username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
-                        password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
-                    }
-                }
-                 */
-            }
-        }
-        signing {
-            val signingKey = Paths.get((findProperty("signing.secretKeyRingFile") as String)).toFile().readText()
-            // println(signingKey)
-            useInMemoryPgpKeys(
-                findProperty("signing.keyId") as String,
-                signingKey,
-                findProperty("signing.password") as String
-            )
-            sign(the<PublishingExtension>().publications["gpr"])
-        }
-        */
     }
 }

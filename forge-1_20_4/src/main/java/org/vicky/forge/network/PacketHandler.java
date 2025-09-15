@@ -11,15 +11,15 @@ import org.vicky.forge.network.registeredpackets.*;
 
 public class PacketHandler {
     private static final int PROTOCOL_VERSION = 1;
-    public static final ResourceLocation CHANNEL_NAME = new ResourceLocation(VickyUtilitiesForge.MODID, "synth");
-    public static final SimpleChannel INSTANCE =
-            ChannelBuilder.named(new ResourceLocation(VickyUtilitiesForge.MODID, "main"))
-                    .serverAcceptedVersions(((status, version) -> version == PROTOCOL_VERSION))
-                    .clientAcceptedVersions(((status, version) -> version == PROTOCOL_VERSION))
-                    .networkProtocolVersion(PROTOCOL_VERSION)
-                    .simpleChannel();
+    public static final ResourceLocation CHANNEL_NAME = new ResourceLocation(VickyUtilitiesForge.MODID, "main");
+    public static final SimpleChannel INSTANCE = ChannelBuilder.named(CHANNEL_NAME)
+            .serverAcceptedVersions(((status, version) -> version == PROTOCOL_VERSION))
+            .clientAcceptedVersions(((status, version) -> version == PROTOCOL_VERSION))
+            .networkProtocolVersion(PROTOCOL_VERSION)
+            .simpleChannel();
     private static final int SYNTH_PROTOCOL_VERSION = 1;
-    public static final SimpleChannel SYNTH_CHANNEL = ChannelBuilder.named(CHANNEL_NAME)
+    public static final ResourceLocation SYNTH_CHANNEL_NAME = new ResourceLocation(VickyUtilitiesForge.MODID, "synth");
+    public static final SimpleChannel SYNTH_CHANNEL = ChannelBuilder.named(SYNTH_CHANNEL_NAME)
             .serverAcceptedVersions(((status, version) -> version == SYNTH_PROTOCOL_VERSION))
             .clientAcceptedVersions(((status, version) -> version == SYNTH_PROTOCOL_VERSION))
             .networkProtocolVersion(SYNTH_PROTOCOL_VERSION)

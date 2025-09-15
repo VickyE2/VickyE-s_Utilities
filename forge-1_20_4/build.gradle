@@ -148,6 +148,15 @@ tasks.named('build').configure {
     dependsOn 'jarJar'
 }
 
+afterEvaluate {
+    reobf {
+        obfJar {}
+    }
+    tasks.named('obfJar') {
+        finalizedBy 'reobfObfJar'
+    }
+}
+
 dependencies {
     // Specify the version of Minecraft to use.
     // Any artifact can be supplied so long as it has a "userdev" classifier artifact and is a compatible patcher artifact.
@@ -155,7 +164,7 @@ dependencies {
     // If the group id is "net.minecraft" and the artifact id is one of ["client", "server", "joined"],
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    api(group: 'io.github.vickye2', name: 'vicky-utils-core', version: '[0.0.1]')
+    api(group: 'io.github.vickye2', name: 'vicky-utils-core', version: '0.0.1')
     api(group: 'org.xerial', name: 'sqlite-jdbc', version: '3.48.0.0')
     api(group: 'net.kyori', name: 'adventure-api', version: '4.17.0')
     api(group: 'net.kyori', name: 'adventure-text-serializer-plain', version: '4.17.0')
@@ -201,22 +210,6 @@ tasks.named('processResources', ProcessResources).configure {
     }}
 
 // Example for how to get properties into the manifest for reading at runtime.
-tasks.named('jar', Jar).configure {
-    manifest {
-        attributes([
-                "Specification-Title": mod_id,
-                "Specification-Vendor": mod_authors,
-                "Specification-Version": "1", // We are version 1 of ourselves
-                "Implementation-Title": project.name,
-                "Implementation-Version": project.jar.archiveVersion,
-                "Implementation-Vendor": mod_authors,
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
-        ])
-    }
-
-    // This is the preferred method to reobfuscate your jar file
-    finalizedBy 'reobfJar'
-}
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation

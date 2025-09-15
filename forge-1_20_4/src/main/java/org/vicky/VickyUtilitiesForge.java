@@ -3,25 +3,15 @@ package org.vicky;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.CreativeModeTabs;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -31,9 +21,6 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
 import org.vicky.forge.client.audio.MidiSynthManager;
 import org.vicky.forge.forgeplatform.*;
@@ -83,7 +70,6 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     public static final ContextLogger CONTEXT_LOGGER =
             new ContextLogger(ContextLogger.ContextType.SYSTEM, "V-UTLS");
 
-    public static RegistryAccess access;
     private static final List<Class<?>> mappingClasses = new ArrayList<>();
     public static SQLManager sqlManager;
 
@@ -138,10 +124,11 @@ public class VickyUtilitiesForge implements PlatformPlugin {
     }
 
     @SubscribeEvent
-    public void onServerStarting(ServerStartingEvent event) {
+    public void onServerStarting(ServerAboutToStartEvent event) {
         LOGGER.info("AHA... There is a server after all...");
         server = event.getServer();
-        access = server.registryAccess();
+        RegistryAccess access = event.getServer().registryAccess();
+        ForgePlatformBlockStateFactory.setLookupProvider(access);
     }
 
     @SubscribeEvent
@@ -149,10 +136,8 @@ public class VickyUtilitiesForge implements PlatformPlugin {
         if (!(event.getLevel() instanceof ServerLevel serverLevel)) return;
         if (!serverLevel.dimension().equals(Level.OVERWORLD)) return;
 
-        Path worldDir = serverLevel.getServer().getWorldPath(LevelResource.ROOT);
-        String folderName = serverLevel.dimension().location().getPath();
-        // worldDir.getFileName().toString().replace(" ", "_").toLowerCase(Locale.ROOT);
-        LOGGER.info("Database folder, {}", folderName);
+        String worldDir = serverLevel.getServer().getWorldPath(LevelResource.ROOT).toString().replace("saves/", "");
+        LOGGER.info("Database folder, {}", worldDir);
 
         sqlManager = new SQLManagerBuilder()
                 .addMappingClass(DatabasePlayer.class)
@@ -166,7 +151,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
                 .setShowSql(false)
                 .setFormatSql(false)
                 .setDialect("org.hibernate.community.dialect.SQLiteDialect")
-                .setDatabaseFolder(worldDir.toString()) // ✅ use full path, not just folderName
+                .setDatabaseFolder(worldDir) // ✅ use full path, not just folderName
                 .setDdlAuto(Hbm2DdlAutoType.UPDATE)
                 .build();
 

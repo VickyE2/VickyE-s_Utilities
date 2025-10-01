@@ -5,6 +5,9 @@ import org.vicky.platform.PlatformLogger;
 import org.vicky.platform.defaults.DefaultPlatformLogger;
 import org.vicky.utilities.ANSIColor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * ContextLogger provides a structured logging utility with ANSI color formatting
  * for both plugin-specific and global Bukkit logging.
@@ -38,22 +41,46 @@ public class ContextLogger {
     this.logger = new DefaultPlatformLogger(contextName);
   }
 
-  /**
-   * Logs a message to the plugin logger with an optional error flag.
-   * The context tag is formatted in red if the message is an error, or in cyan otherwise.
-   *
-   * @param message The message to log
-   * @param isError If true, the message is treated as an error (red formatting); otherwise, cyan is used.
-   */
-  public void print(String message, boolean isError) {
-    String contextTag =
-        "["
-            + ANSIColor.colorize(
-                (isError ? "red" : "cyan") + "[" + context + "-" + contextName + "]")
-            + "] ";
-    String finalContext =
-        contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
-    logger.info(finalContext);
+  public static String replacePlaceholders(String input, List<Integer> indices, List<String> replacements) {
+    StringBuilder sb = new StringBuilder();
+    int placeholderIndex = 0; // counts {} occurrences
+    int replacementIndex = 0; // where we are in replacements list
+
+    for (int i = 0; i < input.length(); i++) {
+      if (i + 1 < input.length() && input.charAt(i) == '{' && input.charAt(i + 1) == '}') {
+        // check if this {} is one we should replace
+        if (indices.contains(placeholderIndex)) {
+          sb.append(replacements.get(replacementIndex++));
+        } else {
+          sb.append("{}"); // leave as-is
+        }
+        placeholderIndex++;
+        i++; // skip over '}'
+      } else {
+        sb.append(input.charAt(i));
+      }
+    }
+    return sb.toString();
+  }
+
+  public static String replaceAllOrdered(String input, List<String> replacements) {
+    StringBuilder sb = new StringBuilder();
+    int replacementIndex = 0;
+
+    for (int i = 0; i < input.length(); i++) {
+      if (i + 1 < input.length() && input.charAt(i) == '{' && input.charAt(i + 1) == '}') {
+        if (replacementIndex < replacements.size()) {
+          sb.append(replacements.get(replacementIndex++));
+        } else {
+          sb.append("{}"); // no replacement left
+        }
+        i++; // skip '}'
+      } else {
+        sb.append(input.charAt(i));
+      }
+    }
+
+    return sb.toString();
   }
 
   /**
@@ -69,6 +96,68 @@ public class ContextLogger {
   }
 
   /**
+   * Logs a message to the plugin logger with an optional error flag.
+   * The context tag is formatted in red if the message is an error, or in cyan otherwise.
+   *
+   * @param message The message to log
+   * @param isError If true, the message is treated as an error (red formatting); otherwise, cyan is used.
+   */
+  public void print(String message, boolean isError) {
+    String contextTag =
+        "["
+            + ANSIColor.colorize(
+                (isError ? "red" : "cyan") + "[" + context + "-" + contextName + "]")
+            + "] ";
+    String finalContext =
+        contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
+    if (isError) logger.error(finalContext);
+    else logger.info(finalContext);
+  }
+
+  /**
+   * Logs a message to the plugin logger using the default cyan context formatting.
+   * This takes an array of object arguments
+   * They will be replaced in the message by the {} placeholder
+   *
+   * @param message The message to log.
+   */
+  public void print(String message, boolean isError, Object... args) {
+    List<String> finalised = new ArrayList<>();
+    for (var arg : args) {
+      finalised.add(arg.toString());
+    }
+    String contextTag =
+            "["
+                    + ANSIColor.colorize(
+                    (isError ? "red" : "cyan") + "[" + context + "-" + contextName + "]")
+                    + "] ";
+    message = replaceAllOrdered(message, finalised);
+    String finalContext =
+            contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
+    if (isError) logger.error(finalContext);
+    else logger.info(finalContext);
+  }
+
+  /**
+   * Logs a message to the plugin logger using the default cyan context formatting.
+   * This takes an array of object arguments
+   * They will be replaced in the message by the {} placeholder
+   *
+   * @param message The message to log.
+   */
+  public void print(String message, Object... args) {
+    List<String> finalised = new ArrayList<>();
+    for (var arg : args) {
+      finalised.add(arg.toString());
+    }
+
+    String contextTag =
+            "[" + ANSIColor.colorize("cyan[" + context + "-" + contextName + "]") + "] ";
+    String finalContext = contextTag + replaceAllOrdered(message, finalised);
+    logger.info(finalContext);
+  }
+
+  /**
    * Logs a message to the plugin logger with a specified log type.
    * The log type determines the color formatting for the context tag and the message.
    *
@@ -79,7 +168,26 @@ public class ContextLogger {
     String contextTag =
         "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
-    logger.info(finalContext);
+    if (type.equals(LogType.WARNING)) logger.warn(finalContext);
+    else if (type.equals(LogType.ERROR)) logger.error(finalContext);
+    else if (type.equals(LogType.AMBIENCE)) logger.debug(finalContext);
+    else logger.info(finalContext);
+  }
+
+  /**
+   * Logs a message to the plugin logger using the default cyan context formatting.
+   * This takes an array of object arguments
+   * They will be replaced in the message by the {} placeholder
+   *
+   * @param message The message to log.
+   */
+  public void print(String message, LogType type, Object... args) {
+    List<String> finalised = new ArrayList<>();
+    for (var arg : args) {
+      finalised.add(arg.toString());
+    }
+    message = replaceAllOrdered(message, finalised);
+    print(message, type);
   }
 
   /**
@@ -96,7 +204,26 @@ public class ContextLogger {
     String finalContext =
         contextTag
             + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
-    logger.info(finalContext);
+    if (type.equals(LogType.WARNING)) logger.warn(finalContext);
+    else if (type.equals(LogType.ERROR)) logger.error(finalContext);
+    else if (type.equals(LogType.AMBIENCE)) logger.debug(finalContext);
+    else logger.info(finalContext);
+  }
+
+  /**
+   * Logs a message to the plugin logger using the default cyan context formatting.
+   * This takes an array of object arguments
+   * They will be replaced in the message by the {} placeholder
+   *
+   * @param message The message to log.
+   */
+  public void print(String message, LogType type, LogPostType effect, Object... args) {
+    List<String> finalised = new ArrayList<>();
+    for (var arg : args) {
+      finalised.add(arg.toString());
+    }
+    message = replaceAllOrdered(message, finalised);
+    print(message, type, effect);
   }
 
   /**
@@ -116,7 +243,26 @@ public class ContextLogger {
     } else {
       finalContext = contextTag + message;
     }
-    logger.info(finalContext);
+    if (type.equals(LogType.WARNING)) logger.warn(finalContext);
+    else if (type.equals(LogType.ERROR)) logger.error(finalContext);
+    else if (type.equals(LogType.AMBIENCE)) logger.debug(finalContext);
+    else logger.info(finalContext);
+  }
+
+  /**
+   * Logs a message to the plugin logger using the default cyan context formatting.
+   * This takes an array of object arguments
+   * They will be replaced in the message by the {} placeholder
+   *
+   * @param message The message to log.
+   */
+  public void print(String message, LogType type, boolean shouldAffectMessage, Object... args) {
+    List<String> finalised = new ArrayList<>();
+    for (var arg : args) {
+      finalised.add(arg.toString());
+    }
+    message = replaceAllOrdered(message, finalised);
+    print(message, type, shouldAffectMessage);
   }
 
   /**
@@ -139,7 +285,26 @@ public class ContextLogger {
     } else {
       finalContext = contextTag + ANSIColor.colorize(effect.effect + "[" + message + "]");
     }
-    logger.info(finalContext);
+    if (type.equals(LogType.WARNING)) logger.warn(finalContext);
+    else if (type.equals(LogType.ERROR)) logger.error(finalContext);
+    else if (type.equals(LogType.AMBIENCE)) logger.debug(finalContext);
+    else logger.info(finalContext);
+  }
+
+  /**
+   * Logs a message to the plugin logger using the default cyan context formatting.
+   * This takes an array of object arguments
+   * They will be replaced in the message by the {} placeholder
+   *
+   * @param message The message to log.
+   */
+  public void print(String message, LogType type, LogPostType effect, boolean shouldAffectMessage, Object... args) {
+    List<String> finalised = new ArrayList<>();
+    for (var arg : args) {
+      finalised.add(arg.toString());
+    }
+    message = replaceAllOrdered(message, finalised);
+    print(message, type, effect, shouldAffectMessage);
   }
 
   /**

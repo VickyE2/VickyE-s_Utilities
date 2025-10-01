@@ -102,7 +102,7 @@ object MusicPlayer {
                         tickEvents.keys.max(),
                         0,
                         iconResourceLocation
-                    ).toPlainBossBarDescriptor()
+                    )
                 )
             )
         }
@@ -308,34 +308,25 @@ object MusicPlayer {
 }
 
 class MusicBossBarDescriptor(
-    private var title: Component,
-    private var subTitle: Component?,
-    private var progress: Float = 1.0f,
-    private var color: IColor? = null,
-    private val overlay: BossBarOverlay? = null,
-
-    val genre: String? = null,
+    title: Component,
+    subTitle: Component?,
+    progress: Float = 1.0f,
+    color: IColor? = null,
+    overlay: BossBarOverlay? = null,
+    genre: String? = null,
     var isPaused: Boolean = false,
-    val trackDuration: Long? = null,
-    var currentTick: Int? = null,
-    var icon: String? = null
+    trackDuration: Long? = null,
+    currentTick: Int? = null,
+    icon: String? = null
 ) : BossBarDescriptor(title, subTitle, progress, color, overlay, "music") {
-    fun toPlainBossBarDescriptor(): BossBarDescriptor {
-        val bossBar = BossBarDescriptor(title)
-            .progress(progress)
-            .color(color)
-            .overlay(overlay)
-            .context("music")
-            .addData("isPaused", isPaused)
-
-        bossBar.addData("type", "MusicBossBarDescriptor")
-        if (genre != null) bossBar.addData("genre", genre)
-        if (trackDuration != null) bossBar.addData("trackDuration", trackDuration)
-        if (currentTick != null) bossBar.addData("currentTick", currentTick)
-        if (icon != null) bossBar.addData("icon", icon)
-        if (subTitle != null) bossBar.addData("subTitle", subTitle)
-
-        return bossBar
+    init {
+        addData("isPaused", isPaused)
+        addData("type", "MusicBossBarDescriptor")
+        if (genre != null) addData("genre", genre)
+        if (trackDuration != null) addData("trackDuration", trackDuration)
+        if (currentTick != null) addData("currentTick", currentTick)
+        if (icon != null) addData("icon", icon)
+        if (subTitle != null) addData("subTitle", subTitle)
     }
 }
 

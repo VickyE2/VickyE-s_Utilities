@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform.useables;
 
 import net.kyori.adventure.text.Component;
@@ -27,12 +28,8 @@ public class ForgeDefaultPlatformBossBar implements PlatformBossBar {
 
     public ForgeDefaultPlatformBossBar(BossBarDescriptor descriptor) {
         this.descriptor = descriptor;
-        this.bossEvent = new BossEvent(
-                uuid,
-                AdventureComponentConverter.toNative(descriptor.title),
-                toColor(descriptor.color),
-                toOverlay(descriptor.overlay)
-        ) {
+        this.bossEvent = new BossEvent(uuid, AdventureComponentConverter.toNative(descriptor.title),
+                toColor(descriptor.color), toOverlay(descriptor.overlay)) {
         };
         bossEvent.setProgress(descriptor.progress);
         bossEvent.setDarkenScreen(false);
@@ -55,7 +52,8 @@ public class ForgeDefaultPlatformBossBar implements PlatformBossBar {
 
     @Override
     public void setVisible(Boolean visible, PlatformPlayer player) {
-        if (!(player instanceof ForgePlatformPlayer forgePlayer)) return;
+        if (!(player instanceof ForgePlatformPlayer forgePlayer))
+            return;
         if (visible) {
             viewers.add(player.uniqueId());
             forgePlayer.getHandle().connection.send(ClientboundBossEventPacket.createAddPacket(bossEvent));
@@ -121,7 +119,8 @@ public class ForgeDefaultPlatformBossBar implements PlatformBossBar {
     private void sendUpdate(ClientboundBossEventPacket packet) {
         for (UUID viewerId : viewers) {
             ServerPlayer sp = server.getPlayerList().getPlayer(viewerId);
-            if (sp != null) sp.connection.send(packet);
+            if (sp != null)
+                sp.connection.send(packet);
         }
     }
 
@@ -131,15 +130,13 @@ public class ForgeDefaultPlatformBossBar implements PlatformBossBar {
         record NamedColor(BossEvent.BossBarColor barColor, float r, float g, float b) {
         }
 
-        NamedColor[] bossColors = new NamedColor[]{
-                new NamedColor(BossEvent.BossBarColor.RED, 1.0f, 0.0f, 0.0f),
+        NamedColor[] bossColors = new NamedColor[]{new NamedColor(BossEvent.BossBarColor.RED, 1.0f, 0.0f, 0.0f),
                 new NamedColor(BossEvent.BossBarColor.GREEN, 0.0f, 1.0f, 0.0f),
                 new NamedColor(BossEvent.BossBarColor.BLUE, 0.0f, 0.0f, 1.0f),
                 new NamedColor(BossEvent.BossBarColor.YELLOW, 1.0f, 1.0f, 0.0f),
                 new NamedColor(BossEvent.BossBarColor.PURPLE, 0.5f, 0.0f, 0.5f),
                 new NamedColor(BossEvent.BossBarColor.WHITE, 1.0f, 1.0f, 1.0f),
-                new NamedColor(BossEvent.BossBarColor.PINK, 1.0f, 0.0f, 1.0f)
-        };
+                new NamedColor(BossEvent.BossBarColor.PINK, 1.0f, 0.0f, 1.0f)};
 
         BossEvent.BossBarColor closest = BossEvent.BossBarColor.WHITE;
         double bestDistance = Double.MAX_VALUE;
@@ -158,7 +155,6 @@ public class ForgeDefaultPlatformBossBar implements PlatformBossBar {
 
         return closest;
     }
-
 
     private BossEvent.BossBarOverlay toOverlay(BossBarOverlay overlay) {
         return switch (overlay) {

@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform.adventure;
 
 import net.kyori.adventure.text.Component;

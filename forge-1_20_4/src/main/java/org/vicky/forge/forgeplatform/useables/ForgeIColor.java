@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform.useables;
 
 import org.vicky.platform.IColor;
@@ -57,13 +58,8 @@ public class ForgeIColor implements IColor {
         return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
-
     @Override
     public String toHex() {
-        return String.format("#%02X%02X%02X",
-                (int) (red * 255),
-                (int) (green * 255),
-                (int) (blue * 255)
-        );
+        return String.format("#%02X%02X%02X", (int) (red * 255), (int) (green * 255), (int) (blue * 255));
     }
 }

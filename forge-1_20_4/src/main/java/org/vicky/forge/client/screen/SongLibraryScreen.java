@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.client.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -15,11 +16,10 @@ import org.vicky.forge.network.registeredpackets.PlaySpecifyableSong;
 import java.util.List;
 
 /**
- * Scrollable, themeable song library screen.
- * - Responsive columns based on available GUI width
- * - Smooth scroll with mouse wheel
- * - Click slots via mouseClicked (no Button widgets so positions don't desync)
- * - Theme values are simple ARGB ints for quick tweaking
+ * Scrollable, themeable song library screen. - Responsive columns based on
+ * available GUI width - Smooth scroll with mouse wheel - Click slots via
+ * mouseClicked (no Button widgets so positions don't desync) - Theme values are
+ * simple ARGB ints for quick tweaking
  */
 public class SongLibraryScreen extends Screen {
     // base GUI size (used for centering); internal layout adjusts to client size
@@ -52,8 +52,10 @@ public class SongLibraryScreen extends Screen {
     }
 
     private static int clamp(int v, int a, int b) {
-        if (v < a) return a;
-        if (v > b) return b;
+        if (v < a)
+            return a;
+        if (v > b)
+            return b;
         return v;
     }
 
@@ -116,18 +118,21 @@ public class SongLibraryScreen extends Screen {
 
         // visible range calculation to avoid drawing everything
         int firstRow = Math.max(0, (scrollY) / (slotSize + slotPaddingY));
-        int lastRow = Math.min((int) Math.ceil((double) contentHeight / (slotSize + slotPaddingY)), firstRow + (innerHeight / (slotSize + slotPaddingY)) + 2);
+        int lastRow = Math.min((int) Math.ceil((double) contentHeight / (slotSize + slotPaddingY)),
+                firstRow + (innerHeight / (slotSize + slotPaddingY)) + 2);
 
         for (int row = firstRow; row <= lastRow; row++) {
             for (int col = 0; col < columns; col++) {
                 int idx = row * columns + col;
-                if (idx >= songs.size()) break;
+                if (idx >= songs.size())
+                    break;
 
                 int x = contentLeft + col * colWidth;
                 int y = contentTop + row * (slotSize + slotPaddingY) - scrollY;
 
                 // skip drawing if outside clip vertically
-                if (y + slotSize < contentTop || y > contentBottom) continue;
+                if (y + slotSize < contentTop || y > contentBottom)
+                    continue;
 
                 // slot background
                 graphics.fill(x - 2, y - 2, x + slotSize + 2, y + slotSize + 2, theme.slotBorder());
@@ -143,17 +148,21 @@ public class SongLibraryScreen extends Screen {
 
                 // draw labels
                 String title = entry.title.length() > 18 ? entry.title.substring(0, 15) + "..." : entry.title;
-                graphics.drawString(this.font, Component.literal(title), x + 4, y + iconSize + 6, theme.titleSmallColor(), false);
+                graphics.drawString(this.font, Component.literal(title), x + 4, y + iconSize + 6,
+                        theme.titleSmallColor(), false);
 
                 String authors = entry.authors == null ? "" : entry.authors;
-                if (authors.length() > 20) authors = authors.substring(0, 17) + "...";
-                graphics.drawString(this.font, Component.literal(authors), x + 4, y + iconSize + 16, theme.subliminalText(), false);
+                if (authors.length() > 20)
+                    authors = authors.substring(0, 17) + "...";
+                graphics.drawString(this.font, Component.literal(authors), x + 4, y + iconSize + 16,
+                        theme.subliminalText(), false);
 
                 // hover highlight & tooltip
                 if (mouseX >= x && mouseX < x + slotSize && mouseY >= y && mouseY < y + slotSize) {
                     graphics.fill(x - 1, y - 1, x + slotSize + 1, y + slotSize + 1, theme.hoverOverlay());
                     // render tooltip as usual
-                    graphics.renderTooltip(Minecraft.getInstance().font, Component.literal(entry.title), mouseX, mouseY);
+                    graphics.renderTooltip(Minecraft.getInstance().font, Component.literal(entry.title), mouseX,
+                            mouseY);
                 }
             }
         }
@@ -165,24 +174,28 @@ public class SongLibraryScreen extends Screen {
 
         // footer hint or page info
         String hint = "Click an icon to play · Scroll to browse";
-        graphics.drawString(this.font, Component.literal(hint), left + 10, top + guiHeight - 18, theme.footerColor(), false);
+        graphics.drawString(this.font, Component.literal(hint), left + 10, top + guiHeight - 18, theme.footerColor(),
+                false);
 
         super.render(graphics, mouseX, mouseY, partialTicks);
     }
 
     private void drawRoundedPanel(GuiGraphics graphics, int x, int y, int w, int h, int color) {
-        // simple rectangle for now (rounded requires texture); keep it small and efficient
+        // simple rectangle for now (rounded requires texture); keep it small and
+        // efficient
         graphics.fill(x, y, x + w, y + h, color);
     }
 
     private void drawIcon(GuiGraphics graphics, ResourceLocation icon, int x, int y, int w, int h) {
-        if (icon == null) return;
+        if (icon == null)
+            return;
         Minecraft mc = Minecraft.getInstance();
         RenderSystem.setShaderTexture(0, icon);
         graphics.blit(icon, x, y, w, h, 0, 0, w, h, w, h);
     }
 
-    private void drawScrollbar(GuiGraphics graphics, int x, int y, int width, int height, int scroll, int totalContent) {
+    private void drawScrollbar(GuiGraphics graphics, int x, int y, int width, int height, int scroll,
+                               int totalContent) {
         // background track
         graphics.fill(x, y, x + width, y + height, theme.scrollTrack());
 
@@ -198,14 +211,17 @@ public class SongLibraryScreen extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double delta, double p_299502_) {
         // wheel: delta positive = up, negative = down
         int step = (int) Math.ceil(Math.abs(delta) * 20);
-        if (delta > 0) scrollY = clamp(scrollY - step, 0, Math.max(0, contentHeight - innerHeight));
-        else scrollY = clamp(scrollY + step, 0, Math.max(0, contentHeight - innerHeight));
+        if (delta > 0)
+            scrollY = clamp(scrollY - step, 0, Math.max(0, contentHeight - innerHeight));
+        else
+            scrollY = clamp(scrollY + step, 0, Math.max(0, contentHeight - innerHeight));
         return true;
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0) return false; // only left click
+        if (button != 0)
+            return false; // only left click
         // check if click is inside content area and match a slot
         int contentLeft = left + 8;
         int contentTop = top + 26;
@@ -216,10 +232,12 @@ public class SongLibraryScreen extends Screen {
         double relX = mouseX - contentLeft;
         double relY = mouseY - contentTop + scrollY;
 
-        if (relX < 0 || relY < 0) return false;
+        if (relX < 0 || relY < 0)
+            return false;
         int col = (int) (relX / colWidth);
         int row = (int) (relY / (slotSize + slotPaddingY));
-        if (col < 0 || col >= columns) return false;
+        if (col < 0 || col >= columns)
+            return false;
 
         int idx = row * columns + col;
         if (idx >= 0 && idx < songs.size()) {

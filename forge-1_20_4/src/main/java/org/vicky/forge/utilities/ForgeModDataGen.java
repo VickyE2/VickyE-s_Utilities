@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.utilities;
 
 import net.minecraft.core.HolderLookup;
@@ -11,9 +12,9 @@ import java.util.concurrent.CompletableFuture;
 
 @Mod.EventBusSubscriber(modid = VickyUtilitiesForge.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ForgeModDataGen {
-    @SubscribeEvent
-    public static void gatherData(GatherDataEvent event) {
-        CompletableFuture<HolderLookup.Provider> providerFuture = event.getLookupProvider();
-        providerFuture.thenAccept(ForgePlatformBlockStateFactory::setLookupProvider);
-    }
+	@SubscribeEvent
+	public static void gatherData(GatherDataEvent event) {
+		CompletableFuture<HolderLookup.Provider> providerFuture = event.getLookupProvider();
+		providerFuture.thenAccept(ForgePlatformBlockStateFactory::setLookupProvider);
+	}
 }

@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.utilities;
 
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -16,9 +17,7 @@ public class ForgeModConfig {
     public static ForgeConfigSpec.BooleanValue DEBUG_MODE;
 
     static {
-        DEBUG_MODE = BUILDER
-                .comment("Enable debug mode")
-                .define("general.debug_mode", false);
+        DEBUG_MODE = BUILDER.comment("Enable debug mode").define("general.debug_mode", false);
 
         SPEC = BUILDER.build();
     }

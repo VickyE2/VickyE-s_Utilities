@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform;
 
 import net.minecraftforge.common.MinecraftForge;
@@ -29,7 +30,8 @@ public class ForgePlatformScheduler implements PlatformScheduler {
 
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+        if (event.phase != TickEvent.Phase.END)
+            return;
 
         Iterator<ScheduledTask> iterator = taskQueue.iterator();
         while (iterator.hasNext()) {

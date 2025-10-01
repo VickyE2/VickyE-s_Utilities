@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform;
 
 import net.minecraft.resources.ResourceLocation;
@@ -18,10 +19,7 @@ public class ForgeBossBarFactory implements PlatformBossBarFactory {
                 }
                 @SuppressWarnings("removal")
                 ResourceLocation resource = new ResourceLocation((String) image);
-                yield new MusicScreenSlidingBossBar(
-                        descriptor,
-                        resource
-                );
+                yield new MusicScreenSlidingBossBar(descriptor, resource);
             }
             default -> new ForgeDefaultPlatformBossBar(descriptor);
         };

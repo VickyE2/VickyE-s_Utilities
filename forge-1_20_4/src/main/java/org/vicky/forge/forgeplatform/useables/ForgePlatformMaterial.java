@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform.useables;
 
 import net.minecraft.world.item.BlockItem;
@@ -22,7 +23,8 @@ public record ForgePlatformMaterial(ItemLike material) implements PlatformMateri
         Item item = material.asItem();
 
         // Item.AIR covers the "no item" case
-        if (item == Items.AIR) return true;
+        if (item == Items.AIR)
+            return true;
 
         // If it's a block, check for air blocks
         if (item instanceof BlockItem blockItem) {
@@ -32,7 +34,6 @@ public record ForgePlatformMaterial(ItemLike material) implements PlatformMateri
 
         return false;
     }
-
 
     @Override
     public ResourceLocation getResourceLocation() {

@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.global;
 
 import com.mojang.brigadier.Command;
@@ -26,7 +27,6 @@ import java.util.Optional;
 
 import static org.vicky.VickyUtilitiesForge.LOGGER;
 
-
 @Mod.EventBusSubscriber
 public class GlobalListener {
     static final DatabasePlayerDAO dao = new DatabasePlayerDAO();
@@ -43,7 +43,8 @@ public class GlobalListener {
         if (!forgeData.contains(FIRST_JOIN_TAG)) {
             forgeData.putBoolean(FIRST_JOIN_TAG, true);
             persistentData.put(Player.PERSISTED_NBT_TAG, forgeData);
-            player.sendSystemMessage(Component.literal("§6Welcome, " + player.getName().getString() + "! This is your first time here."));
+            player.sendSystemMessage(Component
+                    .literal("§6Welcome, " + player.getName().getString() + "! This is your first time here."));
 
             DatabasePlayer databasePlayer = new DatabasePlayer();
             databasePlayer.setId(player.getUUID());
@@ -52,9 +53,7 @@ public class GlobalListener {
 
             MusicPlayer musicPlayer = new MusicPlayer();
             musicPlayer.setId(player.getStringUUID());
-            musicPlayer.addPiece(
-                    new MusicPieceDAO().findById("vicky_utils_symphony1")
-            );
+            musicPlayer.addPiece(new MusicPieceDAO().findById("vicky_utils_symphony1"));
             musicPlayer.setDatabasePlayer(databasePlayer);
             mDao.save(musicPlayer);
         } else {
@@ -69,9 +68,7 @@ public class GlobalListener {
 
                 MusicPlayer musicPlayer = new MusicPlayer();
                 musicPlayer.setId(player.getStringUUID());
-                musicPlayer.addPiece(
-                        new MusicPieceDAO().findById("vicky_utils_symphony1")
-                );
+                musicPlayer.addPiece(new MusicPieceDAO().findById("vicky_utils_symphony1"));
                 musicPlayer.setDatabasePlayer(databasePlayer);
                 mDao.save(musicPlayer);
             } else {
@@ -94,23 +91,19 @@ public class GlobalListener {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
         // Example: /vickyutils hello <name>
-        dispatcher.register(Commands.literal("vicky_utils")
-                .then(Commands.literal("open_library")
-                        .executes(context -> {
-                            if (context.getSource().getEntity() instanceof ServerPlayer player) {
-                                var musicPlayer = new MusicPlayerDAO().findById(player.getUUID());
-                                if (musicPlayer.isEmpty()) {
-                                    throw new IllegalArgumentException("The music player should exist....");
-                                }
-                                var packet = new OpenOwnedRecordsScreen(musicPlayer.get().getOwnedPieces().stream().map(MusicPiece::getId).toList());
-                                PacketHandler.sendToClient(player, packet);
-                            } else {
-                                context.getSource().sendSuccess(() -> Component.literal("You cant do that in a console ;-;"), false);
-                            }
-                            return Command.SINGLE_SUCCESS;
-                        })
-                )
-        );
+        dispatcher.register(Commands.literal("vicky_utils").then(Commands.literal("open_library").executes(context -> {
+            if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                var musicPlayer = new MusicPlayerDAO().findById(player.getUUID());
+                if (musicPlayer.isEmpty()) {
+                    throw new IllegalArgumentException("The music player should exist....");
+                }
+                var packet = new OpenOwnedRecordsScreen(
+                        musicPlayer.get().getOwnedPieces().stream().map(MusicPiece::getId).toList());
+                PacketHandler.sendToClient(player, packet);
+            } else {
+                context.getSource().sendSuccess(() -> Component.literal("You cant do that in a console ;-;"), false);
+            }
+            return Command.SINGLE_SUCCESS;
+        })));
     }
 }
-

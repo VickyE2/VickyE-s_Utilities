@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform.useables;
 
 import de.pauleff.api.ICompoundTag;
@@ -33,10 +34,8 @@ public record ForgePlatformWorldAdapter(Level world) implements PlatformWorld<Bl
 
     public int getHighestBlockYAt(double x, double z) {
         // Forge/vanilla equivalent of Bukkit#getHighestBlockYAt
-        BlockPos pos = world.getHeightmapPos(
-                Heightmap.Types.MOTION_BLOCKING, // blocks movement (like solid or leaves)
-                new BlockPos((int) x, 0, (int) z)
-        );
+        BlockPos pos = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, // blocks movement (like solid or leaves)
+                new BlockPos((int) x, 0, (int) z));
         return pos.getY();
     }
 
@@ -47,7 +46,8 @@ public record ForgePlatformWorldAdapter(Level world) implements PlatformWorld<Bl
 
     @Override
     public List<PlatformPlayer> getPlayers() {
-        return world.players().stream().map(ServerPlayer.class::cast).map(ForgePlatformPlayer::new).collect(Collectors.toUnmodifiableList());
+        return world.players().stream().map(ServerPlayer.class::cast).map(ForgePlatformPlayer::new)
+                .collect(Collectors.toUnmodifiableList());
     }
 
     @Override
@@ -90,17 +90,18 @@ public record ForgePlatformWorldAdapter(Level world) implements PlatformWorld<Bl
         // properties = something like "[axis=y]"
         ResourceLocation rl = new ResourceLocation(id);
         Block block = ForgeRegistries.BLOCKS.getValue(rl);
-        if (block == null) return null;
+        if (block == null)
+            return null;
 
         BlockState state = block.defaultBlockState();
 
-        // TODO: parse `properties` and apply (you'll need to split like axis=y, facing=north, etc.)
+        // TODO: parse `properties` and apply (you'll need to split like axis=y,
+        // facing=north, etc.)
         // Example:
         // state = state.setValue(BlockStateProperties.AXIS, Direction.Axis.Y);
 
         return new ForgePlatformBlockStateAdapter(state);
     }
-
 
     @Override
     public void loadChunkIfNeeded(int chunkX, int chunkZ) {

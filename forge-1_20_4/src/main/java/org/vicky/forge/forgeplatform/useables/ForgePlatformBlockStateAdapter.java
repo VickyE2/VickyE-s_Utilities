@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform.useables;
 
 import net.minecraft.world.level.block.state.BlockState;
@@ -29,17 +30,12 @@ public record ForgePlatformBlockStateAdapter(BlockState state) implements Platfo
     @Override
     public Map<String, String> getProperties() {
         return state.getProperties().stream()
-                .collect(Collectors.toMap(
-                        Property::getName,
-                        property -> state.getValue(property).toString()
-                ));
+                .collect(Collectors.toMap(Property::getName, property -> state.getValue(property).toString()));
     }
 
     @Override
     public <P> P getProperty(String name) {
-        return (P) state.getProperties().stream()
-                .filter(property -> property.getName().equals(name))
-                .limit(1)
+        return (P) state.getProperties().stream().filter(property -> property.getName().equals(name)).limit(1)
                 .map(property -> state.getValue(property));
     }
 }

@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform;
 
 import org.vicky.forge.forgeplatform.useables.ForgeIColor;

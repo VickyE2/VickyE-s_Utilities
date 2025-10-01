@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.client;
 
 import net.minecraft.client.Minecraft;
@@ -14,7 +15,8 @@ import static org.vicky.forge.client.ClientIncomingPacketHandler.activeBars;
 public class ClientRenderHandler {
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiEvent.Pre event) {
-        if (activeBars.isEmpty()) return;
+        if (activeBars.isEmpty())
+            return;
         Minecraft mc = Minecraft.getInstance();
         int sw = mc.getWindow().getGuiScaledWidth();
         int sh = mc.getWindow().getGuiScaledHeight();

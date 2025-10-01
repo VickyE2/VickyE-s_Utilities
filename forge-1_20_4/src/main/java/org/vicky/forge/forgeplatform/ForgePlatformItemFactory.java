@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform;
 
 import org.vicky.forge.forgeplatform.useables.ForgePlatformItem;
@@ -12,6 +13,7 @@ public class ForgePlatformItemFactory implements PlatformItemFactory {
         if (material instanceof ForgePlatformMaterial material1) {
             return new ForgePlatformItem(material1.material().asItem().getDefaultInstance());
         }
-        throw new IllegalArgumentException("Expected `ForgePlatformMaterial` got " + material.getClass().getSimpleName());
+        throw new IllegalArgumentException(
+                "Expected `ForgePlatformMaterial` got " + material.getClass().getSimpleName());
     }
 }

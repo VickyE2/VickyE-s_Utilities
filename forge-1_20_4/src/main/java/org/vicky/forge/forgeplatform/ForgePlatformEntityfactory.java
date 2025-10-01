@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform;
 
 import net.minecraft.network.chat.Component;
@@ -14,7 +15,8 @@ import org.vicky.platform.world.PlatformLocation;
 public class ForgePlatformEntityfactory implements PlatformEntityFactory {
     @Override
     public PlatformArrow spawnArrowAt(PlatformLocation loc) {
-        if (!(loc instanceof ForgeVec3 location)) throw new IllegalArgumentException("Expected ForgeVec3 got abstract");
+        if (!(loc instanceof ForgeVec3 location))
+            throw new IllegalArgumentException("Expected ForgeVec3 got abstract");
         Level world = location.getForgeWorld();
         Arrow arrow = EntityType.ARROW.create(world);
         if (arrow != null) {

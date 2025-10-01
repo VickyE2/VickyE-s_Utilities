@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform;
 
 import com.mojang.brigadier.StringReader;
@@ -14,29 +15,31 @@ import org.vicky.platform.world.PlatformBlockState;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 
 public class ForgePlatformBlockStateFactory implements PlatformBlockStateFactory {
-    private static HolderLookup.Provider lookup;
+	private static HolderLookup.Provider lookup;
 
-    public static void setLookupProvider(HolderLookup.Provider provider) {
-        VickyUtilitiesForge.LOGGER.info("Setting lookup provider to: {}", provider);
-        lookup = provider;
-    }
+	public static void setLookupProvider(HolderLookup.Provider provider) {
+		VickyUtilitiesForge.LOGGER.info("Setting lookup provider to: {}", provider);
+		lookup = provider;
+	}
 
-    public static BlockState parseBlockState(String input) throws CommandSyntaxException {
-        HolderLookup<Block> provider;
-        if (lookup != null) provider = lookup.lookupOrThrow(Registries.BLOCK);
-        else provider = BuiltInRegistries.BLOCK.asLookup();
-        StringReader reader = new StringReader(input);
-        BlockStateParser.BlockResult result = BlockStateParser.parseForBlock(provider, reader, true);
-        return result.blockState();
-    }
+	public static BlockState parseBlockState(String input) throws CommandSyntaxException {
+		HolderLookup<Block> provider;
+		if (lookup != null)
+			provider = lookup.lookupOrThrow(Registries.BLOCK);
+		else
+			provider = BuiltInRegistries.BLOCK.asLookup();
+		StringReader reader = new StringReader(input);
+		BlockStateParser.BlockResult result = BlockStateParser.parseForBlock(provider, reader, true);
+		return result.blockState();
+	}
 
-    @Override
-    public PlatformBlockState<?> getBlockState(String type) {
-        try {
-            var state = parseBlockState(type);
-            return new ForgePlatformBlockStateAdapter(state);
-        } catch (CommandSyntaxException e) {
-            return null;
-        }
-    }
+	@Override
+	public PlatformBlockState<?> getBlockState(String type) {
+		try {
+			var state = parseBlockState(type);
+			return new ForgePlatformBlockStateAdapter(state);
+		} catch (CommandSyntaxException e) {
+			return null;
+		}
+	}
 }

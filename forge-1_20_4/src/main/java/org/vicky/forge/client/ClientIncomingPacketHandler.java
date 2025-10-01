@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.client;
 
 import net.minecraft.client.Minecraft;
@@ -18,7 +19,6 @@ import java.util.UUID;
 public class ClientIncomingPacketHandler {
     static final Map<UUID, SimpleMusicSliderBossBar> activeBars = new HashMap<>();
 
-
     public static void proceedWithSSBossBar(CreateSSBossBar msg) {
         try {
             SimpleMusicSliderBossBar bar = new SimpleMusicSliderBossBar();
@@ -26,7 +26,8 @@ public class ClientIncomingPacketHandler {
             // null-safe conversions — fallback to empty component / default image
             bar.setProgress(msg.progress());
             bar.setTitle(msg.title() == null ? Component.empty() : AdventureComponentConverter.toNative(msg.title()));
-            bar.setSubTitle(msg.subTitle() == null ? Component.empty() : AdventureComponentConverter.toNative(msg.subTitle()));
+            bar.setSubTitle(
+                    msg.subTitle() == null ? Component.empty() : AdventureComponentConverter.toNative(msg.subTitle()));
             bar.setColor(msg.hex() == null ? "#FFFFFF" : msg.hex());
             bar.setImage(msg.image()); // image may be null — let bar handle null gracefully
 
@@ -42,11 +43,11 @@ public class ClientIncomingPacketHandler {
         mc.execute(() -> mc.setScreen(new SongLibraryScreen(msg.songs())));
     }
 
-
     public static void updateSSBossBar(UpdateSSBossBar msg, CustomPayloadEvent.Context ctx) {
         SimpleMusicSliderBossBar bar = activeBars.get(msg.id());
         if (bar != null) {
-            if (msg.title() != null) bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
+            if (msg.title() != null)
+                bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
             bar.setProgress(msg.progress());
             bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
             bar.setSubTitle(AdventureComponentConverter.toNative(msg.subTitle()));

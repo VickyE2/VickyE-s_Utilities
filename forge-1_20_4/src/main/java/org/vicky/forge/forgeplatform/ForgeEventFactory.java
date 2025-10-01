@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform;
 
 import net.minecraftforge.common.MinecraftForge;
@@ -12,7 +13,8 @@ public class ForgeEventFactory implements PlatformEventFactory {
         if (event instanceof ForgeEvent forgeEvent) {
             return (T) MinecraftForge.EVENT_BUS.fire(forgeEvent.getEvent());
         } else {
-            throw new IllegalArgumentException("Expected event of type `ForgeEvent` got " + event.getClass().getSimpleName());
+            throw new IllegalArgumentException(
+                    "Expected event of type `ForgeEvent` got " + event.getClass().getSimpleName());
         }
     }
 }

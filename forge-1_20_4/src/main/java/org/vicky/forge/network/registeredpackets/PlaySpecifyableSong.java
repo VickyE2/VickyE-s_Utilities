@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.network.registeredpackets;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -13,9 +14,7 @@ import java.util.Optional;
 
 public record PlaySpecifyableSong(String id) implements Packetable {
     public static PlaySpecifyableSong decode(FriendlyByteBuf friendlyByteBuf) {
-        return new PlaySpecifyableSong(
-                friendlyByteBuf.readUtf()
-        );
+        return new PlaySpecifyableSong(friendlyByteBuf.readUtf());
     }
 
     public static void handle(PlaySpecifyableSong msg, CustomPayloadEvent.Context ctx) {
@@ -25,17 +24,13 @@ public record PlaySpecifyableSong(String id) implements Packetable {
                 System.out.println("Well that wasn't meant to happen...");
                 return;
             }
-            Optional<MusicPiece> piece = MusicRegistry.getInstance(MusicRegistry.class).getRegisteredEntities()
-                    .stream().filter(it -> it.key().equals(msg.id)).findFirst();
-            piece.ifPresentOrElse(
-                    musicPiece -> MusicPlayer.INSTANCE.play(
-                            new ForgePlatformPlayer(ctx.getSender()),
-                            musicPiece,
-                            "vicky_music:icons/" + musicPiece.key() + ".png"),
-                    () -> {
-                        ctx.getSender().sendSystemMessage(Component.literal("Sadly we could not find that music piece on the server..."));
-                    }
-            );
+            Optional<MusicPiece> piece = MusicRegistry.getInstance(MusicRegistry.class).getRegisteredEntities().stream()
+                    .filter(it -> it.key().equals(msg.id)).findFirst();
+            piece.ifPresentOrElse(musicPiece -> MusicPlayer.INSTANCE.play(new ForgePlatformPlayer(ctx.getSender()),
+                    musicPiece, "vicky_music:icons/" + musicPiece.key() + ".png"), () -> {
+                ctx.getSender().sendSystemMessage(
+                        Component.literal("Sadly we could not find that music piece on the server..."));
+            });
         });
         ctx.setPacketHandled(true);
     }

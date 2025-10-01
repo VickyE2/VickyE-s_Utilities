@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform.useables;
 
 import net.kyori.adventure.text.Component;
@@ -65,31 +66,21 @@ public class ForgePlatformPlayer implements PlatformPlayer {
         bar.removeViewer(ForgePlatformPlayer.adapt(player));
     }
 
-
     @Override
     public void playSound(PlatformLocation location, String soundName, Object category, Float volume, Float pitch) {
         ResourceLocation soundId = new ResourceLocation(soundName);
         SoundEvent event = ForgeRegistries.SOUND_EVENTS.getValue(soundId);
-        if (event == null) return;
-        player.playNotifySound(
-                event,
-                SoundSource.valueOf(category.toString().toUpperCase(Locale.ROOT)), // e.g. "RECORDS"
-                volume,
-                pitch
-        );
+        if (event == null)
+            return;
+        player.playNotifySound(event, SoundSource.valueOf(category.toString().toUpperCase(Locale.ROOT)), // e.g.
+                // "RECORDS"
+                volume, pitch);
     }
 
     @Override
     public PlatformLocation getLocation() {
         Level level = player.level();
-        return new ForgeVec3(
-                level,
-                player.getX(),
-                player.getY(),
-                player.getZ(),
-                player.yRotO,
-                player.xRotO
-        );
+        return new ForgeVec3(level, player.getX(), player.getY(), player.getZ(), player.yRotO, player.xRotO);
     }
 
     @Override
@@ -105,7 +96,8 @@ public class ForgePlatformPlayer implements PlatformPlayer {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof ForgePlatformPlayer)) return false;
+        if (!(obj instanceof ForgePlatformPlayer))
+            return false;
         return ((ForgePlatformPlayer) obj).getHandle() == this.player;
     }
 

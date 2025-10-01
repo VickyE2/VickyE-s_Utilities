@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.client.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -18,7 +19,7 @@ public class SimpleMusicSliderBossBar implements Renderable {
     private float animationProgress = 0.0f; // 0 (hidden) to 1 (fully shown)
     private long lastUpdateTime = System.currentTimeMillis();
     private boolean visible = true;
-    private Theme theme = Theme.SELECTED;      // assign the current theme
+    private Theme theme = Theme.SELECTED; // assign the current theme
     private @Nullable ResourceLocation image;
 
     public void setProgress(float progress) {
@@ -42,7 +43,8 @@ public class SimpleMusicSliderBossBar implements Renderable {
     }
 
     private static int parseHexToIntSafe(String hex, int fallback) {
-        if (hex == null) return fallback;
+        if (hex == null)
+            return fallback;
         try {
             String h = hex.startsWith("#") ? hex.substring(1) : hex;
             int rgb = Integer.parseInt(h, 16);
@@ -62,10 +64,12 @@ public class SimpleMusicSliderBossBar implements Renderable {
 
         // Animate in/out
         final float ANIM_SPEED = 6.0f; // higher => faster
-        if (visible && animationProgress < 1f) animationProgress = Math.min(1f, animationProgress + delta * ANIM_SPEED);
+        if (visible && animationProgress < 1f)
+            animationProgress = Math.min(1f, animationProgress + delta * ANIM_SPEED);
         if (!visible && animationProgress > 0f)
             animationProgress = Math.max(0f, animationProgress - delta * ANIM_SPEED);
-        if (animationProgress <= 0.01f) return; // fully hidden
+        if (animationProgress <= 0.01f)
+            return; // fully hidden
 
         // layout
         int screenW = graphics.guiWidth();
@@ -97,7 +101,7 @@ public class SimpleMusicSliderBossBar implements Renderable {
 
         // --- Background (rounded look can be faked with two fills) ---
         graphics.fill(x - 2, y - 2, x + barWidth + 2, y + barHeight + 2, borderCol); // border
-        graphics.fill(x, y, x + barWidth, y + barHeight, panelBg);                  // panel
+        graphics.fill(x, y, x + barWidth, y + barHeight, panelBg); // panel
 
         // Progress track background
         int trackLeft = x + 4;
@@ -115,16 +119,19 @@ public class SimpleMusicSliderBossBar implements Renderable {
 
         // Title: left-aligned near the left of the bar
         int textLeft = x + 8;
-        graphics.drawString(Minecraft.getInstance().font, Component.literal(titleStr), textLeft, y + 10, titleCol, false);
+        graphics.drawString(Minecraft.getInstance().font, Component.literal(titleStr), textLeft, y + 10, titleCol,
+                false);
 
         // Subtitle: right-aligned small text next to title or below depending on space
-        graphics.drawString(Minecraft.getInstance().font, Component.literal(subStr), textLeft, y + 18, subtitleCol, false);
+        graphics.drawString(Minecraft.getInstance().font, Component.literal(subStr), textLeft, y + 18, subtitleCol,
+                false);
 
         // Draw image (if present) to the left of the panel (clamped)
         if (image != null) {
             try {
                 RenderSystem.setShaderTexture(0, image);
-                // draw 20x20 icon inside the bar to the far right or left — here we'll put it left of title
+                // draw 20x20 icon inside the bar to the far right or left — here we'll put it
+                // left of title
                 int iconSize = 20;
                 int iconX = x - iconSize - 6; // outside left of the panel by a small gap
                 int iconY = y + (barHeight - iconSize) / 2;
@@ -142,4 +149,3 @@ public class SimpleMusicSliderBossBar implements Renderable {
         }
     }
 }
-

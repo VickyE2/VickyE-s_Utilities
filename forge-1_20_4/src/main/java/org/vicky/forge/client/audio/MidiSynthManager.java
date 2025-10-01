@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.client.audio;
 
 import net.minecraft.resources.ResourceLocation;
@@ -19,7 +20,8 @@ public class MidiSynthManager {
         synth = MidiSystem.getSynthesizer();
         synth.open();
         channels = synth.getChannels();
-        var resource = manager.getResourceOrThrow(ResourceLocation.fromNamespaceAndPath("vicky_music", "synth/default_synth.sf2"));
+        var resource = manager
+                .getResourceOrThrow(ResourceLocation.fromNamespaceAndPath("vicky_music", "synth/default_synth.sf2"));
         soundbank = MidiSystem.getSoundbank(resource.open());
         if (synth.isSoundbankSupported(soundbank)) {
             synth.loadAllInstruments(soundbank);

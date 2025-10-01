@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.network.registeredpackets;
 
 import net.kyori.adventure.text.Component;
@@ -43,7 +44,8 @@ public record UpdateSSBossBar(UUID id, Component title, Component subTitle, floa
 
     private static Component safeDeserializeComponent(String json) {
         try {
-            if (json == null || json.isBlank()) return Component.empty();
+            if (json == null || json.isBlank())
+                return Component.empty();
             return GsonComponentSerializer.gson().deserialize(json);
         } catch (Exception ex) {
             // Decoding failed — fallback to an empty component and log
@@ -79,7 +81,8 @@ public record UpdateSSBossBar(UUID id, Component title, Component subTitle, floa
     }
 
     public static void handle(UpdateSSBossBar msg, CustomPayloadEvent.Context ctx) {
-        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientIncomingPacketHandler.updateSSBossBar(msg, ctx)));
+        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
+                () -> () -> ClientIncomingPacketHandler.updateSSBossBar(msg, ctx)));
         ctx.setPacketHandled(true);
     }
 }

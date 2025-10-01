@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform.useables;
 
 import net.kyori.adventure.text.Component;
@@ -50,12 +51,13 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
 
     @Override
     public void setVisible(Boolean visible, PlatformPlayer viewer) {
-        if (!(viewer instanceof ForgePlatformPlayer player)) return;
+        if (!(viewer instanceof ForgePlatformPlayer player))
+            return;
         if (visible) {
             viewers.add(player);
-            PacketHandler.sendToClient(player.getHandle(), new CreateSSBossBar(id, title, subTitle, progress, hex, image));
-        }
-        else {
+            PacketHandler.sendToClient(player.getHandle(),
+                    new CreateSSBossBar(id, title, subTitle, progress, hex, image));
+        } else {
             var output = viewers.remove(player);
             if (output) {
                 PacketHandler.sendToClient(player.getHandle(), new RemoveSSBossBar(id));
@@ -66,7 +68,8 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
 
     @Override
     public boolean isVisible(PlatformPlayer player) {
-        if (!(player instanceof ForgePlatformPlayer platformPlayer)) return false;
+        if (!(player instanceof ForgePlatformPlayer platformPlayer))
+            return false;
         return viewers.contains(platformPlayer);
     }
 
@@ -113,14 +116,17 @@ public class MusicScreenSlidingBossBar implements PlatformBossBar {
         this.hex = descriptor.color.toHex();
         // this.subTitle = descriptor.subTitle;
         this.progress = descriptor.progress;
-        // this.image = new ResourceLocation((String) descriptor.getInformation().getOrDefault("icon", "minecraft:dirt"));
+        // this.image = new ResourceLocation((String)
+        // descriptor.getInformation().getOrDefault("icon", "minecraft:dirt"));
         updateAll();
     }
 
     private void updateAll() {
         for (PlatformPlayer viewer : viewers) {
-            if (!(viewer instanceof ForgePlatformPlayer player)) return;
-            PacketHandler.sendToClient(player.getHandle(), new UpdateSSBossBar(id, title, subTitle, progress, hex, image));
+            if (!(viewer instanceof ForgePlatformPlayer player))
+                return;
+            PacketHandler.sendToClient(player.getHandle(),
+                    new UpdateSSBossBar(id, title, subTitle, progress, hex, image));
         }
     }
 }

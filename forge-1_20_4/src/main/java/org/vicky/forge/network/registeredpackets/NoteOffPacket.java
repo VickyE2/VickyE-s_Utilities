@@ -1,10 +1,10 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.network.registeredpackets;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.event.network.CustomPayloadEvent;
 import org.vicky.forge.client.audio.ClientSynthManager;
 import org.vicky.forge.network.SynthPacket;
-
 
 public record NoteOffPacket(Integer uid) implements SynthPacket {
 

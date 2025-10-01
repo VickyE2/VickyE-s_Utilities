@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.network.registeredpackets;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -6,14 +7,22 @@ import org.vicky.forge.client.audio.ClientSynthManager;
 import org.vicky.forge.network.SynthPacket;
 
 /**
- * @param instId       short instrument id, optional use
- * @param midiId       The key in the midi
- * @param midiNote     THe Pitch
- * @param velocity     0..1
- * @param release      ADSR seconds (release used on noteOff)
- * @param sustainLoop  if true, client will hold sustain until NoteOff
- * @param vibratoDepth rate in Hz, depth in cents
- * @param uid          unique note id to match noteOff
+ * @param instId
+ *            short instrument id, optional use
+ * @param midiId
+ *            The key in the midi
+ * @param midiNote
+ *            THe Pitch
+ * @param velocity
+ *            0..1
+ * @param release
+ *            ADSR seconds (release used on noteOff)
+ * @param sustainLoop
+ *            if true, client will hold sustain until NoteOff
+ * @param vibratoDepth
+ *            rate in Hz, depth in cents
+ * @param uid
+ *            unique note id to match noteOff
  */
 public record NoteOnPacket(String instId, int[] midiId, Integer midiNote, float velocity, float attack, float decay,
                            float sustain, float release, boolean sustainLoop, float vibratoRate, float vibratoDepth,

@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform;
 
 import org.jetbrains.annotations.NotNull;
@@ -30,20 +31,9 @@ public class ForgeSynthSoundBackend implements PlatformSoundBackend {
         float vibratoRate = 5.0f;
         float vibratoDepth = 5.0f;
 
-        NoteOnPacket noteOn = new NoteOnPacket(
-                event.sound() != null ? event.sound().name() : "inst",
-                midiId,
-                midiNote,
-                event.volume(),
-                adsr.getAttack(),
-                adsr.getDecay(),
-                adsr.getSustain(),
-                adsr.getRelease(),
-                adsr.getSustainLoop(),
-                vibratoRate,
-                vibratoDepth,
-                uid
-        );
+        NoteOnPacket noteOn = new NoteOnPacket(event.sound() != null ? event.sound().name() : "inst", midiId, midiNote,
+                event.volume(), adsr.getAttack(), adsr.getDecay(), adsr.getSustain(), adsr.getRelease(),
+                adsr.getSustainLoop(), vibratoRate, vibratoDepth, uid);
         return noteOn;
     }
 
@@ -83,14 +73,10 @@ public class ForgeSynthSoundBackend implements PlatformSoundBackend {
     }
 
     @Override
-    public void playNamed(PlatformPlayer player, @NotNull String soundName, SoundCategory category, float volume, int pitch) {
-        player.playSound(
-                player.getLocation(),
-                soundName,
-                category != null ? category : "master",
-                volume,
-                (float) (440.0 * Math.pow(2.0, (pitch - 69) / 12.0))
-        );
+    public void playNamed(PlatformPlayer player, @NotNull String soundName, SoundCategory category, float volume,
+                          int pitch) {
+        player.playSound(player.getLocation(), soundName, category != null ? category : "master", volume,
+                (float) (440.0 * Math.pow(2.0, (pitch - 69) / 12.0)));
     }
 
     @Override

@@ -18,9 +18,9 @@ import java.util.List;
  * </p>
  */
 public class ContextLogger {
-  private final ContextType context;
-  private final String contextName;
-  private final PlatformLogger logger;
+  protected final ContextType context;
+  protected final String contextName;
+  protected final PlatformLogger logger;
 
   /**
    * Constructs a ContextLogger with the specified context type and context name.

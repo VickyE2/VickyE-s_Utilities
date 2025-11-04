@@ -1,6 +1,7 @@
 package org.vicky.platform.utils;
 
 import java.io.Serializable;
+import java.util.random.RandomGenerator;
 
 import static java.lang.Math.PI;
 
@@ -13,6 +14,49 @@ public class Vec3 implements Cloneable, Serializable {
 
     public static Vec3 of(double x, double y, double z) {
         return new Vec3(x, y, z);
+    }
+
+    public static Vec3 randomUnit(RandomGenerator rnd) {
+        double theta = rnd.nextDouble() * 2 * Math.PI; // azimuth
+        double z = rnd.nextDouble() * 2 - 1;           // height (−1 to 1)
+        double r = Math.sqrt(1 - z * z);
+        double x = r * Math.cos(theta);
+        double y = r * Math.sin(theta);
+        return new Vec3(x, y, z);
+    }
+
+    /**
+     * Creates a 3D direction vector from yaw and pitch angles.
+     * <p>
+     * Yaw and pitch follow the standard right-handed coordinate convention:
+     * <ul>
+     *     <li><b>Yaw</b> (rotation around the Y-axis):
+     *         <br>Defines the horizontal rotation — 0° points along +Z,
+     *         90° points along -X, 180° along -Z, and so on (like a compass heading).</li>
+     *     <li><b>Pitch</b> (rotation around the X-axis):
+     *         <br>Defines the vertical rotation — 0° is level (horizontal),
+     *         positive pitch angles look upward, negative pitch angles look downward.</li>
+     * </ul>
+     *
+     * @param yawDegrees   the horizontal rotation in degrees
+     * @param pitchDegrees the vertical rotation in degrees
+     * @return a normalized {@link Vec3} representing the direction
+     */
+    public static Vec3 fromYawPitch(float yawDegrees, float pitchDegrees) {
+        double yaw = Math.toRadians(yawDegrees);
+        double pitch = Math.toRadians(pitchDegrees);
+
+        double x = -Math.sin(yaw) * Math.cos(pitch);
+        double y = -Math.sin(pitch);
+        double z = Math.cos(yaw) * Math.cos(pitch);
+
+        return new Vec3(x, y, z).normalize();
+    }
+
+    public Vec3 randomPerturbated(RandomGenerator rnd, double strength) {
+        Vec3 rand = Vec3.randomUnit(rnd);
+
+        return this.add(rand.multiply(strength)).normalize();
     }
 
     public MutableVec3 mutable() {
@@ -35,12 +79,25 @@ public class Vec3 implements Cloneable, Serializable {
         return new Vec3(x - other.x, y - other.y, z - other.z);
     }
 
+    public double angleTo(Vec3 other) {
+        double dot = this.dot(other);
+        double magA = this.length();
+        double magB = other.length();
+
+        if (magA == 0 || magB == 0) return 0;
+        double cosTheta = dot / (magA * magB);
+
+        // Clamp to handle floating-point precision errors
+        cosTheta = Math.max(-1.0, Math.min(1.0, cosTheta));
+        return Math.acos(cosTheta);
+    }
+
     public Vec3 subtract(Double x, Double y, Double z) {
-        return new Vec3(x - this.x, y - this.y, z - this.z);
+        return new Vec3(this.x - x, this.y - y, this.z - z);
     }
 
     public Vec3 subtract(Integer x, Integer y, Integer z) {
-        return new Vec3(x - this.x, y - this.y, z - this.z);
+        return new Vec3(this.x - x, this.y - y, this.z - z);
     }
 
     public double toPitch() {
@@ -79,6 +136,10 @@ public class Vec3 implements Cloneable, Serializable {
 
     public String toParserString() {
         return this.x + "," + this.y + "," + this.z;
+    }
+
+    public String toJsonString() {
+        return "[" + this.x + "," + this.y + "," + this.z + "]";
     }
 
     public Vec3 getMinimum(Vec3 v2) {

@@ -1,5 +1,7 @@
 package org.vicky.platform.utils;
 
+import java.util.random.RandomGenerator;
+
 import static java.lang.Math.PI;
 
 public class MutableVec3 implements Cloneable {
@@ -19,6 +21,61 @@ public class MutableVec3 implements Cloneable {
         return new Vec3(x, y, z);
     }
 
+    /**
+     * Creates a 3D direction vector from yaw and pitch angles.
+     * <p>
+     * Yaw and pitch follow the standard right-handed coordinate convention:
+     * <ul>
+     *     <li><b>Yaw</b> (rotation around the Y-axis):
+     *         <br>Defines the horizontal rotation — 0° points along +Z,
+     *         90° points along -X, 180° along -Z, and so on (like a compass heading).</li>
+     *     <li><b>Pitch</b> (rotation around the X-axis):
+     *         <br>Defines the vertical rotation — 0° is level (horizontal),
+     *         positive pitch angles look upward, negative pitch angles look downward.</li>
+     * </ul>
+     *
+     * @param yawDegrees   the horizontal rotation in degrees
+     * @param pitchDegrees the vertical rotation in degrees
+     * @return a normalized {@link Vec3} representing the direction
+     */
+    public static MutableVec3 fromYawPitch(float yawDegrees, float pitchDegrees) {
+        double yaw = Math.toRadians(yawDegrees);
+        double pitch = Math.toRadians(pitchDegrees);
+
+        double x = -Math.sin(yaw) * Math.cos(pitch);
+        double y = -Math.sin(pitch);
+        double z = Math.cos(yaw) * Math.cos(pitch);
+
+        return new MutableVec3(x, y, z).normalize();
+    }
+
+    public static MutableVec3 randomUnit(RandomGenerator rnd) {
+        double theta = rnd.nextDouble() * 2 * Math.PI; // azimuth
+        double z = rnd.nextDouble() * 2 - 1;           // height (−1 to 1)
+        double r = Math.sqrt(1 - z * z);
+        double x = r * Math.cos(theta);
+        double y = r * Math.sin(theta);
+        return new MutableVec3(x, y, z);
+    }
+
+    public MutableVec3 randomPerturbated(RandomGenerator rnd, double strength) {
+        MutableVec3 rand = MutableVec3.randomUnit(rnd);
+
+        return this.add(rand.multiply(strength)).normalize();
+    }
+
+    public double angleTo(MutableVec3 other) {
+        double dot = this.dot(other);
+        double magA = this.length();
+        double magB = other.length();
+
+        if (magA == 0 || magB == 0) return 0;
+        double cosTheta = dot / (magA * magB);
+
+        // Clamp to handle floating-point precision errors
+        cosTheta = Math.max(-1.0, Math.min(1.0, cosTheta));
+        return Math.acos(cosTheta);
+    }
 
     public MutableVec3 round() {
         this.x = Math.round(x);

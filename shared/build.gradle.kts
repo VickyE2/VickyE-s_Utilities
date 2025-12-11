@@ -94,6 +94,14 @@ tasks.test {
 // Optional: downgrade task if you need
 tasks.register<xyz.wagyourtail.jvmdg.gradle.task.DowngradeJar>("downgrade") {
     inputFile = file("libs/jNBT-1.6.0.jar")
+
+    archiveFileName.set("jNBT-1.6.0-downgraded-17.jar")
+    destinationDirectory.set(file("libs"))
+    archiveClassifier.set("downgraded-17")
+
     downgradeTo = JavaVersion.VERSION_17
-    archiveClassifier = "downgraded-17"
+    doFirst {
+        println("Input: ${inputFile.asFile.get().path}")
+        println("Output: ${archiveFile.get().asFile.path}")
+    }
 }

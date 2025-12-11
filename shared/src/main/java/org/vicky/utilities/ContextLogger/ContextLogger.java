@@ -21,6 +21,7 @@ public class ContextLogger {
   protected final ContextType context;
   protected final String contextName;
   protected final PlatformLogger logger;
+  private int requiredLogLevel = 0;
 
   /**
    * Constructs a ContextLogger with the specified context type and context name.
@@ -89,6 +90,7 @@ public class ContextLogger {
    * @param message The message to log.
    */
   public void print(String message) {
+    if (requiredLogLevel > LogType.BASIC.level) return;
     String contextTag =
         "[" + ANSIColor.colorize("cyan[" + context + "-" + contextName + "]") + "] ";
     String finalContext = contextTag + message;
@@ -103,6 +105,7 @@ public class ContextLogger {
    * @param isError If true, the message is treated as an error (red formatting); otherwise, cyan is used.
    */
   public void print(String message, boolean isError) {
+    if (requiredLogLevel > (isError ? LogType.ERROR.level : LogType.BASIC.level)) return;
     String contextTag =
         "["
             + ANSIColor.colorize(
@@ -122,6 +125,7 @@ public class ContextLogger {
    * @param message The message to log.
    */
   public void print(String message, boolean isError, Object... args) {
+    if (requiredLogLevel > (isError ? LogType.ERROR.level : LogType.BASIC.level)) return;
     List<String> finalised = new ArrayList<>();
     for (var arg : args) {
       finalised.add(arg.toString());
@@ -146,6 +150,7 @@ public class ContextLogger {
    * @param message The message to log.
    */
   public void print(String message, Object... args) {
+    if (requiredLogLevel > LogType.BASIC.level) return;
     List<String> finalised = new ArrayList<>();
     for (var arg : args) {
       finalised.add(arg.toString());
@@ -165,6 +170,7 @@ public class ContextLogger {
    * @param type    The log type, which determines the color used for formatting.
    */
   public void print(String message, LogType type) {
+    if (requiredLogLevel > type.level) return;
     String contextTag =
         "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
@@ -182,6 +188,7 @@ public class ContextLogger {
    * @param message The message to log.
    */
   public void print(String message, LogType type, Object... args) {
+    if (requiredLogLevel > type.level) return;
     List<String> finalised = new ArrayList<>();
     for (var arg : args) {
       finalised.add(arg.toString());
@@ -199,6 +206,7 @@ public class ContextLogger {
    * @param effect  The post-formatting effect to apply (e.g., bold, italic, underline).
    */
   public void print(String message, LogType type, LogPostType effect) {
+    if (requiredLogLevel > type.level) return;
     String contextTag =
         "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext =
@@ -218,6 +226,7 @@ public class ContextLogger {
    * @param message The message to log.
    */
   public void print(String message, LogType type, LogPostType effect, Object... args) {
+    if (requiredLogLevel > type.level) return;
     List<String> finalised = new ArrayList<>();
     for (var arg : args) {
       finalised.add(arg.toString());
@@ -235,6 +244,7 @@ public class ContextLogger {
    * @param shouldAffectMessage If true, the message is formatted with the log type's color; otherwise, it is not.
    */
   public void print(String message, LogType type, boolean shouldAffectMessage) {
+    if (requiredLogLevel > type.level) return;
     String contextTag =
         "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext;
@@ -257,6 +267,7 @@ public class ContextLogger {
    * @param message The message to log.
    */
   public void print(String message, LogType type, boolean shouldAffectMessage, Object... args) {
+    if (requiredLogLevel > type.level) return;
     List<String> finalised = new ArrayList<>();
     for (var arg : args) {
       finalised.add(arg.toString());
@@ -275,6 +286,7 @@ public class ContextLogger {
    * @param shouldAffectMessage If true, the message is additionally formatted with the log type's color; otherwise, only the effect is applied.
    */
   public void print(String message, LogType type, LogPostType effect, boolean shouldAffectMessage) {
+    if (requiredLogLevel > type.level) return;
     String contextTag =
         "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
     String finalContext;
@@ -299,12 +311,17 @@ public class ContextLogger {
    * @param message The message to log.
    */
   public void print(String message, LogType type, LogPostType effect, boolean shouldAffectMessage, Object... args) {
+    if (requiredLogLevel > type.level) return;
     List<String> finalised = new ArrayList<>();
     for (var arg : args) {
       finalised.add(arg.toString());
     }
     message = replaceAllOrdered(message, finalised);
     print(message, type, effect, shouldAffectMessage);
+  }
+
+  public void setLevel(LogType level) {
+    this.requiredLogLevel = level.level;
   }
 
   /**
@@ -361,38 +378,40 @@ public class ContextLogger {
     /**
      * Represents error messages (red).
      */
-    ERROR("red"),
+    ERROR("red", 3),
     /**
      * Represents warning messages (yellow).
      */
-    WARNING("yellow"),
+    WARNING("yellow", 2),
     /**
      * Represents success messages (green).
      */
-    SUCCESS("green"),
+    SUCCESS("green", 1),
     /**
      * Represents pending messages (orange).
      */
-    PENDING("orange"),
+    PENDING("orange", 1),
     /**
      * Represents basic messages (cyan).
      */
-    BASIC("cyan"),
+    BASIC("cyan", 0),
     /**
      * Represents plain messages (white).
      */
-    PLAIN("white"),
+    PLAIN("white", 0),
     /**
      * Represents ambient messages (purple).
      */
-    AMBIENCE("purple");
+    AMBIENCE("purple", 0);
 
     /**
      * The ANSI color code for the log type.
      */
     public final String color;
+    private final int level;
 
-    LogType(String color) {
+    LogType(String color, int level) {
+      this.level = level;
       this.color = color;
     }
   }

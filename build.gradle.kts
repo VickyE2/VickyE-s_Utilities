@@ -345,15 +345,16 @@ subprojects {
                 }*/
             }
         }
-        signing {
-            useInMemoryPgpKeys(
-                project.findProperty("signing.SIGNING_KEY_ID") as String? ?: System.getenv("SIGNING_KEY_ID") as String,
-                project.findProperty("signing.SIGNING_KEY") as String? ?: System.getenv("SIGNING_KEY"),
-                project.findProperty("signing.SIGNING_PASSWORD") as String?
-                    ?: System.getenv("SIGNING_PASSWORD") as String
-            )
-            sign(the<PublishingExtension>().publications["mavenNormal"])
-            sign(the<PublishingExtension>().publications["mavenObfMapped"])
-        }
+        // signing {
+        //     useInMemoryPgpKeys(
+        //         project.findProperty("signing.SIGNING_KEY_ID") as String? ?: System.getenv("SIGNING_KEY_ID") as String,
+        //         project.findProperty("signing.SIGNING_KEY") as String? ?: System.getenv("SIGNING_KEY"),
+        //         project.findProperty("signing.SIGNING_PASSWORD") as String?
+        //             ?: System.getenv("SIGNING_PASSWORD") as String
+        //     )
+        //     sign(publishing.publications)
+        //     sign(the<PublishingExtension>().publications["mavenNormal"])
+        //     sign(the<PublishingExtension>().publications["mavenObfMapped"])
+        // }
     }
 }

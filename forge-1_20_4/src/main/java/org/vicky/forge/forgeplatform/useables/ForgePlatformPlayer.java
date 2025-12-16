@@ -9,6 +9,9 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
+import org.vicky.forge.entity.ForgePlatformEntity;
+import org.vicky.forge.entity.ForgePlatformLivingEntity;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.platform.PlatformBossBar;
 import org.vicky.platform.PlatformPlayer;
@@ -17,11 +20,12 @@ import org.vicky.platform.world.PlatformLocation;
 import java.util.Locale;
 import java.util.UUID;
 
-public class ForgePlatformPlayer implements PlatformPlayer {
+public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements PlatformPlayer {
 
     private final ServerPlayer player;
 
     public ForgePlatformPlayer(ServerPlayer player) {
+        super(player);
         this.player = player;
     }
 
@@ -68,7 +72,7 @@ public class ForgePlatformPlayer implements PlatformPlayer {
 
     @Override
     public void playSound(PlatformLocation location, String soundName, Object category, Float volume, Float pitch) {
-        ResourceLocation soundId = new ResourceLocation(soundName);
+        ResourceLocation soundId = ResourceLocation.parse(soundName);
         SoundEvent event = ForgeRegistries.SOUND_EVENTS.getValue(soundId);
         if (event == null)
             return;
@@ -78,20 +82,9 @@ public class ForgePlatformPlayer implements PlatformPlayer {
     }
 
     @Override
-    public PlatformLocation getLocation() {
+    public @NotNull PlatformLocation getLocation() {
         Level level = player.level();
         return new ForgeVec3(level, player.getX(), player.getY(), player.getZ(), player.yRotO, player.xRotO);
-    }
-
-    @Override
-    public boolean teleport(PlatformLocation location) {
-        if (location instanceof ForgeVec3 pos) {
-            if (pos.getForgeWorld() instanceof ServerLevel level) {
-                player.teleportTo(level, pos.x, pos.y, pos.z, pos.yaw, pos.pitch);
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override
@@ -101,7 +94,7 @@ public class ForgePlatformPlayer implements PlatformPlayer {
         return ((ForgePlatformPlayer) obj).getHandle() == this.player;
     }
 
-    public ServerPlayer getHandle() {
+    public @NotNull ServerPlayer getHandle() {
         return player;
     }
 }

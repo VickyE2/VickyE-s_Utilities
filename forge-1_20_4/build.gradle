@@ -117,14 +117,14 @@ repositories {
     // flatDir {
     //     dir 'libs'
     // }
-    maven {
-        name = "GitHubPackages"
-        url = uri("https://maven.pkg.github.com/VickyE2/VickyE-s_Utilities")
-        credentials {
-            username = project.findProperty("gpr.user") as String ?: System.getenv("GITHUB_ACTOR")
-            password = project.findProperty("gpr.key") as String ?: System.getenv("GITHUB_TOKEN")
-        }
-    }
+    // maven {
+    //     name = "GitHubPackages"
+    //     url = uri("https://maven.pkg.github.com/VickyE2/VickyE-s_Utilities")
+    //     credentials {
+    //         username = project.findProperty("gpr.user") as String ?: System.getenv("GITHUB_ACTOR")
+    //         password = project.findProperty("gpr.key") as String ?: System.getenv("GITHUB_TOKEN")
+    //     }
+    // }
     mavenCentral()
     maven {
         name = 'Kyori'

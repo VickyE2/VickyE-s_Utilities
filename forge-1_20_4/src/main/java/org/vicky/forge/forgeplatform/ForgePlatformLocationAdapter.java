@@ -19,4 +19,14 @@ public class ForgePlatformLocationAdapter implements PlatformLocationAdapter<For
     public PlatformLocation fromNative(ForgeVec3 nativeLocation) {
         return nativeLocation;
     }
+
+    public static ForgeVec3 toNativeS(PlatformLocation location) {
+        ForgePlatformWorldAdapter adapter = (ForgePlatformWorldAdapter) location.getWorld();
+        Level world = adapter.world();
+        return new ForgeVec3(world, location.getX(), location.getY(), location.getZ(), location.yaw, location.pitch);
+    }
+
+    public static PlatformLocation fromNativeS(ForgeVec3 nativeLocation) {
+        return nativeLocation;
+    }
 }

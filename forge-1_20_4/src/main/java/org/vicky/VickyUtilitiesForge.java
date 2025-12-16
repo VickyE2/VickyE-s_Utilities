@@ -35,6 +35,9 @@ import org.vicky.music.utils.MusicPiece;
 import org.vicky.music.utils.Sound;
 import org.vicky.musicPlayer.PlatformSoundBackend;
 import org.vicky.platform.*;
+import org.vicky.platform.entity.MobEntityDescriptor;
+import org.vicky.platform.entity.PlatformEffectBridge;
+import org.vicky.platform.entity.PlatformEntityFactory;
 import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 import org.vicky.utilities.ANSIColor;
@@ -241,11 +244,6 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 	}
 
 	@Override
-	public PlatformEntityFactory getPlatformEntityFactory() {
-		return new ForgePlatformEntityfactory();
-	}
-
-	@Override
 	public PlatformEventFactory getEventFactory() {
 		return new ForgeEventFactory();
 	}
@@ -275,6 +273,31 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 	public Optional<PlatformPlayer> getPlatformPlayer(UUID uuid) {
 		ServerPlayer player = server.getPlayerList().getPlayer(uuid);
 		return player != null ? Optional.of(new ForgePlatformPlayer(player)) : Optional.empty();
+	}
+
+	@Override
+	public int getLogLevel() {
+		return -1;
+	}
+
+	@Override
+	public String getPlatformIdentifier() {
+		return MODID;
+	}
+
+	@Override
+	public PlatformEffectBridge<?> getPlatformEffectBridge() {
+		return null;
+	}
+
+	@Override
+	public PlatformEntityFactory getPlatformEntityFactory() {
+		return null;
+	}
+
+	@Override
+	public void registerMobEntityDescriptor(MobEntityDescriptor mobEntityDescriptor) {
+
 	}
 
 	// You can use EventBusSubscriber to automatically register all static methods

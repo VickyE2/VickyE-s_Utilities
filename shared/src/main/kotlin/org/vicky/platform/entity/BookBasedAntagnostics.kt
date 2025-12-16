@@ -47,7 +47,7 @@ data class CompiledBlockTimedAction(
     val id: ResourceLocation,
     val defaultDuration: Int,
     val defaultInterval: Int,
-    val onStart: (PlatformLivingEntity, PlatformBlock<*>?) -> Unit,
+    val onStart: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
     val onTick: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
     val onEnd: (PlatformLivingEntity, PlatformBlock<*>?) -> Unit
 )
@@ -56,7 +56,7 @@ data class CompiledTimedAction(
     val id: ResourceLocation,
     val defaultDuration: Int,
     val defaultInterval: Int,
-    val onStart: (PlatformLivingEntity, PlatformLivingEntity?) -> Unit,
+    val onStart: (PlatformLivingEntity, PlatformLivingEntity?) -> Boolean,
     val onTick: (PlatformLivingEntity, PlatformLivingEntity?) -> Boolean,
     val onEnd: (PlatformLivingEntity, PlatformLivingEntity?) -> Unit
 )
@@ -455,7 +455,7 @@ fun registerInlineBlockCondition(possibleId: ResourceLocation, lambda: (Platform
 
 fun registerInlineBlockTimedAction(
     possibleId: ResourceLocation?,
-    start: (PlatformLivingEntity, PlatformBlock<*>?) -> Unit,
+    start: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
     tick: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
     end: (PlatformLivingEntity, PlatformBlock<*>?) -> Unit,
     defaultDuration: Int = 40,
@@ -473,7 +473,7 @@ fun registerInlineBlockTimedAction(
 
 fun registerInlineTimedAction(
     possibleId: ResourceLocation?,
-    start: (PlatformLivingEntity, PlatformLivingEntity?) -> Unit,
+    start: (PlatformLivingEntity, PlatformLivingEntity?) -> Boolean,
     tick: (PlatformLivingEntity, PlatformLivingEntity?) -> Boolean,
     end: (PlatformLivingEntity, PlatformLivingEntity?) -> Unit,
     defaultDuration: Int = -1,
@@ -531,14 +531,14 @@ interface ActionSpec<T, Y> : Spec {
 }
 
 interface TimedActionSpec<T, Y> : Spec {
-    fun onStart(self: T, target: Y?)
+    fun onStart(self: T, target: Y?): Boolean
     fun onTick(self: T, target: Y?): Boolean
     fun onEnd(self: T, target: Y?)
 }
 
 object SetTargetToLookAt : EntityTimedActionSpec<PlatformLivingEntity>(
     rl("core", "set_look_at_target"),
-    { _, _ -> },
+    { _, _ -> true },
     lambda@{ self, target ->
         if (target != null) {
             if (self !is PlatformLivingEntity) return@lambda false
@@ -566,7 +566,7 @@ object SetTargetToLookAt : EntityTimedActionSpec<PlatformLivingEntity>(
 
 object LookAtAttacker : EntityTimedActionSpec<PlatformLivingEntity>(
     rl("core", "set_look_at_target"),
-    { _, _ -> },
+    { _, _ -> true },
     lambda@{ self, _ ->
         if (self !is PlatformLivingEntity) return@lambda false
         else {
@@ -600,7 +600,7 @@ class ConeFilter(
     rl("core", "cone_angle_based_filter"),
     lambda@{ obj, ctx ->
         val self = ctx.self ?: return@lambda true
-        val dir = self.lookDirection
+        val dir = self.lookDirection.dir
         val toTarget = obj.location.subtract(self.location).normalize()
         return@lambda dir.dot(toTarget) >= cos(toRadians(angle / 2.0))
     }
@@ -627,7 +627,7 @@ object LivingEntitiesOnly : EntityFilterSpec(
 // typed spec for timed block actions (registers factory on construction)
 open class BlockTimedActionSpec(
     val id: ResourceLocation,
-    val onStart: (PlatformLivingEntity, PlatformBlock<*>?) -> Unit,
+    val onStart: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
     val onTick: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
     val onEnd: (PlatformLivingEntity, PlatformBlock<*>?) -> Unit
 ) {
@@ -645,11 +645,14 @@ open class BlockTimedActionSpec(
 
 object WalkToBlock : BlockTimedActionSpec(
     rl("core", "walk_to_block"),
-    onStart = { self, block ->
+    onStart = start@{ self, block ->
+        if (block == null) return@start false
         self.getNavigator()?.let {
-            val path = it.createPath(block?.blockPos, self.lookDistance.toInt())
-            it.moveTo(path, self.getSpeed())
+            val path = it.createPath(block.blockPos, self.lookDistance.toInt()) ?: return@start false
+            it.moveTo(path, self.getSpeed().toDouble())
+            return@start true
         }
+        false
     },
     onTick = onTick@{ self, _ ->
         val nav = self.getNavigator() ?: return@onTick false
@@ -723,7 +726,7 @@ open class BlockConditionSpec(
 }
 
 // SelectorSpec kept generic-by-intent, but we create concrete Entity/Block subclasses below.
-abstract class SelectorSpec<X : Any, T : FilterSpec<X>>(val id: ResourceLocation, val resultType: ResultType, val range: Float, val filters: List<T>) : Spec {
+abstract class SelectorSpec<X : Any, T : FilterSpec<X>>(val id: ResourceLocation, val resultType: ResultType, val range: Double, val filters: List<T>) : Spec {
     abstract fun findCandidates(ctx: SelectorContext): List<X>
     open fun get(ctx: SelectorContext): AmountableResult<X> {
         val base = findCandidates(ctx)
@@ -783,7 +786,7 @@ open class BlockActionSpec(val id: ResourceLocation, val runner: (PlatformLiving
 
 open class EntityTimedActionSpec<T: PlatformLivingEntity>(
     val id: ResourceLocation,
-    val onStartV: (PlatformEntity, PlatformEntity?) -> Unit,
+    val onStartV: (PlatformEntity, PlatformEntity?) -> Boolean,
     val runner: (PlatformEntity, PlatformEntity?) -> Boolean,
     val onEndV: (PlatformEntity, PlatformEntity?) -> Unit
 ) : TimedActionSpec<PlatformEntity, PlatformEntity?> {
@@ -798,7 +801,7 @@ open class EntityTimedActionSpec<T: PlatformLivingEntity>(
                 )
             }
     }
-    override fun onStart(self: PlatformEntity, target: PlatformEntity?) { onStartV(self, target) }
+    override fun onStart(self: PlatformEntity, target: PlatformEntity?): Boolean = onStartV(self, target)
     override fun onTick(self: PlatformEntity, target: PlatformEntity?): Boolean = runner(self, target)
     override fun onEnd(self: PlatformEntity, target: PlatformEntity?) { onEndV(self, target) }
     override fun id(): ResourceLocation = id
@@ -807,7 +810,7 @@ open class EntityTimedActionSpec<T: PlatformLivingEntity>(
 // --------------------- Block selectors ---------------------
 
 class BlockInSightSelector(
-    range: Float,
+    range: Double,
     private val step: Double = 0.5,
     filters: List<BlockFilterSpec>
 ) : SelectorSpec<PlatformBlock<*>, BlockFilterSpec>(
@@ -821,16 +824,16 @@ class BlockInSightSelector(
         val world = ctx.world
         // prefer engine raycast
         val hit = try {
-            world.raycastBlock(self.getEyeLocation(), self.lookDirection, range)
+            world.raycastBlock(self.getEyeLocation(), self.lookDirection.dir, range.toFloat())
         } catch (ex: Throwable) {
             sampleAlongLook(self, world, range, step)
         }
         return if (hit != null) listOf(hit) else emptyList()
     }
 
-    private fun sampleAlongLook(self: PlatformEntity, world: PlatformWorld<*, *>, range: Float, step: Double): PlatformBlock<*>? {
+    private fun sampleAlongLook(self: PlatformEntity, world: PlatformWorld<*, *>, range: Double, step: Double): PlatformBlock<*>? {
         val origin = self.getEyeLocation()
-        val dir = self.lookDirection.normalize()
+        val dir = self.lookDirection.dir.normalize()
         val steps = 1.coerceAtLeast((range / step).toInt())
         var i = 1
         while (i <= steps) {
@@ -944,11 +947,11 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
     fun blockMode(): TaskBuilder { mode = Mode.BLOCK; return this }
 
     // selection entry-points - entity or block explicit helpers
-    fun withRange(id: ResourceLocation, range: Float = ordinal.lookDistance): EntitySelectionTaskStep {
+    fun withRange(id: ResourceLocation, range: Double = ordinal.lookDistance): EntitySelectionTaskStep {
         entityMode()
         return EntitySelectionTaskStep(id, range, this)
     }
-    fun withBlockRange(id: ResourceLocation, range: Float = ordinal.lookDistance): BlockSelectionTaskStep {
+    fun withBlockRange(id: ResourceLocation, range: Double = ordinal.lookDistance): BlockSelectionTaskStep {
         blockMode()
         return BlockSelectionTaskStep(id, range, this)
     }
@@ -1161,7 +1164,7 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
     }
 
     // entity selection step
-    class EntitySelectionTaskStep(private val id: ResourceLocation, private val range: Float, private val parent: TaskBuilder): ReturningTaskStep<PlatformLivingEntity> {
+    class EntitySelectionTaskStep(private val id: ResourceLocation, private val range: Double, private val parent: TaskBuilder): ReturningTaskStep<PlatformLivingEntity> {
         internal val filtersRef: MutableList<FilterRef<PlatformEntity>> = mutableListOf()
         var resultType: ResultType = ResultType.SINGLE
         var resultAmount: Int = -1
@@ -1185,7 +1188,7 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
         override fun compile(): CompiledEntitySelector {
             val compiledFilters = filtersRef.map { GlobalSpecRegistry.compileFilter(it) }
             val selFn: (SelectorContext) -> AmountableResult<PlatformLivingEntity> = { ctx ->
-                val base = ctx.world.getLivingEntitiesWithin(ctx.originX, ctx.originY, ctx.originZ, range)
+                val base = ctx.world.getLivingEntitiesWithin(ctx.originX, ctx.originY, ctx.originZ, range.toFloat())
                 val filtered = base.filter { candidate -> compiledFilters.all { it.test(candidate, ctx) } }
                 when (resultType) {
                     ResultType.SINGLE -> AmountableResult(ResultType.SINGLE, filtered.take(1))
@@ -1205,7 +1208,7 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
     }
 
     // block selection step
-    class BlockSelectionTaskStep(private val id: ResourceLocation, private val range: Float, private val parent: TaskBuilder): ReturningTaskStep<PlatformBlock<*>> {
+    class BlockSelectionTaskStep(private val id: ResourceLocation, private val range: Double, private val parent: TaskBuilder): ReturningTaskStep<PlatformBlock<*>> {
         internal val filtersRef: MutableList<FilterRef<PlatformBlock<*>>> = mutableListOf()
         var resultType: ResultType = ResultType.SINGLE
         var resultAmount: Int = -1

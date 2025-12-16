@@ -1,8 +1,10 @@
 package org.vicky.platform.entity
 
+import de.pauleff.core.Tag
 import org.vicky.platform.PlatformItem
 import org.vicky.platform.PlatformPlayer
 import org.vicky.platform.defaults.AABB
+import org.vicky.platform.utils.Direction
 import org.vicky.platform.utils.IntVec3
 import org.vicky.platform.utils.ResourceLocation
 import org.vicky.platform.utils.SoundCategory
@@ -113,7 +115,6 @@ interface PlatformEntity {
     fun teleport(location: PlatformLocation)
 
     fun remove()
-    val isValid: Boolean
     val isDead: Boolean
 
     var velocity: Vec3?
@@ -121,10 +122,9 @@ interface PlatformEntity {
     fun setRotation(yaw: Float, pitch: Float)
     val yaw: Float
     val pitch: Float
-    val eyeHeight: Double
-    val lookDirection: Vec3
+    val eyeHeight: Float
+    val lookDirection: Direction
     fun getEyeLocation(): Vec3
-    fun hasLineOfSight(target: PlatformEntity): Boolean
 
     fun setGravity(enabled: Boolean)
     fun setInvisible(invisible: Boolean)
@@ -132,10 +132,10 @@ interface PlatformEntity {
 
     fun setCustomName(name: String)
     val customName: Optional<String>
-    fun setPersistentData(key: String, value: Any)
-    fun getPersistentData(key: String): Any?
+    fun <T> setPersistentData(key: String, value: Tag<T>)
+    fun getPersistentData(key: String): Tag<*>?
 
-    fun interact(interacter: PlatformEntity)
+    fun interact(interacter: PlatformPlayer)
 
     var boundingBox: AABB
     val handle: Any
@@ -143,34 +143,33 @@ interface PlatformEntity {
 }
 
 interface PlatformLivingEntity : PlatformEntity {
-    var health: Double
-    var absorption: Double
-    var maxHealth: Double
-    var maxAbsorption: Double
-    var lookDistance: Float
-
-    var sounds: MobSounds
+    var health: Float
+    var absorption: Float
+    fun getMaxHealth(): Float
+    fun getMaxAbsorption(): Float
+    var lookDistance: Double
 
     fun hurt(amount: Float, source: AntagonisticDamageSource)
     fun die(source: AntagonisticDamageSource)
     fun heal(amount: Float)
 
-    fun setAttribute(key: String, value: Double)
+    fun hasLineOfSight(target: PlatformEntity): Boolean
+    fun setAttributeBaseValue(key: String, value: Double)
     fun getAttribute(key: String): Double?
     fun getAttributeBaseValue(key: String): Double?
+    fun getAttributeValue(key: String): Double?
     fun getAttributes(): Map<String, Double>
 
-    fun increaseAirSupply(value: Double)
-    fun decreaseAirSupply(value: Double)
+    fun increaseAirSupply(value: Int)
+    fun decreaseAirSupply(value: Int)
+    var airSupply: Int
 
-    fun setSpeed(value: Double)
-    fun getSpeed(): Double
-    fun getFlyingSpeed(): Double
+    fun setSpeed(value: Float)
+    fun getSpeed(): Float
 
     val isOnGround: Boolean
     val isInWater: Boolean
 
-    fun hurtArmor(amount: Double)
     fun getNavigator(): PathNavigator?
 
     fun getLastAttacker(): PlatformLivingEntity?
@@ -181,10 +180,8 @@ interface PlatformLivingEntity : PlatformEntity {
     fun setLastHurtMob(mob: PlatformLivingEntity?)
 
     fun giveItem(item: PlatformItem)
-    fun getLastHandItem(): PlatformItem?
     fun getOffhandItem(): PlatformItem?
     fun getMainHandItem(): PlatformItem?
-    fun setLastHandItem(item: PlatformItem)
     fun setItemSlot(slot: EquipmentSlot, item: PlatformItem)
     fun getItemBySlot(slot: EquipmentSlot): PlatformItem?
     fun hasItemInSlot(slot: EquipmentSlot): Boolean
@@ -195,14 +192,12 @@ interface PlatformLivingEntity : PlatformEntity {
     val isPushable: Boolean
     val isPickable: Boolean
     val isSensitiveToWater: Boolean
-    val isImmobile: Boolean
     val isInvertedHealAndHarm: Boolean
     val isBaby: Boolean
     val isOnFire: Boolean
     val isSprinting: Boolean
     val isSneaking: Boolean
 
-    val shouldDropLoot: Boolean
     val shouldDropExperience: Boolean
 
     val canBreatheUnderwater: Boolean
@@ -335,42 +330,22 @@ enum class EventResult {
     CANCEL     // stop further handlers but still allow some fallback (optional semantic)
 }
 
-data class PathPoint(
-    val x: Int,
-    val y: Int,
-    val z: Int,
-    var distanceToTarget: Float,
-    var index: Int,
-) {
-    fun distanceTo(point: PathPoint?): Float {
-        if (point == null) return 0f
-        return IntVec3.of(x, y, z).distance(IntVec3.of(point.x, point.y, point.z))
-            .toFloat()
-    }
+interface AbstractPath {
+    fun getCurrent(): AbstractPathNode?
+    fun getEnd(): AbstractPathNode?
+    fun isFinished(): Boolean
+    fun advance()
+    fun length(): Int
+    fun target(): IntVec3
 }
 
-class Path(
-    private val points: Array<PathPoint>,
-    private var currentNodeIndex: Int = 0,
-    private val target: IntVec3,
-) {
-    fun getCurrentPos(): PathPoint? =
-        points.getOrNull(currentNodeIndex)
+interface AbstractPathNode {
+    val x: Int
+    val y: Int
+    val z: Int
 
-    fun getFinalPathPoint(): PathPoint? =
-        points.lastOrNull()
-
-    fun isFinished(): Boolean =
-        currentNodeIndex >= points.size
-
-    fun incrementPathIndex() {
-        if (!isFinished()) currentNodeIndex++
-    }
-
-    fun getCurrentPathLength(): Int =
-        points.size
-
-    fun getTarget(): IntVec3 = target
+    fun distanceTo(other: AbstractPathNode?): Float
+    fun asVec(): IntVec3 = IntVec3.of(x, y, z)
 }
 
 interface PathNavigator {
@@ -381,36 +356,42 @@ interface PathNavigator {
     fun setSpeed(speed: Double)
 
     // Returns the current path object
-    fun getPath(): Path?
+    fun getPath(): AbstractPath?
 
     // Checks if the entity has completed its path
-    fun isDone(): Boolean = noPath()
+    fun isDone(): Boolean
+
+    // Checks if the entity is still navigating
+    fun isInProgress(): Boolean
 
     // Moves the entity along its current path
     fun tick()
 
-    // Creates a path to specific coordinates
-    fun createPath(pos: IntVec3?, range: Int): Path?
+    fun getTargetPos(): IntVec3?
 
     // Creates a path to an entity
-    fun createPath(targetEntity: PlatformEntity?, range: Int): Path?
+    fun createPath(targetEntity: PlatformEntity, distance: Int): AbstractPath?
+
+    // Creates a path to a specified coordinate
+    fun createPath(targetEntity: IntVec3, distance: Int): AbstractPath?
+
+    // Creates a path to the list of positions
+    fun createPath(positions: Set<IntVec3>, distance: Int): AbstractPath?
 
     // Starts following the given path
-    fun moveTo(path: Path?, speed: Double)
+    fun moveTo(path: AbstractPath, speed: Double)
+
+    // Starts following the given path
+    fun moveTo(path: PlatformEntity?, speed: Double)
 
     // Clears the current path
     fun stop()
 
-    // Returns whether the pathfinding has reached the destination
-    fun noPath(): Boolean
-
-    // Returns the final path point in the path
-    fun getPathEnd(): PathPoint?
+    // Returns whether the pathfinding has been stuck
+    fun isStuck(): Boolean
 
     // Sets pathfinding options such as avoiding water or roads
-    fun setCanFloat(canFloat: Boolean)
-    fun setCanPassDoors(canPassDoors: Boolean)
-    fun setAvoidsWater(avoidsWater: Boolean)
+    var canFloat: Boolean
 }
 
 interface MobEntityEventHandler {

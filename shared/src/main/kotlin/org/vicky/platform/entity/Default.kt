@@ -66,7 +66,7 @@ object DefaultTasks {
                 .blockMode()
                 .cooldownTicks((params["cooldown"] as Int?) ?: 60)
                 .withBlockRange(ResourceLocation.from("core", "find_block_${self.uuid}"),
-                    range = (params["range"] as Float?) ?: 12f)
+                    range = (params["range"] as Double?) ?: 12.0)
                     .filter(BlockIsWalkableFilter)
                     .filter(BlockIsHighest)
                     .withRandomSingleResult()

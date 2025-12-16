@@ -12,6 +12,9 @@ object DefaultEntities {
             maxHealth = 40.0
             movementSpeed = 0.22
             modelId = "${PlatformPlugin.id()}:default_dummy"
+            spawn {
+
+            }
         }
 
         physical {

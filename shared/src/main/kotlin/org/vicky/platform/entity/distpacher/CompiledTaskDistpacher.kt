@@ -298,11 +298,11 @@ object EntityTaskManager {
                 val ticksLeft = ref.duration ?: compiledTimed.defaultDuration
                 val interval = ref.interval ?: compiledTimed.defaultInterval
 
-                // create active timed
-                val active = ActiveTimedAction(compiledTimed, owner, target, ticksLeft, interval, 0, slot)
-                st.activeEntityTimed.add(active)
-                // call onStart on main thread
-                compiledTimed.onStart(owner, target)
+                if (compiledTimed.onStart(owner, target)) {
+                    // create active timed
+                    val active = ActiveTimedAction(compiledTimed, owner, target, ticksLeft, interval, 0, slot)
+                    st.activeEntityTimed.add(active)
+                }
             }
         }
     }
@@ -334,11 +334,12 @@ object EntityTaskManager {
                 val ticksLeft = ref.duration ?: compiledTimed.defaultDuration
                 val interval = ref.interval ?: compiledTimed.defaultInterval
 
-                // create active timed
-                val active = ActiveTimedBlockAction(compiledTimed, owner, target, ticksLeft, interval, 0, slot)
-                st.activeBlockTimed.add(active)
                 // call onStart on main thread
-                compiledTimed.onStart(owner, target)
+                if (compiledTimed.onStart(owner, target)) {
+                    // create active timed
+                    val active = ActiveTimedBlockAction(compiledTimed, owner, target, ticksLeft, interval, 0, slot)
+                    st.activeBlockTimed.add(active)
+                }
             }
         }
     }

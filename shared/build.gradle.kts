@@ -17,6 +17,7 @@ dependencies {
     compileOnly("com.google.code.gson:gson:2.13.1")
 
     // Hibernate as internal implementation
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("org.hibernate.orm:hibernate-core:6.4.1.Final")
     implementation("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final")
     implementation("org.jboss.logging:jboss-logging:3.5.3.Final")
@@ -67,6 +68,7 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
         exclude("org/eclipse/**")
         // exclude("module-info.class")
         exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib"))
+        exclude(dependency("org.jetbrains.kotlinx:kotlinx-serialization-json"))
         exclude(dependency("org.jetbrains.kotlin:kotlin-reflect"))
         exclude(dependency("org.spongepowered:.*"))
         exclude(dependency("org.jetbrains:annotations"))

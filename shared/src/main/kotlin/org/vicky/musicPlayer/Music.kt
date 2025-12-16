@@ -26,7 +26,7 @@ import kotlin.math.abs
 
 object MusicPlayer {
     private val playerStates = mutableMapOf<UUID, PlayerState>()
-    private val noteUidMap = mutableMapOf<NoteKey, Integer>()
+    private val noteUidMap = mutableMapOf<NoteKey, Int>()
     // Java-style static map for reverse lookup (pitch → name)
     private val NOTE_ORDER = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
     private val OCTAVE_SHIFTS = mapOf("--" to 2, "-" to 3, "" to 4, "+" to 5, "++" to 6)
@@ -338,7 +338,7 @@ interface PlatformSoundBackend {
     /**
      * Play the given MusicEvent for this player. Return the event given uid for the note or your own logic.
      */
-    fun playNote(player: PlatformPlayer, event: MusicEvent): Integer?
+    fun playNote(player: PlatformPlayer, event: MusicEvent): Int?
 
     /**
      * Play the given MusicEvent for this player for a given time in seconds.
@@ -349,7 +349,7 @@ interface PlatformSoundBackend {
      * Stop a previously started note identified by uid.
      * If a backend doesn't use uids, it's fine to ignore or best-effort.
      */
-    fun stopNote(player: PlatformPlayer, uid: Integer?)
+    fun stopNote(player: PlatformPlayer, uid: Int?)
 
     /**
      * Fallback to play an already-resolved sound name (useful for Bukkit/playSound usage).

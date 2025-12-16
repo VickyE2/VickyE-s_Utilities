@@ -2,6 +2,7 @@
 package org.vicky.utilities.ContextLogger;
 
 import org.vicky.platform.PlatformLogger;
+import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.defaults.DefaultPlatformLogger;
 import org.vicky.utilities.ANSIColor;
 
@@ -21,7 +22,7 @@ public class ContextLogger {
   protected final ContextType context;
   protected final String contextName;
   protected final PlatformLogger logger;
-  private int requiredLogLevel = 0;
+  private int requiredLogLevel = PlatformPlugin.logLevel();
 
   /**
    * Constructs a ContextLogger with the specified context type and context name.
@@ -82,6 +83,19 @@ public class ContextLogger {
     }
 
     return sb.toString();
+  }
+
+  /**
+   * Logs a message to the plugin logger using the default cyan context formatting.
+   *
+   * @param message The message to log.
+   */
+  public void debug(String message) {
+    if (requiredLogLevel > LogType.DEBUG.level) return;
+    String contextTag =
+        "[" + ANSIColor.colorize("pink[" + context + "-" + contextName + "]") + "] ";
+    String finalContext = contextTag + message;
+    logger.info(finalContext);
   }
 
   /**
@@ -158,6 +172,26 @@ public class ContextLogger {
 
     String contextTag =
             "[" + ANSIColor.colorize("cyan[" + context + "-" + contextName + "]") + "] ";
+    String finalContext = contextTag + replaceAllOrdered(message, finalised);
+    logger.info(finalContext);
+  }
+
+  /**
+   * Logs a debug message to the plugin logger.
+   * This takes an array of object arguments
+   * They will be replaced in the message by the {} placeholder
+   *
+   * @param message The message to log.
+   */
+  public void debug(String message, Object... args) {
+    if (requiredLogLevel > LogType.DEBUG.level) return;
+    List<String> finalised = new ArrayList<>();
+    for (var arg : args) {
+      finalised.add(arg.toString());
+    }
+
+    String contextTag =
+            "[" + ANSIColor.colorize("pink[" + context + "-" + contextName + "]") + "] ";
     String finalContext = contextTag + replaceAllOrdered(message, finalised);
     logger.info(finalContext);
   }
@@ -277,6 +311,43 @@ public class ContextLogger {
   }
 
   /**
+   * Logs a debug message to the plugin logger.
+   * Optionally, the message itself can be affected by the log type's color formatting.
+   *
+   * @param message             The message to log.
+   * @param shouldAffectMessage If true, the message is formatted with the log type's color; otherwise, it is not.
+   */
+  public void debug(String message, boolean shouldAffectMessage) {
+    if (requiredLogLevel > LogType.DEBUG.level) return;
+    String contextTag =
+        "[" + ANSIColor.colorize(LogType.DEBUG.color + "[" + context + "-" + contextName + "]") + "] ";
+    String finalContext;
+    if (shouldAffectMessage) {
+      finalContext = contextTag + ANSIColor.colorize(LogType.DEBUG.color + "[" + message + "]");
+    } else {
+      finalContext = contextTag + message;
+    }
+    logger.debug(finalContext);
+  }
+
+  /**
+   * Logs a message to the plugin logger using the default cyan context formatting.
+   * This takes an array of object arguments
+   * They will be replaced in the message by the {} placeholder
+   *
+   * @param message The message to log.
+   */
+  public void debug(String message, boolean shouldAffectMessage, Object... args) {
+    if (requiredLogLevel > LogType.DEBUG.level) return;
+    List<String> finalised = new ArrayList<>();
+    for (var arg : args) {
+      finalised.add(arg.toString());
+    }
+    message = replaceAllOrdered(message, finalised);
+    debug(message, shouldAffectMessage);
+  }
+
+  /**
    * Logs a message to the plugin logger with a specified log type and post-formatting effect,
    * with an option to affect the message formatting.
    *
@@ -321,7 +392,9 @@ public class ContextLogger {
   }
 
   public void setLevel(LogType level) {
-    this.requiredLogLevel = level.level;
+    if (level.level > PlatformPlugin.logLevel()) {
+      this.requiredLogLevel = level.level;
+    }
   }
 
   /**
@@ -402,7 +475,8 @@ public class ContextLogger {
     /**
      * Represents ambient messages (purple).
      */
-    AMBIENCE("purple", 0);
+    AMBIENCE("purple", 0),
+    DEBUG("pink", -1);
 
     /**
      * The ANSI color code for the log type.

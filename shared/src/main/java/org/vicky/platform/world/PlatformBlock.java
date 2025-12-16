@@ -1,15 +1,17 @@
 package org.vicky.platform.world;
 
+import org.vicky.platform.utils.IntVec3;
 import org.vicky.platform.utils.Vec3;
 
 public interface PlatformBlock<T> {
+    /** This dosent mean literal solid but just not air **/
     boolean isSolid();
 
     PlatformMaterial getMaterial();
-    PlatformLocation getLocation();
 
-    default Vec3 getPosition() {
-        return new Vec3(getLocation().x, getLocation().y, getLocation().y);
+    PlatformLocation getLocation();
+    default IntVec3 getBlockPos() {
+        return new IntVec3(getLocation().x, getLocation().y, getLocation().y);
     }
 
     PlatformBlockState<T> getBlockState();

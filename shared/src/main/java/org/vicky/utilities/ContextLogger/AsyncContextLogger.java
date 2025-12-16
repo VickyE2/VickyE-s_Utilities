@@ -180,6 +180,13 @@ public class AsyncContextLogger extends ContextLogger {
     }
 
     @Override
+    public void debug(String message) {
+        // capture immutable snapshot minimal work on caller thread
+        final String m = message;
+        enqueueNonBlocking(() -> AsyncContextLogger.super.debug(m));
+    }
+
+    @Override
     public void print(String message, boolean isError) {
         final String m = message;
         final boolean e = isError;
@@ -199,6 +206,13 @@ public class AsyncContextLogger extends ContextLogger {
         final String m = message;
         final Object[] a = copyArgs(args);
         enqueueNonBlocking(() -> AsyncContextLogger.super.print(m, a));
+    }
+
+    @Override
+    public void debug(String message, Object... args) {
+        final String m = message;
+        final Object[] a = copyArgs(args);
+        enqueueNonBlocking(() -> AsyncContextLogger.super.debug(m, a));
     }
 
     @Override
@@ -242,12 +256,27 @@ public class AsyncContextLogger extends ContextLogger {
     }
 
     @Override
+    public void debug(String message, boolean shouldAffectMessage) {
+        final String m = message;
+        final boolean s = shouldAffectMessage;
+        enqueueNonBlocking(() -> AsyncContextLogger.super.print(m, s));
+    }
+
+    @Override
     public void print(String message, LogType type, boolean shouldAffectMessage, Object... args) {
         final String m = message;
         final LogType t = type;
         final boolean s = shouldAffectMessage;
         final Object[] a = copyArgs(args);
         enqueueNonBlocking(() -> AsyncContextLogger.super.print(m, t, s, a));
+    }
+
+    @Override
+    public void debug(String message, boolean shouldAffectMessage, Object... args) {
+        final String m = message;
+        final boolean s = shouldAffectMessage;
+        final Object[] a = copyArgs(args);
+        enqueueNonBlocking(() -> AsyncContextLogger.super.debug(m, s, a));
     }
 
     @Override

@@ -4,7 +4,7 @@ package org.vicky.utilities;
 import org.vicky.platform.IColor;
 import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.defaults.CommonParticle;
-import org.vicky.platform.entity.PlatformArrow;
+import org.vicky.platform.entity.PlatformEntity;
 import org.vicky.platform.entity.PlatformParticle;
 import org.vicky.platform.utils.Vec3;
 import org.vicky.platform.world.PlatformLocation;
@@ -26,7 +26,7 @@ import org.vicky.platform.world.PlatformLocation;
  */
 public class ParticleTask implements Runnable {
   private volatile boolean running = true;
-  private final PlatformArrow arrow;
+  private final PlatformEntity arrow;
   private final double radiusH;
   private final double radiusM;
   private final double heightStep;
@@ -100,7 +100,7 @@ public class ParticleTask implements Runnable {
    */
   public ParticleTask(
       long startTime,
-      PlatformArrow arrow,
+      PlatformEntity arrow,
       double radiusH,
       double radiusM,
       double heightStep,

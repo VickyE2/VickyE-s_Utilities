@@ -1,6 +1,11 @@
 package org.vicky.platform;
 
+import org.vicky.coreregistry.CoreEntityRegistry;
 import org.vicky.musicPlayer.PlatformSoundBackend;
+import org.vicky.platform.entity.DefaultEntities;
+import org.vicky.platform.entity.MobEntityDescriptor;
+import org.vicky.platform.entity.PlatformEffectBridge;
+import org.vicky.platform.entity.PlatformEntityFactory;
 import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 
@@ -22,6 +27,8 @@ public interface PlatformPlugin {
     static void set(PlatformPlugin instance) {
         if (Holder.INSTANCE == null) {
             Holder.INSTANCE = instance;
+            DefaultEntities.INSTANCE.register();
+            CoreEntityRegistry.installInto(instance);
         } else {
             throw new IllegalStateException("Cannot set PlatformPlugin after its already been set.");
         }
@@ -83,6 +90,10 @@ public interface PlatformPlugin {
         return get().getSoundBackend();
     }
 
+    static PlatformEffectBridge<?> effectBridge() {
+        return get().getPlatformEffectBridge();
+    }
+
     static void registerTemplateUtilityPackage(String jarName, String packageName) {
         Holder.pendingDBTemplatesUtils.put(packageName, jarName);
     }
@@ -118,6 +129,24 @@ public interface PlatformPlugin {
         return get().getPlatformPlayer(uuid);
     }
 
+    static int logLevel() {
+        return get().getLogLevel();
+    }
+
+    static String id() {
+        return get().getPlatformIdentifier();
+    }
+
+    void registerMobEntityDescriptor(MobEntityDescriptor descriptor);
+
+    /**
+     * Optional: platform may implement to immediately process any pending descriptors.
+     * For example, call processPendingEntities() or processEntityGenerators();
+     */
+    default void processPendingEntities() {
+        // default no-op; implementations may trigger PlatformDimensionManager.processDimensions()
+    }
+
     PlatformLogger getPlatformLogger();
     PlatformScheduler getPlatformScheduler();
     PlatformRankService getRankService();
@@ -134,9 +163,14 @@ public interface PlatformPlugin {
 
     PlatformSoundBackend getSoundBackend();
 
+    PlatformEffectBridge<?> getPlatformEffectBridge();
+
     PlatformLocationAdapter<?> getPlatformLocationAdapter();
     File getPlatformDataFolder();
     Optional<PlatformPlayer> getPlatformPlayer(UUID uuid);
+
+    int getLogLevel();
+    String getPlatformIdentifier();
 
     class Holder {
         private static final Map<String, String> pendingDBTemplates = new HashMap<>();

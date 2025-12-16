@@ -4,12 +4,12 @@ package org.vicky.utilities;
 import org.vicky.platform.IColor;
 import org.vicky.platform.defaults.CommonParticle;
 import org.vicky.platform.defaults.VanillaColor;
-import org.vicky.platform.entity.PlatformArrow;
+import org.vicky.platform.entity.PlatformEntity;
 import org.vicky.platform.entity.PlatformParticle;
 
 public class ParticleTaskBuilder {
   private long startTime = System.currentTimeMillis();
-  private PlatformArrow arrow;
+  private PlatformEntity arrow;
   private double radiusH = 1.4;
   private double radiusM = 1.1;
   private double heightStep = 1;
@@ -49,7 +49,7 @@ public class ParticleTaskBuilder {
     return this;
   }
 
-  public ParticleTaskBuilder setArrow(PlatformArrow arrow) {
+  public ParticleTaskBuilder setArrow(PlatformEntity arrow) {
     this.arrow = arrow;
     return this;
   }

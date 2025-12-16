@@ -14,6 +14,7 @@ public class PlatformLocation extends Location3D implements Cloneable {
     public PlatformWorld getWorld() { return world; }
 
     public PlatformLocation add(double dx, double dy, double dz) {
+
         return new PlatformLocation(world, x + dx, y + dy, z + dz);
     }
 

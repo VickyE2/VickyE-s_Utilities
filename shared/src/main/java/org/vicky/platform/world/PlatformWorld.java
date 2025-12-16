@@ -1,7 +1,10 @@
 package org.vicky.platform.world;
 
 import de.pauleff.api.ICompoundTag;
+import org.jetbrains.annotations.NotNull;
 import org.vicky.platform.PlatformPlayer;
+import org.vicky.platform.entity.PlatformEntity;
+import org.vicky.platform.entity.PlatformLivingEntity;
 import org.vicky.platform.utils.Vec3;
 
 import java.util.List;
@@ -13,7 +16,15 @@ public interface PlatformWorld<T, N> {
 
     int getHighestBlockYAt(double x, double z);
 
+    PlatformBlock<T> getHighestBlockAt(double x, double z);
+
     int getMaxWorldHeight();
+
+    @NotNull List<? extends @NotNull PlatformEntity> getEntities();
+
+    @NotNull List<? extends @NotNull PlatformEntity> getEntitiesWithin(double x, double y, double z, float range);
+
+    @NotNull List<? extends @NotNull PlatformLivingEntity> getLivingEntitiesWithin(double x, double y, double z, float range);
 
     List<PlatformPlayer> getPlayers();
 
@@ -56,4 +67,6 @@ public interface PlatformWorld<T, N> {
     default void ensureChunkLoadedFor(Vec3 pos) {
         loadChunkIfNeeded((int) pos.x >> 4, (int) pos.z >> 4);
     }
+
+    PlatformBlock<T> raycastBlock(Vec3 eyeLocation, Vec3 lookDirection, Float range);
 }

@@ -1,5 +1,6 @@
 package org.vicky.platform.entity
 
+import org.vicky.platform.entity.distpacher.EntityTaskState
 import org.vicky.platform.utils.ResourceLocation
 import org.vicky.platform.world.PlatformBlock
 import org.vicky.platform.world.PlatformWorld
@@ -18,7 +19,8 @@ data class ActiveTimedAction(
     var ticksLeft: Int,                // -1 = infinite
     val interval: Int = 1,
     var intervalTicksLeft: Int = 0,
-    val slot: String? = null
+    val slot: String? = null,
+    val taskId: ResourceLocation
 )
 data class ActiveTimedBlockAction(
     val compiled: CompiledBlockTimedAction,
@@ -27,7 +29,8 @@ data class ActiveTimedBlockAction(
     var ticksLeft: Int,                // -1 = infinite
     val interval: Int = 1,
     var intervalTicksLeft: Int = 0,
-    val slot: String? = null
+    val slot: String? = null,
+    val taskId: ResourceLocation
 )
 
 /**
@@ -382,7 +385,9 @@ object BookBasedAntagnosticCompiler {
             priority = dto.priority,
             steps = compiledSteps,
             cooldownTicks = dto.cooldownTicks,
-            chance = dto.chance
+            chance = dto.chance,
+            lifecycle = dto.lifecycle,
+            completionPredicate = dto.completionPredicate
         )
     }
 }
@@ -913,33 +918,42 @@ data class StepDTO(
 data class TaskSpecDTO(
     val id: String,
     val type: TaskType,
+    val lifecycle: TaskLifecycle,
     val priority: Int = 0,
     val chance: Double = 0.5,
     val steps: List<StepDTO> = emptyList(),
-    val cooldownTicks: Int = -1
+    val cooldownTicks: Int = -1,
+    val completionPredicate: (PlatformEntity, EntityTaskState) -> Boolean
 )
 
 enum class TaskType { CONDITIONED, RANDOM }
+enum class TaskLifecycle { ONE_SHOT, REPEATING, UNTIL_CONDITION }
 
 // --------------------- TaskBuilder with entity / block modes ---------------------
 
-class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id: ResourceLocation, val type: TaskType, val priority: Int, val chance: Double = 0.5) {
+class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id: ResourceLocation, val type: TaskType, val lifecycle: TaskLifecycle, val priority: Int, val chance: Double = 0.5) {
     private val steps = mutableListOf<ParentableTaskStep>()
     private var cooldownTicks: Int = -1
     private var LOGGER: AsyncContextLogger = AsyncContextLogger(ContextLogger.ContextType.SUB_SYSTEM, "TASK-RUNNER-[$id]")
 
     private enum class Mode { ENTITY, BLOCK }
     private var mode: Mode = Mode.ENTITY
+    private var completionPredicate: ((PlatformEntity, EntityTaskState) -> Boolean) = { _, _ -> true }
 
     companion object {
-        private fun of(ordinal: PlatformLivingEntity, id: ResourceLocation, type: TaskType, priority: Int, chance: Double = 0.5): TaskBuilder =
-            TaskBuilder(ordinal, id, type, priority, chance)
+        private fun of(ordinal: PlatformLivingEntity, id: ResourceLocation, type: TaskType, lifecycle: TaskLifecycle, priority: Int, chance: Double = 0.5): TaskBuilder =
+            TaskBuilder(ordinal, id, type, lifecycle, priority, chance)
         @JvmOverloads
-        fun random(ordinal: PlatformLivingEntity, id: ResourceLocation, priority: Int = 0, chance: Double = 0.5) =
-            of(ordinal, id, TaskType.RANDOM, priority, chance)
+        fun random(ordinal: PlatformLivingEntity, id: ResourceLocation, lifecycle: TaskLifecycle = TaskLifecycle.ONE_SHOT, priority: Int = 0, chance: Double = 0.5) =
+            of(ordinal, id, TaskType.RANDOM, lifecycle, priority, chance)
         @JvmOverloads
-        fun conditioned(ordinal: PlatformLivingEntity, id: ResourceLocation, priority: Int = 0) =
-            of(ordinal, id, TaskType.CONDITIONED, priority)
+        fun conditioned(ordinal: PlatformLivingEntity, id: ResourceLocation, lifecycle: TaskLifecycle = TaskLifecycle.UNTIL_CONDITION, priority: Int = 0) =
+            of(ordinal, id, TaskType.CONDITIONED, lifecycle, priority)
+    }
+
+    fun completionPredicate(sP: (PlatformEntity, EntityTaskState) -> Boolean): TaskBuilder {
+        this.completionPredicate = sP
+        return this
     }
 
     // mode switches
@@ -1003,7 +1017,8 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
             }
         }
 
-        return CompiledTask(id = this.id, type = this.type, priority = this.priority, steps = compiledSteps.toList(), chance = this.chance, cooldownTicks = this.cooldownTicks)
+        return CompiledTask(id = this.id, type = this.type, priority = this.priority, steps = compiledSteps.toList(), chance = this.chance,
+            completionPredicate = this.completionPredicate, lifecycle = this.lifecycle, cooldownTicks = this.cooldownTicks)
     }
 
     // toDto left as-is for entity selection only in this snippet - extend DTO to mark block vs entity when serializing
@@ -1044,7 +1059,8 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
             }
         }
 
-        return TaskSpecDTO(id = this.id.toString(), type = this.type, priority = this.priority, steps = stepDtos, cooldownTicks = this.cooldownTicks)
+        return TaskSpecDTO(id = this.id.toString(), type = this.type, priority = this.priority, steps = stepDtos, lifecycle = this.lifecycle,
+            completionPredicate = this.completionPredicate, cooldownTicks = this.cooldownTicks)
     }
 
     // --------------------- step interfaces ---------------------
@@ -1255,8 +1271,10 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
 data class CompiledTask(
     val id: ResourceLocation,
     val type: TaskType,
+    val lifecycle: TaskLifecycle,
     val priority: Int,
     val chance: Double,
     val steps: List<CompiledStep>,
-    val cooldownTicks: Int = -1
+    val cooldownTicks: Int = -1,
+    val completionPredicate: ((PlatformEntity, EntityTaskState) -> Boolean)
 )

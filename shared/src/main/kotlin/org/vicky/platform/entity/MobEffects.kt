@@ -2,16 +2,34 @@ package org.vicky.platform.entity
 
 import org.vicky.platform.utils.ResourceLocation
 
-data class UniversalEffect(
+enum class MobEffectCategory {
+    BENEFICIAL,
+    HARMFUL,
+    NEUTRAL
+}
+
+interface PlatformEffect {
+    val key: ResourceLocation
+    val displayName: String
+    val color: Int
+    val maxAmplifier: Int
+    val isInstant: Boolean
+    val defaultDuration: Int
+    fun onTick(): ((ctx: EffectTickContext) -> Unit) = { }
+    fun onEffectStarted(): ((ctx: EffectApplyContext) -> Unit) = { }
+    fun onRemove(): ((ctx: EffectRemoveContext) -> Unit) = { }
+}
+
+data class EffectDescriptor(
     val key: ResourceLocation,
     val displayName: String,
-    val maxAmplifier: Int = 4,
-    val isDebuff: Boolean = false,
-    val isInstant: Boolean = false,
-    val defaultDuration: Int = 200, // ticks
-    val onTick: ((ctx: EffectTickContext) -> Unit)? = null,
-    val onApply: ((ctx: EffectApplyContext) -> Unit)? = null,
-    val onRemove: ((ctx: EffectRemoveContext) -> Unit)? = null,
+    val color: Int,
+    val maxAmplifier: Int,
+    val isInstant: Boolean,
+    val defaultDuration: Int,
+    val onTick: ((ctx: EffectTickContext) -> Unit),
+    val onEffectStarted: ((ctx: EffectApplyContext) -> Unit),
+    val onRemove: ((ctx: EffectRemoveContext) -> Unit)
 )
 
 data class EffectApplyContext(
@@ -32,39 +50,39 @@ data class EffectRemoveContext(
 )
 
 data class PlatformEffectInstance(
-    val effect: UniversalEffect,
+    val effect: PlatformEffect,
     val amplifier: Int,
     val remainingDuration: Int
 )
 
 @ConsistentCopyVisibility
 data class RegisteredUniversalEffect internal constructor(
-    val effect: UniversalEffect
+    val effect: PlatformEffect
 )
 
 interface PlatformEffectBridge<T: PlatformLivingEntity> {
-    fun registerEffect(effect: UniversalEffect) : RegisteredUniversalEffect
+    fun registerEffect(effect: EffectDescriptor) : RegisteredUniversalEffect
     fun getEffect(id: ResourceLocation) : RegisteredUniversalEffect?
 
     fun applyEffect(
         entity: T,
-        effect: UniversalEffect,
+        effect: ResourceLocation,
         duration: Int,
         amplifier: Int
     )
 
     fun removeEffect(
         entity: T,
-        effect: UniversalEffect
+        effect: ResourceLocation
     )
 
     fun hasEffect(
         entity: T,
-        effect: UniversalEffect
+        effect: ResourceLocation
     ): Boolean
 
     fun getEffectData(
         entity: T,
-        effect: UniversalEffect
+        effect: ResourceLocation
     ): PlatformEffectInstance?
 }

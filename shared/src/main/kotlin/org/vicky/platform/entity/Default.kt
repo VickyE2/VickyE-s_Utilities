@@ -36,6 +36,7 @@ object DefaultTasks {
         override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.random(
             self,
             ResourceLocation.from("core", "look_at_nearest_player_${self.uuid}"),
+            TaskLifecycle.REPEATING
         )
             .withRange(ResourceLocation.from("look_at_nearest_player", "find_closest_entity_${self.uuid}"), self.lookDistance)
                 .filter(PlayersOnly)
@@ -46,7 +47,7 @@ object DefaultTasks {
             .build()
     }
     object LookAtAttacker : ProducerIntendedTask {
-        override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.random(
+        override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.conditioned(
             self,
             ResourceLocation.from("core", "look_at_attacker_${self.uuid}"),
         )
@@ -62,7 +63,7 @@ object DefaultTasks {
      */
     object PassiveWander : ProducerIntendedTask {
         override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask =
-            TaskBuilder.random(self, ResourceLocation.from("core", "wander_${self.uuid}"), priority = 0)
+            TaskBuilder.random(self, ResourceLocation.from("core", "wander_${self.uuid}"), TaskLifecycle.REPEATING, priority = 0)
                 .blockMode()
                 .cooldownTicks((params["cooldown"] as Int?) ?: 60)
                 .withBlockRange(ResourceLocation.from("core", "find_block_${self.uuid}"),
@@ -87,10 +88,9 @@ object DefaultHandlers {
                     return EventResult.CONSUME
                 }
 
-                override fun onLeaveCombat(self: PlatformLivingEntity): EventResult {
+                override fun onLeaveCombat(self: PlatformLivingEntity) {
                     self.setLastHurtByMob(null)
                     self.setLastHurtMob(null)
-                    return super.onLeaveCombat(self)
                 }
 
                 override fun onHurt(

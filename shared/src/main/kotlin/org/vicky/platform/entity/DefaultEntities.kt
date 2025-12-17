@@ -2,18 +2,30 @@ package org.vicky.platform.entity
 
 import org.vicky.coreregistry.CoreEntityRegistry
 import org.vicky.platform.PlatformPlugin
+import java.lang.annotation.ElementType
+import java.lang.annotation.RetentionPolicy
 
-object DefaultEntities {
+
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.TYPE, AnnotationTarget.CLASS)
+annotation class RegisterFactory
+
+interface MobRegisteringClass {
+    fun register(registry: PlatformPlugin)
+}
+
+@RegisterFactory
+class DefaultEntities : MobRegisteringClass {
     val testDummy = mob(
-        key = "core:test_dummy_mob",
+        key = "core" rli "test_dummy_mob",
         handler = DefaultHandlers.MobDefaultHandler
     ) {
         defaults("Dummy") {
             maxHealth = 40.0
             movementSpeed = 0.22
-            modelId = "${PlatformPlugin.id()}:default_dummy"
+            modelId = PlatformPlugin.id() rli "default_dummy"
             spawn {
-
+                condition { _ -> false }
             }
         }
 
@@ -27,8 +39,8 @@ object DefaultEntities {
         }
     }
 
-    fun register() {
-        CoreEntityRegistry.register(
+    override fun register(registry: PlatformPlugin) {
+        registry.registerMobEntityDescriptor(
             testDummy
         )
     }

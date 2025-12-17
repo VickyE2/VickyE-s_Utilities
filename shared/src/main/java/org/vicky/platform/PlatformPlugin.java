@@ -10,10 +10,7 @@ import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public interface PlatformPlugin {
 
@@ -27,7 +24,6 @@ public interface PlatformPlugin {
     static void set(PlatformPlugin instance) {
         if (Holder.INSTANCE == null) {
             Holder.INSTANCE = instance;
-            DefaultEntities.INSTANCE.register();
             CoreEntityRegistry.installInto(instance);
         } else {
             throw new IllegalStateException("Cannot set PlatformPlugin after its already been set.");
@@ -138,6 +134,8 @@ public interface PlatformPlugin {
     }
 
     void registerMobEntityDescriptor(MobEntityDescriptor descriptor);
+    void registerMobEntityDescriptor(MobEntityDescriptor... descriptor);
+    void registerMobEntityDescriptor(Collection<MobEntityDescriptor> descriptor);
 
     /**
      * Optional: platform may implement to immediately process any pending descriptors.

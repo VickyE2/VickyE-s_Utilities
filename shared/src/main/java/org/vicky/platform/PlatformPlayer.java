@@ -15,6 +15,7 @@ public interface PlatformPlayer extends PlatformLivingEntity {
     void showBossBar(PlatformBossBar bar);
     void hideBossBar(PlatformBossBar bar);
     double flightSpeed();
+    void giveItem(PlatformItem item);
     void playSound(PlatformLocation location, String soundName, Object soundCategory, Float volume, Float pitch);
 
     @Override

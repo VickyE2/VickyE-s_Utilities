@@ -2,6 +2,7 @@ package org.vicky.coreregistry;
 
 import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.entity.MobEntityDescriptor;
+import org.vicky.platform.utils.ResourceLocation;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -15,7 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * The platform should call installInto(plugin) during startup to consume registrations.
  */
 public class CoreEntityRegistry {
-    private static final ConcurrentHashMap<String, MobEntityDescriptor> DESCRIPTORS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<ResourceLocation, MobEntityDescriptor> DESCRIPTORS
+            = new ConcurrentHashMap<>();
 
     private CoreEntityRegistry() {
     }
@@ -25,9 +27,7 @@ public class CoreEntityRegistry {
      */
     public static void register(MobEntityDescriptor descriptor) {
         if (descriptor == null) throw new IllegalArgumentException("descriptor");
-        String id = descriptor.getMobDetails().getMobKey();
-        if (id.isEmpty()) throw new IllegalArgumentException("mob$mobKey is empty");
-        // keep first-registered or replace? we keep first by default to avoid accidental override:
+        ResourceLocation id = descriptor.getMobDetails().getMobKey();
         DESCRIPTORS.putIfAbsent(id, descriptor);
     }
 

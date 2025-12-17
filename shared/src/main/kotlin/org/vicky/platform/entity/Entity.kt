@@ -20,7 +20,7 @@ class ErrorOnMobProductionException : RuntimeException {
 }
 
 interface PlatformEntityFactory {
-    open class RegisteredMobEntityEventHandler protected constructor(
+    class RegisteredMobEntityEventHandler internal constructor(
         val handler: MobEntityEventHandler
     )
 
@@ -29,7 +29,8 @@ interface PlatformEntityFactory {
     fun getHandler(id: ResourceLocation): RegisteredMobEntityEventHandler?
 
     @Throws(ErrorOnMobProductionException::class)
-    fun register(defaults: MobEntityDescriptor, location: PlatformLocation): PlatformLivingEntity
+    fun register(defaults: MobEntityDescriptor)
+    fun spawn(world: PlatformWorld<*, *>, id: ResourceLocation, x: Double, y: Double, z: Double): PlatformLivingEntity
 }
 
 enum class DamageType {
@@ -41,7 +42,7 @@ enum class DamageType {
 }
 
 enum class MobCategory {
-    NONE, HOSTILE, NEUTRAL, PASSIVE
+    NONE, MONSTER, CREATURE, AMBIENT, MISC
 }
 
 enum class SpawnCategory {
@@ -155,7 +156,6 @@ interface PlatformLivingEntity : PlatformEntity {
 
     fun hasLineOfSight(target: PlatformEntity): Boolean
     fun setAttributeBaseValue(key: String, value: Double)
-    fun getAttribute(key: String): Double?
     fun getAttributeBaseValue(key: String): Double?
     fun getAttributeValue(key: String): Double?
     fun getAttributes(): Map<String, Double>
@@ -179,7 +179,6 @@ interface PlatformLivingEntity : PlatformEntity {
     fun getLastHurtMob(): PlatformLivingEntity?
     fun setLastHurtMob(mob: PlatformLivingEntity?)
 
-    fun giveItem(item: PlatformItem)
     fun getOffhandItem(): PlatformItem?
     fun getMainHandItem(): PlatformItem?
     fun setItemSlot(slot: EquipmentSlot, item: PlatformItem)
@@ -216,24 +215,30 @@ data class MobEntityDescriptor(
 )
 
 class MobDefaults(
-    val mobKey: String,                        // unique ID
+    val mobKey: ResourceLocation,                        // unique ID
     val displayName: String,                   // name shown to players
     val category: MobCategory = MobCategory.NONE,
 
     // --- Model / Appearance ---
-    val modelId: String? = null,               // e.g., GeckoLib model, ItemsAdder model, etc.
+    val modelId: ResourceLocation? = null,               // e.g., GeckoLib model, ItemsAdder model, etc.
     val scale: Double = 1.0,
     val baby: Boolean = false,
 
     // --- Stats ---
     val maxHealth: Double = 20.0,
+    val maxAbsorption: Double = 0.0,
     val baseArmor: Double = 0.0,
+    val baseArmorToughness: Double = 0.0,
     val knockbackResistance: Double = 0.0,
     val movementSpeed: Double = 0.25,
     val swimSpeed: Double = 1.0,
     val flySpeed: Double = 0.8,
+    val jumpStrength: Double = 0.8,
     val attackDamage: Double = 2.0,
+    val attackSpeed: Double = 0.7,
+    val attackKnockback: Double = 1.0,
     val followRange: Double = 16.0,
+    val luck: Double = 0.0,
 
     // --- Combat Behavior ---
     val aggressive: Boolean = true,
@@ -273,7 +278,7 @@ class MobDefaults(
 )
 
 data class MobSpawnSettings(
-    val mobId: String,
+    val mobId: ResourceLocation,
     val category: SpawnCategory = SpawnCategory.CREATURE,
     val weight: Int = 10,
     val minGroupSize: Int = 1,
@@ -317,7 +322,13 @@ data class DropEntry(
 )
 
 data class MobEntityPhysicalProperties(
-    val hitBox: AABB
+    val hitBox: AABB,
+    val eggColors: Pair<Int, Int>,
+    val eyeHeight: Float,
+    val isFireImmune: Boolean,
+    val isPushable: Boolean,
+    val noGravity: Boolean,
+
 )
 
 data class MobEntityAIBasedGoals(
@@ -395,21 +406,20 @@ interface PathNavigator {
 }
 
 interface MobEntityEventHandler {
-    fun onEnterCombat(self: PlatformLivingEntity): EventResult = EventResult.PASS
-    fun onLeaveCombat(self: PlatformLivingEntity): EventResult = EventResult.PASS
+    fun onEnterCombat(self: PlatformLivingEntity) { }
+    fun onLeaveCombat(self: PlatformLivingEntity) { }
     fun onTick(self: PlatformLivingEntity): EventResult = EventResult.PASS
     fun onSpawn(self: PlatformLivingEntity): EventResult = EventResult.PASS
     fun onInteract(self: PlatformLivingEntity, interacter: PlatformLivingEntity): EventResult = EventResult.PASS
     fun onAttacked(self: PlatformLivingEntity, attacker: PlatformLivingEntity): EventResult = EventResult.PASS
     fun onAttack(self: PlatformLivingEntity, victim: PlatformLivingEntity): EventResult = EventResult.PASS
     fun onApplyPotion(self: PlatformLivingEntity, effect: RegisteredUniversalEffect): EventResult = EventResult.PASS
-    fun onPickItem(self: PlatformLivingEntity, item: PlatformItem): EventResult = EventResult.PASS
     fun onHurt(self: PlatformLivingEntity, source: AntagonisticDamageSource, amount: Float): EventResult = EventResult.PASS
     fun onDeath(self: PlatformLivingEntity, source: AntagonisticDamageSource): EventResult = EventResult.PASS
 }
 
 fun mob(
-    key: String,
+    key: ResourceLocation,
     handler: PlatformEntityFactory.RegisteredMobEntityEventHandler,
     block: MobEntityDescriptorBuilder.() -> Unit
 ): MobEntityDescriptor {
@@ -417,13 +427,20 @@ fun mob(
 }
 
 class MobEntityDescriptorBuilder(
-    private val mobKey: String,
+    private val mobKey: ResourceLocation,
     private val handler: PlatformEntityFactory.RegisteredMobEntityEventHandler
 ) {
     private val dataMap = mutableMapOf<String, Any>()
 
     private var defaults: MobDefaults? = null
-    private var physical = MobEntityPhysicalProperties(AABB(0.6, 0.6, 1.95))
+    private var physical = MobEntityPhysicalProperties(
+        AABB(0.6, 0.6, 1.95),
+        0xFFFFFF to 0xAAAAAA,
+        0.3f,
+        false,
+        true,
+        false
+    )
     private val goals = mutableMapOf<ProducerIntendedTask, Map<String, Any>>()
 
     fun metadata(key: String, value: Any) {
@@ -456,6 +473,11 @@ class MobEntityDescriptorBuilder(
 
 class PhysicalBuilder {
     private var hitBox: AABB = AABB(0.6, 0.6, 1.95)
+    var eggColors: Pair<Int, Int> = 0xFFFFFF to 0xAAAAAA;
+    var eyeHeight: Float  = 0.3f;
+    var isFireImmune: Boolean = false;
+    var isPushable: Boolean = true;
+    var noGravity: Boolean = false;
 
     fun hitBox(width: Double, depth: Double, height: Double) {
         hitBox = AABB(width, depth, height)
@@ -466,17 +488,17 @@ class PhysicalBuilder {
     }
 
     fun build(): MobEntityPhysicalProperties =
-        MobEntityPhysicalProperties(hitBox)
+        MobEntityPhysicalProperties(hitBox, eggColors, eyeHeight, isFireImmune, isPushable, noGravity)
 }
 
 
 class MobDefaultsBuilder(
-    private val mobKey: String,
+    private val mobKey: ResourceLocation,
     private val displayName: String
 ) {
     var category: MobCategory = MobCategory.NONE
 
-    var modelId: String? = null
+    var modelId: ResourceLocation? = null
     var scale: Double = 1.0
     var baby: Boolean = false
 
@@ -588,7 +610,7 @@ class AnimationBuilder(
         )
 }
 
-class SpawnSettingsBuilder(private val mobId: String) {
+class SpawnSettingsBuilder(private val mobId: ResourceLocation) {
     var category: SpawnCategory = SpawnCategory.CREATURE
     var weight: Int = 10
     var groupSize: IntRange = 1..4

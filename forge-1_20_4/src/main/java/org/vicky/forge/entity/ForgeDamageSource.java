@@ -8,7 +8,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.vicky.platform.entity.AntagonisticDamageSource;
 import org.vicky.platform.entity.DamageType;
-import org.vicky.platform.world.PlatformLocation;
 
 import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 
@@ -34,8 +33,8 @@ public class ForgeDamageSource extends DamageSource {
         return new AntagonisticDamageSource(
                 ForgePlatformEntity.from(src.getEntity()),
                 ForgePlatformEntity.from(src.getDirectEntity()),
-                toVicky(src.getSourcePosition()),
-                toVicky(src.sourcePositionRaw()),
+                toVicky(src.getSourcePosition() != null ? src.getSourcePosition() : Vec3.ZERO, src.getEntity() != null ? src.getEntity().level() : null),
+                toVicky(src.sourcePositionRaw() != null ? src.sourcePositionRaw() : Vec3.ZERO, src.getEntity() != null ? src.getEntity().level() : null),
                 src.isIndirect(),
                 src.scalesWithDifficulty(),
                 DamageType.valueOf(src.typeHolder().unwrap().orThrow().location().getPath().toUpperCase())

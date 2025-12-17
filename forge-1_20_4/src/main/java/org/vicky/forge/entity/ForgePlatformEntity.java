@@ -1,9 +1,7 @@
 package org.vicky.forge.entity;
 
-import de.pauleff.api.ICompoundTag;
 import de.pauleff.core.*;
 import net.minecraft.nbt.*;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;

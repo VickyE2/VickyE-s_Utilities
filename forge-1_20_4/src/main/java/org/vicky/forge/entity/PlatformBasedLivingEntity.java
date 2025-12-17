@@ -6,7 +6,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -64,21 +63,19 @@ public class PlatformBasedLivingEntity extends PathfinderMob {
     @Override
     public void onEnterCombat() {
         if (handler != null) {
-            EventResult res = handler.getHandler().onEnterCombat(asPlatform());
-            if (res == EventResult.CONSUME) return;
+            handler.getHandler().onEnterCombat(asPlatform());
         }
     }
 
     @Override
     public void onLeaveCombat() {
         if (handler != null) {
-            EventResult res = handler.getHandler().onLeaveCombat(asPlatform());
-            if (res == EventResult.CONSUME) return;
+            handler.getHandler().onLeaveCombat(asPlatform());
         }
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
+    public boolean hurt(@NotNull DamageSource source, float amount) {
         // build AntagonisticDamageSource wrapper from DamageSource as needed
         AntagonisticDamageSource wrap = convert(source);
         if (handler != null) {
@@ -94,10 +91,9 @@ public class PlatformBasedLivingEntity extends PathfinderMob {
         if (handler != null) {
             EventResult r = handler.getHandler().onDeath(asPlatform(), convert(cause));
             if (r == EventResult.CONSUME) {
-                // maybe suppress drops or mark dead manually
+                super.die(cause);
             }
         }
-        super.die(cause);
     }
 
     @Override

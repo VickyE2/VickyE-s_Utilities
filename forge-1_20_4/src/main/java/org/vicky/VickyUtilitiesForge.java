@@ -24,6 +24,8 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 import org.vicky.forge.client.audio.MidiSynthManager;
+import org.vicky.forge.entity.bridge.EntityFactoryBootstrap;
+import org.vicky.forge.entity.bridge.ForgePlatformEffectBridge;
 import org.vicky.forge.forgeplatform.*;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.forge.forgeplatform.useables.ForgeVec3;
@@ -55,10 +57,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.vicky.utilities.DatabaseManager.SQLManager.generator;
 
@@ -86,6 +85,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 		PacketHandler.register();
 		org.vicky.musicPlayer.MusicPlayer.INSTANCE.toggleLogging();
 
+		EntityFactoryBootstrap.loadFactories(this);
 		ForgePlatformEntityFactory.ENTITIES.register(FMLJavaModLoadingContext.get().getModEventBus());
 		ForgePlatformEntityFactory.INSTANCE.attachListeners(FMLJavaModLoadingContext.get().getModEventBus());
 	}
@@ -301,6 +301,20 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 	@Override
 	public void registerMobEntityDescriptor(MobEntityDescriptor mobEntityDescriptor) {
 		ForgePlatformEntityFactory.INSTANCE.register(mobEntityDescriptor);
+	}
+
+	@Override
+	public void registerMobEntityDescriptor(MobEntityDescriptor... descriptors) {
+		for (var descriptor : descriptors) {
+			ForgePlatformEntityFactory.INSTANCE.register(descriptor);
+		}
+	}
+
+	@Override
+	public void registerMobEntityDescriptor(Collection<MobEntityDescriptor> descriptors) {
+		for (var descriptor : descriptors) {
+			ForgePlatformEntityFactory.INSTANCE.register(descriptor);
+		}
 	}
 
 	// You can use EventBusSubscriber to automatically register all static methods

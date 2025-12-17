@@ -1,0 +1,84 @@
+package org.vicky.forge.entity.effects;
+
+import net.minecraft.world.effect.MobEffect;
+import org.jetbrains.annotations.NotNull;
+import org.vicky.forge.entity.ForgePlatformLivingEntity;
+import org.vicky.platform.entity.EffectApplyContext;
+import org.vicky.platform.entity.EffectRemoveContext;
+import org.vicky.platform.entity.EffectTickContext;
+import org.vicky.platform.entity.PlatformEffect;
+import org.vicky.platform.utils.ResourceLocation;
+
+import java.util.function.Consumer;
+import java.util.function.Function;
+
+public class ForgePlatformEffect implements PlatformEffect {
+
+    public final MobEffect ordinal;
+
+    private ForgePlatformEffect(MobEffect e) { this.ordinal = e; }
+    public static ForgePlatformEffect from(MobEffect e) { return new ForgePlatformEffect(e); }
+
+    @Override
+    public @NotNull ResourceLocation getKey() {
+        return ordinal.get;
+    }
+
+    @Override
+    public @NotNull String getDisplayName() {
+        return ordinal.getDisplayName().getString();
+    }
+
+    @Override
+    public int getColor() {
+        return ordinal.getColor();
+    }
+
+    @Override
+    public int getMaxAmplifier() {
+        return ordinal.getAttributeModifiers();
+    }
+
+    @Override
+    public boolean isInstant() {
+        return ordinal.isInstantenous();
+    }
+
+    @Override
+    public int getDefaultDuration() {
+        return ordinal.;
+    }
+
+    // Make Consumer
+    @Override
+    public @NotNull Consumer<EffectTickContext> onTick() {
+        return (effectTickContext -> {
+            if (effectTickContext.getEntity() instanceof ForgePlatformLivingEntity e) {
+                ordinal.applyEffectTick(e.ordinal, effectTickContext.getAmplifier());
+            }
+        });
+    }
+
+    @Override
+    public @NotNull Consumer<EffectApplyContext> onEffectStarted() {
+        return (effectTickContext -> {
+            if (effectTickContext.getEntity() instanceof ForgePlatformLivingEntity e) {
+                ordinal.onEffectStarted(e.ordinal, effectTickContext.getAmplifier());
+            }
+        });
+    }
+
+    @Override
+    public @NotNull Consumer<EffectRemoveContext> onRemove() {
+        return (effectTickContext -> {
+            if (effectTickContext.getEntity() instanceof ForgePlatformLivingEntity e) {
+                if (ordinal instanceof  PlatformInstanceMobEffect eff) {
+                    eff.onEffectStopped(e.ordinal, effectTickContext.getAmplifier());
+                }
+                else {
+                    ordinal.applyEffectTick(e.ordinal, effectTickContext.getAmplifier());
+                }
+            }
+        });
+    }
+}

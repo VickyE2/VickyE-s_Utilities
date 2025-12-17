@@ -1,4 +1,4 @@
-package org.vicky.platform.forge.entity.bridge;
+package org.vicky.forge.entity.bridge;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;

@@ -86,17 +86,6 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
         ordinal.heal(v);
     }
 
-    // Remove Ambiguity
-    @Override
-    public @Nullable Double getAttribute(@NotNull String s) {
-        Attribute pos = ForgeRegistries.ATTRIBUTES.getValue(ResourceLocation.parse(s));
-        if (pos != null)
-            if (ordinal.getAttribute(pos) != null)
-                return ordinal.getAttribute(pos).getValue();
-
-        return null;
-    }
-
     @Override
     public @Nullable Double getAttributeBaseValue(@NotNull String s) {
         Attribute pos = ForgeRegistries.ATTRIBUTES.getValue(ResourceLocation.parse(s));
@@ -208,12 +197,6 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
     public void setLastHurtMob(@Nullable PlatformLivingEntity platformLivingEntity) {
         if (platformLivingEntity instanceof ForgePlatformLivingEntity l)
             ordinal.setLastHurtMob(l.ordinal);
-    }
-
-    // Move to player
-    @Override
-    public void giveItem(@NotNull PlatformItem platformItem) {
-        // no op
     }
 
     @Override

@@ -1,12 +1,14 @@
 package org.vicky.forge.entity;
 
 import de.pauleff.api.ICompoundTag;
-import de.pauleff.core.Tag_Compound;
+import de.pauleff.core.*;
+import net.minecraft.nbt.*;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -27,6 +29,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
+
 public class ForgePlatformEntity implements PlatformEntity {
 
     public final Entity ordinal;
@@ -46,7 +50,7 @@ public class ForgePlatformEntity implements PlatformEntity {
 
     @Override
     public @NotNull ResourceLocation getTypeId() {
-        return ordinal.getType().;
+        return toVicky(EntityType.getKey(ordinal.getType()));
     }
 
     @Override
@@ -166,14 +170,34 @@ public class ForgePlatformEntity implements PlatformEntity {
     // Make use de.pauleff.core.Tag<?>
     @Override
     public <T> void setPersistentData(@NotNull String s, @NotNull de.pauleff.core.Tag<T> o) {
-        if (T instanceof String)
-            ordinal.getPersistentData().putString(s, o);
+        if (o.getData() instanceof String)
+            ordinal.getPersistentData().putString(s, (String) o.getData());
+        else if (o.getData() instanceof Integer)
+            ordinal.getPersistentData().putInt(s, (Integer) o.getData());
+        else if (o.getData() instanceof Float)
+            ordinal.getPersistentData().putFloat(s, (Float) o.getData());
+        else if (o.getData() instanceof Byte)
+            ordinal.getPersistentData().putBoolean(s, (Boolean) o.getData());
+        else if (o.getData() instanceof UUID)
+            ordinal.getPersistentData().putUUID(s, (UUID) o.getData());
     }
 
     // Make use de.pauleff.core.Tag<?>
     @Override
     public @Nullable de.pauleff.core.Tag<?> getPersistentData(@NotNull String s) {
-        return new Tag_Compound(s, ordinal.getPersistentData().get(s));
+        if (ordinal.getPersistentData().get(s) != null) {
+            if (ordinal.getPersistentData().get(s).getType() instanceof StringTag)
+                return new Tag_String(s, ordinal.getPersistentData().getString(s));
+            else if (ordinal.getPersistentData().get(s).getType() instanceof IntTag)
+                return new Tag_Int(s, ordinal.getPersistentData().getInt(s));
+            else if (ordinal.getPersistentData().get(s).getType() instanceof FloatTag)
+                return new Tag_Float(s, ordinal.getPersistentData().getFloat(s));
+            else if (ordinal.getPersistentData().get(s).getType() instanceof ByteTag)
+                return new Tag_Byte(s, ordinal.getPersistentData().getByte(s));
+            else if (ordinal.getPersistentData().get(s).getType() instanceof IntArrayTag)
+                return new Tag_Int_Array(s, ordinal.getPersistentData().getIntArray(s));
+        }
+        return null;
     }
 
     // Should pass PlatformPlayer

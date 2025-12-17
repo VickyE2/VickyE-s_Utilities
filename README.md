@@ -18,36 +18,8 @@
                         Particle particleH, Particle particleM,
                         ParticleTypeEffect.ParticleTypeEffects effectTypeH, ParticleTypeEffect.ParticleTypeEffects effectTypeM,
                         double rFreq, double pFreq, double angleStep, ParticleTypeEffect.SpacingMode spacingMode, int circleNumber,
-                        float yaw, float pitch)
+                        float yaw, float pitch);
 ```
 
 **ANSI colors and Hex Gradient Generators**
 - This allows for colors to be added to Logs and to create Gradients. Thats all.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

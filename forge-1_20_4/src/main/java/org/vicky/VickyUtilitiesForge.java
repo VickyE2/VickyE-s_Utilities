@@ -287,17 +287,17 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
 	@Override
 	public PlatformEffectBridge<?> getPlatformEffectBridge() {
-		return null;
+		return ForgePlatformEffectBridge.INSTANCE;
 	}
 
 	@Override
 	public PlatformEntityFactory getPlatformEntityFactory() {
-		return null;
+		return ForgePlatformEntityFactory.INSTANCE;
 	}
 
 	@Override
 	public void registerMobEntityDescriptor(MobEntityDescriptor mobEntityDescriptor) {
-
+		ForgePlatformEntityFactory.INSTANCE.register(mobEntityDescriptor);
 	}
 
 	// You can use EventBusSubscriber to automatically register all static methods

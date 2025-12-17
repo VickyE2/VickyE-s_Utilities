@@ -18,6 +18,7 @@ import org.vicky.platform.PlatformItem;
 import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.entity.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class ForgePlatformLivingEntity extends ForgePlatformEntity implements PlatformLivingEntity {
@@ -87,6 +88,7 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
         ordinal.heal(v);
     }
 
+    // Remove Ambiguity
     @Override
     public @Nullable Double getAttribute(@NotNull String s) {
         Attribute pos = ForgeRegistries.ATTRIBUTES.getValue(ResourceLocation.parse(s));
@@ -108,8 +110,26 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
     }
 
     @Override
+    public @Nullable Double getAttributeValue(@NotNull String s) {
+        return 0.0;
+    }
+
+    @Override
+    public void setAttributeBaseValue(@NotNull String s, double v) {
+        Attribute pos = ForgeRegistries.ATTRIBUTES.getValue(ResourceLocation.parse(s));
+        if (pos != null)
+            if (ordinal.getAttribute(pos) != null)
+                ordinal.getAttribute(pos).setBaseValue(v);
+    }
+
+    @Override
+    public void setLookDistance(double v) {
+
+    }
+
+    @Override
     public @NotNull Map<String, Double> getAttributes() {
-        return ordinal.getAttributes();
+        return new HashMap<>();
     }
 
     @Override
@@ -123,13 +143,13 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
     }
 
     @Override
-    public void getAirSupply(int v) {
-        ordinal.setAirSupply(v);
+    public int getAirSupply() {
+        return ordinal.getAirSupply();
     }
 
     @Override
-    public int setAirSupply() {
-        return ordinal.getAirSupply();
+    public void setAirSupply(int i) {
+        ordinal.setAirSupply(i);
     }
 
     @Override
@@ -194,7 +214,7 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 
     @Override
     public void giveItem(@NotNull PlatformItem platformItem) {
-        ordinal.item
+        // no op
     }
 
     @Override

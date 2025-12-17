@@ -3,14 +3,12 @@ package org.vicky.forge.forgeplatform.useables;
 
 import net.kyori.adventure.text.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
-import org.vicky.forge.entity.ForgePlatformEntity;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.platform.PlatformBossBar;

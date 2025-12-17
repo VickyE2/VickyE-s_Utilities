@@ -1,12 +1,16 @@
 package org.vicky.forge.entity;
 
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.vicky.forge.forgeplatform.useables.ForgeHacks;
 import org.vicky.platform.entity.Path;
 import org.vicky.platform.entity.PathNavigator;
 import org.vicky.platform.entity.PathPoint;
 import org.vicky.platform.entity.PlatformEntity;
 import org.vicky.platform.utils.IntVec3;
+
+import java.util.Set;
 
 public class ForgePlatformNavigator implements PathNavigator {
 
@@ -18,9 +22,16 @@ public class ForgePlatformNavigator implements PathNavigator {
 
     public static ForgePlatformNavigator from(PathNavigation nav) { return new ForgePlatformNavigator(nav); }
 
+
+    @Override
+    public boolean getCanFloat() {
+        return ordinal.canFloat();
+    }
+
     @Override
     public boolean canUpdatePath() {
-        return ordinal.;
+        // no op...
+        return false;
     }
 
     @Override
@@ -29,13 +40,18 @@ public class ForgePlatformNavigator implements PathNavigator {
     }
 
     @Override
-    public @Nullable Path getPath() {
-        return ForgePath.from(ordinal.getPath());
+    public @Nullable org.vicky.platform.entity.AbstractPath getPath() {
+        return null;
     }
 
     @Override
     public boolean isDone() {
-        return ordinal.isDone();
+        return false;
+    }
+
+    @Override
+    public boolean isInProgress() {
+        return ordinal.isInProgress();
     }
 
     @Override
@@ -44,53 +60,48 @@ public class ForgePlatformNavigator implements PathNavigator {
     }
 
     @Override
-    public @Nullable Path createPath(@Nullable IntVec3 intVec3, int i) {
+    public @Nullable IntVec3 getTargetPos() {
+        if (ordinal.getTargetPos() == null) return null;
+        return ForgeHacks.toVicky(ordinal.getTargetPos());
+    }
+
+    @Override
+    public @Nullable org.vicky.platform.entity.AbstractPath createPath(@NotNull PlatformEntity platformEntity, int i) {
         return null;
     }
 
     @Override
-    public @Nullable Path createPath(@Nullable PlatformEntity platformEntity, int i) {
+    public @Nullable org.vicky.platform.entity.AbstractPath createPath(@NotNull IntVec3 intVec3, int i) {
         return null;
     }
 
     @Override
-    public void moveTo(@Nullable Path path, double v) {
-        ordinal.moveTo(path, v);
+    public @Nullable org.vicky.platform.entity.AbstractPath createPath(@NotNull Set<? extends IntVec3> set, int i) {
+        return null;
+    }
+
+    @Override
+    public void moveTo(@NotNull org.vicky.platform.entity.AbstractPath abstractPath, double v) {
+
+    }
+
+    @Override
+    public void moveTo(@Nullable PlatformEntity platformEntity, double v) {
+
     }
 
     @Override
     public void stop() {
-        ordinal.stop();
+
     }
 
     @Override
-    public boolean noPath() {
-        return ordinal.isDone();
-    }
-
-    @Override
-    public @Nullable PathPoint getPathEnd() {
-        return ordinal.getTargetPos();
+    public boolean isStuck() {
+        return false;
     }
 
     @Override
     public void setCanFloat(boolean b) {
-        ordinal.setCanFloat(b);
-    }
 
-    @Override
-    public void setCanPassDoors(boolean b) {
-        ordinal.
-    }
-
-    @Override
-    public void setAvoidsWater(boolean b) {
-        ordinal.
-    }
-
-    static Path forgePath(net.minecraft.world.level.pathfinder.Path p) {
-        return new Path(
-                p.
-        )
     }
 }

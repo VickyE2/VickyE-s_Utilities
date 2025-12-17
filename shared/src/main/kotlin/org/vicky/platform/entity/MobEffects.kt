@@ -1,6 +1,24 @@
 package org.vicky.platform.entity
 
 import org.vicky.platform.utils.ResourceLocation
+import java.util.function.Consumer
+
+
+/** Mark a class that provides an EffectDescriptor to be auto-registered.  */
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
+annotation class RegisterEffect(
+    /** Optional priority (higher -> registered earlier).  */
+    val priority: Int = 0
+)
+
+interface EffectProvider {
+    /**
+     * Called by bootstrap to create the descriptor to register.
+     * Must be a cheap, side-effect-free creation method.
+     */
+    fun create(): EffectDescriptor
+}
 
 enum class MobEffectCategory {
     BENEFICIAL,
@@ -10,26 +28,28 @@ enum class MobEffectCategory {
 
 interface PlatformEffect {
     val key: ResourceLocation
+    val category: MobEffectCategory
     val displayName: String
     val color: Int
     val maxAmplifier: Int
     val isInstant: Boolean
     val defaultDuration: Int
-    fun onTick(): ((ctx: EffectTickContext) -> Unit) = { }
-    fun onEffectStarted(): ((ctx: EffectApplyContext) -> Unit) = { }
-    fun onRemove(): ((ctx: EffectRemoveContext) -> Unit) = { }
+    fun onTick(): Consumer<EffectTickContext> = Consumer { }
+    fun onEffectStarted(): Consumer<EffectApplyContext> = Consumer { }
+    fun onRemove(): Consumer<EffectRemoveContext> = Consumer { }
 }
 
 data class EffectDescriptor(
     val key: ResourceLocation,
+    val category: MobEffectCategory,
     val displayName: String,
     val color: Int,
     val maxAmplifier: Int,
     val isInstant: Boolean,
     val defaultDuration: Int,
-    val onTick: ((ctx: EffectTickContext) -> Unit),
-    val onEffectStarted: ((ctx: EffectApplyContext) -> Unit),
-    val onRemove: ((ctx: EffectRemoveContext) -> Unit)
+    val onTick: Consumer<EffectTickContext>,
+    val onEffectStarted: Consumer<EffectApplyContext>,
+    val onRemove: Consumer<EffectRemoveContext>
 )
 
 data class EffectApplyContext(

@@ -7,7 +7,7 @@ import java.lang.annotation.RetentionPolicy
 
 
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.TYPE, AnnotationTarget.CLASS)
+@Target(AnnotationTarget.CLASS)
 annotation class RegisterFactory
 
 interface MobRegisteringClass {

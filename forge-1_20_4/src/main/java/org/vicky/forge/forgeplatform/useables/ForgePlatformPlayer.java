@@ -3,9 +3,9 @@ package org.vicky.forge.forgeplatform.useables;
 
 import net.kyori.adventure.text.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
@@ -20,14 +20,14 @@ import java.util.UUID;
 
 public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements PlatformPlayer {
 
-    private final ServerPlayer player;
+    private final Player player;
 
-    public ForgePlatformPlayer(ServerPlayer player) {
+    public ForgePlatformPlayer(Player player) {
         super(player);
         this.player = player;
     }
 
-    public static ForgePlatformPlayer adapt(ServerPlayer player) {
+    public static ForgePlatformPlayer adapt(Player player) {
         return new ForgePlatformPlayer(player);
     }
 
@@ -69,6 +69,11 @@ public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements Pl
     }
 
     @Override
+    public double flightSpeed() {
+        return ordinal.getSpeed();
+    }
+
+    @Override
     public void playSound(PlatformLocation location, String soundName, Object category, Float volume, Float pitch) {
         ResourceLocation soundId = ResourceLocation.parse(soundName);
         SoundEvent event = ForgeRegistries.SOUND_EVENTS.getValue(soundId);
@@ -92,7 +97,7 @@ public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements Pl
         return ((ForgePlatformPlayer) obj).getHandle() == this.player;
     }
 
-    public @NotNull ServerPlayer getHandle() {
+    public @NotNull Player getHandle() {
         return player;
     }
 }

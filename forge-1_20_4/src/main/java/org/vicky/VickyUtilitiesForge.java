@@ -85,6 +85,9 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 		ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ForgeModConfig.SPEC);
 		PacketHandler.register();
 		org.vicky.musicPlayer.MusicPlayer.INSTANCE.toggleLogging();
+
+		ForgePlatformEntityFactory.ENTITIES.register(FMLJavaModLoadingContext.get().getModEventBus());
+		ForgePlatformEntityFactory.INSTANCE.attachListeners(FMLJavaModLoadingContext.get().getModEventBus());
 	}
 
 	public static void addTemplateClass(Class<? extends DatabaseTemplate> clazz) {

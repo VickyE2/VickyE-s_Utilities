@@ -1,17 +1,15 @@
 package org.vicky.forge.entity;
 
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.vicky.forge.entity.navigation.ForgePlatformNavigator;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformItem;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.platform.PlatformItem;
@@ -212,6 +210,7 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
             ordinal.setLastHurtMob(l.ordinal);
     }
 
+    // Move to player
     @Override
     public void giveItem(@NotNull PlatformItem platformItem) {
         // no op

@@ -16,7 +16,7 @@ interface MobRegisteringClass {
 
 @RegisterFactory
 class DefaultEntities : MobRegisteringClass {
-    val testDummy = mob(
+    private val testDummy = mob(
         key = "core" rli "test_dummy_mob",
         handler = DefaultHandlers.MobDefaultHandler
     ) {

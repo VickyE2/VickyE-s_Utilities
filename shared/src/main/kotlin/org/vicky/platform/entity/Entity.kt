@@ -4,11 +4,7 @@ import de.pauleff.core.Tag
 import org.vicky.platform.PlatformItem
 import org.vicky.platform.PlatformPlayer
 import org.vicky.platform.defaults.AABB
-import org.vicky.platform.utils.Direction
-import org.vicky.platform.utils.IntVec3
-import org.vicky.platform.utils.ResourceLocation
-import org.vicky.platform.utils.SoundCategory
-import org.vicky.platform.utils.Vec3
+import org.vicky.platform.utils.*
 import org.vicky.platform.world.PlatformLocation
 import org.vicky.platform.world.PlatformWorld
 import java.util.*
@@ -30,7 +26,7 @@ interface PlatformEntityFactory {
 
     @Throws(ErrorOnMobProductionException::class)
     fun register(defaults: MobEntityDescriptor)
-    fun spawn(world: PlatformWorld<*, *>, id: ResourceLocation, x: Double, y: Double, z: Double): PlatformLivingEntity
+    fun spawn(world: PlatformWorld<*, *>, id: ResourceLocation, x: Double, y: Double, z: Double): PlatformLivingEntity?
 }
 
 enum class DamageType {
@@ -42,7 +38,14 @@ enum class DamageType {
 }
 
 enum class MobCategory {
-    NONE, MONSTER, CREATURE, AMBIENT, MISC
+    MISC,
+    MONSTER,
+    CREATURE,
+    AMBIENT,
+    AXOLOTLS,
+    UNDERGROUND_WATER_CREATURE,
+    WATER_CREATURE,
+    WATER_AMBIENT,
 }
 
 enum class SpawnCategory {
@@ -90,6 +93,10 @@ data class AnimationDefinition(
     val custom: Map<String, ResourceLocation> = emptyMap()
 )
 
+interface PlatformAnimationController {
+    fun play(animationKey: String?, loop: Boolean)
+}
+
 data class SoundDefinition(
     val sound: SoundId,
     val volume: Float = 1f,
@@ -126,6 +133,9 @@ interface PlatformEntity {
     val eyeHeight: Float
     val lookDirection: Direction
     fun getEyeLocation(): Vec3
+
+    val animationsController: PlatformAnimationController
+    val nativeEntityId: Int
 
     fun setGravity(enabled: Boolean)
     fun setInvisible(invisible: Boolean)
@@ -217,7 +227,7 @@ data class MobEntityDescriptor(
 class MobDefaults(
     val mobKey: ResourceLocation,                        // unique ID
     val displayName: String,                   // name shown to players
-    val category: MobCategory = MobCategory.NONE,
+    val category: MobCategory = MobCategory.MISC,
 
     // --- Model / Appearance ---
     val modelId: ResourceLocation? = null,               // e.g., GeckoLib model, ItemsAdder model, etc.
@@ -496,7 +506,7 @@ class MobDefaultsBuilder(
     private val mobKey: ResourceLocation,
     private val displayName: String
 ) {
-    var category: MobCategory = MobCategory.NONE
+    var category: MobCategory = MobCategory.MISC
 
     var modelId: ResourceLocation? = null
     var scale: Double = 1.0

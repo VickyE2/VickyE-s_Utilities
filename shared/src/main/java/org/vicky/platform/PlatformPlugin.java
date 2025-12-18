@@ -2,10 +2,7 @@ package org.vicky.platform;
 
 import org.vicky.coreregistry.CoreEntityRegistry;
 import org.vicky.musicPlayer.PlatformSoundBackend;
-import org.vicky.platform.entity.DefaultEntities;
-import org.vicky.platform.entity.MobEntityDescriptor;
-import org.vicky.platform.entity.PlatformEffectBridge;
-import org.vicky.platform.entity.PlatformEntityFactory;
+import org.vicky.platform.entity.*;
 import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 
@@ -24,6 +21,10 @@ public interface PlatformPlugin {
     static void set(PlatformPlugin instance) {
         if (Holder.INSTANCE == null) {
             Holder.INSTANCE = instance;
+            new DefaultEntities().register(instance);
+            instance.getPlatformEffectBridge()
+                    .registerEffect(new DefaultMarkedMobEffect().create());
+            CoreEntityRegistry.installInto(instance);
             CoreEntityRegistry.installInto(instance);
         } else {
             throw new IllegalStateException("Cannot set PlatformPlugin after its already been set.");

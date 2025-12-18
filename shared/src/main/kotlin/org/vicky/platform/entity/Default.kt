@@ -38,11 +38,12 @@ object DefaultTasks {
             ResourceLocation.from("core", "look_at_nearest_player_${self.uuid}"),
             TaskLifecycle.REPEATING
         )
+            .cooldownTicks((params["cooldown"] as Int?) ?: 120)
             .withRange(ResourceLocation.from("look_at_nearest_player", "find_closest_entity_${self.uuid}"), self.lookDistance)
                 .filter(PlayersOnly)
                 .withSingleResult()
             .performOnTarget(ResourceLocation.from("look_at_nearest_player", "set_target_${self.uuid}"))
-                .doingTimed(SetTargetToLookAt, 40, runBlocking = false)
+                .doingTimed(SetTargetToLookAt, 60, runBlocking = false)
                 .end()
             .build()
     }

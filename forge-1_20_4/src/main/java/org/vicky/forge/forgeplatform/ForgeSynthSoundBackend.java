@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform;
 
+import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.forge.client.audio.InstrumentMapper;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
@@ -41,35 +42,32 @@ public class ForgeSynthSoundBackend implements PlatformSoundBackend {
     public Integer playNote(@NotNull PlatformPlayer player, @NotNull MusicEvent event) {
         // System.out.println("Trying to play note");
         ForgePlatformPlayer serverPlayer = asServerPlayer(player);
-        if (serverPlayer == null) {
-            return null;
-        }
+        if (serverPlayer != null) {
+            var adsr = DefaultAdsrMapper.INSTANCE.map(event);
+            Integer uid = event.noteId();
+            if (keys.contains(uid)) {
+                return uid;
+            } else {
+                keys.add(uid);
+            }
 
-        var adsr = DefaultAdsrMapper.INSTANCE.map(event);
-        Integer uid = event.noteId();
-        if (keys.contains(uid)) {
+            NoteOnPacket noteOn = getNoteOnPacket(event, adsr, uid);
+
+            PacketHandler.sendToClient(serverPlayer.getHandle(), noteOn);
             return uid;
-        } else {
-            keys.add(uid);
         }
 
-        // map wave choice
-        NoteOnPacket noteOn = getNoteOnPacket(event, adsr, uid);
-
-        PacketHandler.sendToClient(serverPlayer.getHandle(), noteOn);
-        return uid;
+        return null;
     }
 
     @Override
     public void stopNote(@NotNull PlatformPlayer player, Integer uid) {
         ForgePlatformPlayer serverPlayer = asServerPlayer(player);
-        if (serverPlayer == null) {
-            return;
+        if (serverPlayer != null) {
+            keys.remove(uid);
+            NoteOffPacket off = new NoteOffPacket(uid);
+            PacketHandler.sendToClient(serverPlayer.getHandle(), off);
         }
-
-        keys.remove(uid);
-        NoteOffPacket off = new NoteOffPacket(uid);
-        PacketHandler.sendToClient(serverPlayer.getHandle(), off);
     }
 
     @Override

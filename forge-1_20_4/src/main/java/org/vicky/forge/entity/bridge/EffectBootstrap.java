@@ -4,57 +4,55 @@ import com.mojang.logging.LogUtils;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.forgespi.language.ModFileScanData;
 import org.objectweb.asm.Type;
+import org.slf4j.Logger;
+import org.vicky.forge.entity.effects.ForgePlatformEffectBridge;
+import org.vicky.platform.entity.RegisterEffect;
+import org.vicky.platform.entity.EffectProvider;
+import org.vicky.platform.entity.EffectDescriptor;
 
 import java.lang.reflect.Method;
 import java.util.ServiceLoader;
 
-import org.slf4j.Logger;
-import org.vicky.forge.entity.effects.ForgePlatformEffectBridge;
-import org.vicky.platform.PlatformPlugin;
-import org.vicky.platform.entity.EffectDescriptor;
-import org.vicky.platform.entity.EffectProvider;
-import org.vicky.platform.entity.MobRegisteringClass;
-import org.vicky.platform.entity.RegisterFactory;
-
-public final class EntityFactoryBootstrap {
-    private static final Type REGISTER_FACTORY =
-            Type.getType(RegisterFactory.class);
+public final class EffectBootstrap {
+    private static final Type REGISTER_EFFECT_TYPE = Type.getType(RegisterEffect.class);
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static void loadFactories(PlatformPlugin plugin) {
-        LOGGER.info("Scanning Mob Factories...");
-        ServiceLoader.load(MobRegisteringClass.class).forEach(provider -> {
-            provider.register(plugin);
-            LOGGER.info("Successfully loaded mob factory in service loader: {}", provider.getClass());
+    public static void discoverAndRegisterAll() {
+        LOGGER.info("Scanning Effects...");
+        ServiceLoader.load(EffectProvider.class).forEach(provider -> {
+            EffectDescriptor desc = provider.create();
+            LOGGER.info("Successfully loaded effect descriptor from service loader: {}", desc.getKey());
+            ForgePlatformEffectBridge.INSTANCE.registerEffect(desc);
         });
-        for (ModFileScanData scanData : ModList.get().getAllScanData()) {
-            scanData.getAnnotations().forEach(annotation -> {
-
-                if (!annotation.annotationType().equals(REGISTER_FACTORY)) {
-                    // LOGGER.info("Skipping non-type annotation: {}", annotation.annotationType());
-                    return;
+        for (ModFileScanData data : ModList.get().getAllScanData()) {
+            for (ModFileScanData.AnnotationData ann : data.getAnnotations()) {
+                if (!ann.annotationType().equals(REGISTER_EFFECT_TYPE)) {
+                    // LOGGER.info("Skipping non-type annotation: {}", ann.annotationType());
+                    continue;
                 }
 
-                String className = annotation.clazz().getClassName();
-
+                String providerClass = ann.clazz().getClassName();
                 try {
-                    Class<?> clazz = loadClassFromScan(scanData, className);
+                    // Use context classloader helper
+                    Class<?> clazz = loadClassFromScan(data, providerClass);
 
-                    if (!MobRegisteringClass.class.isAssignableFrom(clazz)) {
+                    if (!EffectProvider.class.isAssignableFrom(clazz)) {
                         throw new IllegalStateException(
-                                "@RegisterFactory used on non-MobRegisteringClass: " + className
+                                "@RegisterEffect used on class that does not implement EffectProvider: " + providerClass
                         );
                     }
 
-                    MobRegisteringClass factory =
-                            (MobRegisteringClass) clazz.getDeclaredConstructor().newInstance();
-                    LOGGER.info("Successfully loaded mob factory: {}", factory.getClass());
-                    factory.register(plugin);
+                    EffectProvider provider = (EffectProvider) clazz.getDeclaredConstructor().newInstance();
+                    EffectDescriptor desc = provider.create();
+                    LOGGER.info("Successfully loaded effect descriptor: {}", desc.getKey());
+
+                    ForgePlatformEffectBridge.INSTANCE.registerEffect(desc);
 
                 } catch (Throwable t) {
-                    throw new RuntimeException("Failed to load @RegisterFactory class: " + className, t);
+                    // fail fast — optionally log and continue for resilience
+                    throw new RuntimeException("Failed to load effect provider: " + providerClass, t);
                 }
-            });
+            }
         }
     }
 
@@ -99,5 +97,4 @@ public final class EntityFactoryBootstrap {
         // 3) Fallback: default Class.forName (app/system loader)
         return Class.forName(className);
     }
-
 }

@@ -39,7 +39,7 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
     private ForgePlatformEntityFactory() {}
 
     private final Map<ResourceLocation, RegisteredMobEntityEventHandler> HANDLERS = new HashMap<>();
-    private final Map<ResourceLocation, RegistryObject<EntityType<?>>> REGISTERED_ENTITIES = new HashMap<>();
+    private final Map<ResourceLocation, RegistryObject<EntityType<? extends LivingEntity>>> REGISTERED_ENTITIES = new HashMap<>();
     private final Map<RegistryObject<EntityType<? extends LivingEntity>>, Supplier<AttributeSupplier>> ATTR_SUPPLIERS = new HashMap<>();
 
     // DeferredRegister created on mod init
@@ -60,10 +60,10 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
 
     // make void and remove loc
     @Override
-    public void register(@NotNull MobEntityDescriptor descriptor, @NotNull PlatformLocation platformLocation) throws ErrorOnMobProductionException {
-        String key = descriptor.getMobDetails().getMobKey();
+    public void register(@NotNull MobEntityDescriptor descriptor) throws ErrorOnMobProductionException {
+        String key = descriptor.getMobDetails().getMobKey().getPath();
 
-        RegistryObject<EntityType<?>> registeredObject = ENTITIES.register(key, () ->
+        RegistryObject<EntityType<? extends LivingEntity>> registeredObject = ENTITIES.register(key, () ->
                 EntityType.Builder.<PathfinderMob>of(
                                 (type, level) -> new PlatformBasedLivingEntity(descriptor, type, level),
                                 MobCategory.valueOf(descriptor.getMobDetails().getCategory().name())
@@ -84,7 +84,7 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
                 .add(Attributes.ATTACK_KNOCKBACK, descriptor.getMobDetails().getAttackKnockback()) //
                 .add(Attributes.ATTACK_SPEED, descriptor.getMobDetails().getAttackSpeed()) //
                 .add(Attributes.JUMP_STRENGTH, descriptor.getMobDetails().getJumpStrength()) //
-                .add(Attributes.ARMOR_TOUGHNESS, descriptor.getMobDetails().getArmorToughness()) //
+                .add(Attributes.ARMOR_TOUGHNESS, descriptor.getMobDetails().getBaseArmorToughness()) //
                 .add(Attributes.MAX_ABSORPTION, descriptor.getMobDetails().getMaxAbsorption()) //
                 .add(Attributes.LUCK, descriptor.getMobDetails().getLuck()) //
                 .build());
@@ -110,11 +110,11 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
                 loc.y, loc.z, Items.ARROW.getDefaultInstance()));
     }
 
-    // add helper: spawn entity by mob key
+    // make nullable
     @Override
-    public PlatformLivingEntity spawn(PlatformWorld<?, ?> world, ResourceLocation id, double x, double y, double z) {
+    public @Nullable PlatformLivingEntity spawn(@NotNull PlatformWorld<?, ?> world, @NotNull ResourceLocation id, double x, double y, double z) {
         if (!(world instanceof ForgePlatformWorldAdapter level)) return null;
-        RegistryObject<EntityType<?>> ro = REGISTERED_ENTITIES.get(id);
+        RegistryObject<EntityType<? extends LivingEntity>> ro = REGISTERED_ENTITIES.get(id);
         if (ro == null) return null;
         EntityType<?> type = ro.get();
         if (level.getNative().isClientSide()) return null;

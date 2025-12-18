@@ -3,6 +3,7 @@ package org.vicky.forge.entity.effects;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
@@ -55,8 +56,7 @@ public class PlatformInstanceMobEffect extends MobEffect {
                         ForgePlatformLivingEntity.from(e),
                         amplifier,
                         0
-                )
-        );
+                ));
     }
 
     public void onEffectStopped(@NotNull LivingEntity e, int amplifier) {
@@ -66,5 +66,9 @@ public class PlatformInstanceMobEffect extends MobEffect {
                         amplifier
                 )
         );
+    }
+
+    public EffectDescriptor getDesc() {
+        return desc;
     }
 }

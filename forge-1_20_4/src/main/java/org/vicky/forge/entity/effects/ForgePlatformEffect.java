@@ -3,14 +3,12 @@ package org.vicky.forge.entity.effects;
 import net.minecraft.world.effect.MobEffect;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
-import org.vicky.platform.entity.EffectApplyContext;
-import org.vicky.platform.entity.EffectRemoveContext;
-import org.vicky.platform.entity.EffectTickContext;
-import org.vicky.platform.entity.PlatformEffect;
+import org.vicky.platform.entity.*;
 import org.vicky.platform.utils.ResourceLocation;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
+
+import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 
 public class ForgePlatformEffect implements PlatformEffect {
 
@@ -21,7 +19,7 @@ public class ForgePlatformEffect implements PlatformEffect {
 
     @Override
     public @NotNull ResourceLocation getKey() {
-        return ordinal.get;
+        return toVicky(ordinal.builtInRegistryHolder().key().location());
     }
 
     @Override
@@ -36,7 +34,12 @@ public class ForgePlatformEffect implements PlatformEffect {
 
     @Override
     public int getMaxAmplifier() {
-        return ordinal.getAttributeModifiers();
+        if (ordinal instanceof  PlatformInstanceMobEffect eff) {
+            return eff.getDesc().getMaxAmplifier();
+        }
+        else {
+            return 4;
+        }
     }
 
     @Override
@@ -46,11 +49,14 @@ public class ForgePlatformEffect implements PlatformEffect {
 
     @Override
     public int getDefaultDuration() {
-        return ordinal.;
+        if (ordinal instanceof  PlatformInstanceMobEffect eff) {
+            return eff.getDesc().getDefaultDuration();
+        }
+        else {
+            return 255;
+        }
     }
 
-    // Make Consumer
-    @Override
     public @NotNull Consumer<EffectTickContext> onTick() {
         return (effectTickContext -> {
             if (effectTickContext.getEntity() instanceof ForgePlatformLivingEntity e) {
@@ -80,5 +86,10 @@ public class ForgePlatformEffect implements PlatformEffect {
                 }
             }
         });
+    }
+
+    @Override
+    public @NotNull MobEffectCategory getCategory() {
+        return MobEffectCategory.valueOf(ordinal.getCategory().name());
     }
 }

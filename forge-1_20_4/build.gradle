@@ -165,6 +165,8 @@ dependencies {
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     api(group: 'io.github.vickye2', name: 'vicky-utils-core', version: '0.0.1')
+    implementation "software.bernie.geckolib:geckolib-forge-1.20.4:4.4.4"
+    runtimeOnly "org.jetbrains.kotlin:kotlin-stdlib:1.9.10"
     api(group: 'org.xerial', name: 'sqlite-jdbc', version: '3.48.0.0')
     api(group: 'net.kyori', name: 'adventure-api', version: '4.17.0')
     api(group: 'net.kyori', name: 'adventure-text-serializer-plain', version: '4.17.0')

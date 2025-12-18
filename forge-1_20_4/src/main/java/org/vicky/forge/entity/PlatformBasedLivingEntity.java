@@ -1,6 +1,7 @@
 package org.vicky.forge.entity;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -98,11 +99,13 @@ public class PlatformBasedLivingEntity extends PathfinderMob {
 
     @Override
     public @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand hand) {
-        PlatformPlayer p = ForgePlatformPlayer.adapt(player);
-        if (handler != null) {
-            EventResult r = handler.getHandler().onInteract(asPlatform(), p);
-            if (r == EventResult.CONSUME) return InteractionResult.SUCCESS;
-            if (r == EventResult.CANCEL) return InteractionResult.FAIL;
+        if (player instanceof ServerPlayer pp) {
+            PlatformPlayer p = ForgePlatformPlayer.adapt(pp);
+            if (handler != null) {
+                EventResult r = handler.getHandler().onInteract(asPlatform(), p);
+                if (r == EventResult.CONSUME) return InteractionResult.SUCCESS;
+                if (r == EventResult.CANCEL) return InteractionResult.FAIL;
+            }
         }
         return super.mobInteract(player, hand);
     }

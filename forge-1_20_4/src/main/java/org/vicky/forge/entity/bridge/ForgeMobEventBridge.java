@@ -1,8 +1,10 @@
 package org.vicky.forge.entity.bridge;
 
+import net.minecraft.world.entity.EntityEvent;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -11,6 +13,7 @@ import org.vicky.forge.entity.ForgePlatformLivingEntity;
 import org.vicky.forge.entity.PlatformBasedLivingEntity;
 import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.entity.*;
+import org.vicky.platform.entity.distpacher.EntityTaskManager;
 
 import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 
@@ -28,6 +31,15 @@ public final class ForgeMobEventBridge {
     /* ------------------------------------------------------------
      *  ATTACKED (incoming damage)
      * ------------------------------------------------------------ */
+
+    @SubscribeEvent
+    public static void onLivingTicked(LivingEvent.LivingTickEvent event) {
+        if (event.getEntity().level().isClientSide()) return;
+        if (event.getEntity() instanceof PlatformBasedLivingEntity e) {
+            long worldTick = event.getEntity().level().getGameTime();
+            EntityTaskManager.INSTANCE.tickEntity(e.asPlatform(), worldTick);
+        }
+    }
 
     @SubscribeEvent
     public static void onLivingAttacked(LivingAttackEvent event) {

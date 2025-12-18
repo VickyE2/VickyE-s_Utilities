@@ -3,15 +3,19 @@ package org.vicky.forge.forgeplatform.useables;
 
 import net.kyori.adventure.text.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.platform.PlatformBossBar;
+import org.vicky.platform.PlatformItem;
 import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.world.PlatformLocation;
 
@@ -20,14 +24,14 @@ import java.util.UUID;
 
 public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements PlatformPlayer {
 
-    private final Player player;
+    private final ServerPlayer player;
 
-    public ForgePlatformPlayer(Player player) {
+    public ForgePlatformPlayer(ServerPlayer player) {
         super(player);
         this.player = player;
     }
 
-    public static ForgePlatformPlayer adapt(Player player) {
+    public static ForgePlatformPlayer adapt(ServerPlayer player) {
         return new ForgePlatformPlayer(player);
     }
 
@@ -74,6 +78,14 @@ public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements Pl
     }
 
     @Override
+    public void giveItem(PlatformItem item) {
+        if (item instanceof ForgePlatformItem i) {
+            ItemStack stack = i.item();
+            ordinal.onItemPickup(i.item().getEntityRepresentation().spawnAtLocation(stack));
+        }
+    }
+
+    @Override
     public void playSound(PlatformLocation location, String soundName, Object category, Float volume, Float pitch) {
         ResourceLocation soundId = ResourceLocation.parse(soundName);
         SoundEvent event = ForgeRegistries.SOUND_EVENTS.getValue(soundId);
@@ -97,7 +109,7 @@ public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements Pl
         return ((ForgePlatformPlayer) obj).getHandle() == this.player;
     }
 
-    public @NotNull Player getHandle() {
+    public @NotNull ServerPlayer getHandle() {
         return player;
     }
 }

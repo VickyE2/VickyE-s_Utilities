@@ -1,16 +1,20 @@
-package org.vicky.forge.entity.bridge;
+package org.vicky.forge.entity.effects;
 
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
-import org.vicky.forge.entity.effects.PlatformInstanceMobEffect;
 import org.vicky.platform.entity.*;
 import org.vicky.platform.utils.ResourceLocation;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.vicky.VickyUtilitiesForge.MODID;
 import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 
 // make universal effect an interface
@@ -23,14 +27,16 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
 
     private void registerVanillaEffects() {
         BuiltInRegistries.MOB_EFFECT.entrySet().stream().map(Map.Entry::getValue).forEach(effect -> {
-            registerEffect(
+            registry.put(
                     toVicky(effect.builtInRegistryHolder().key().location()),
                     new EffectDescriptor(
                             toVicky(effect.builtInRegistryHolder().key().location()),
+                            MobEffectCategory.valueOf(effect.getCategory().name()),
                             effect.getDisplayName().getString(),
                             effect.getColor(),
                             225,
                             effect.isInstantenous(),
+                            200,
                             (ctx) -> {
                                 if (ctx.getEntity() instanceof ForgePlatformLivingEntity e)
                                     effect.onEffectStarted(e.ordinal, ctx.getAmplifier());
@@ -58,15 +64,36 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
      */
     private final Map<UUID, Map<ResourceLocation, PlatformEffectInstance>> active = new ConcurrentHashMap<>();
 
+    // DeferredRegister created on mod init
+    public static final DeferredRegister<MobEffect> EFFECTS =
+        DeferredRegister.create(ForgeRegistries.MOB_EFFECTS, MODID);
+    private final Map<ResourceLocation, RegistryObject<MobEffect>> registeredEffects =
+            new ConcurrentHashMap<>();
+
+
     // -------------------------
     // Registration
     // -------------------------
     @Override
     public @NotNull RegisteredUniversalEffect registerEffect(@NotNull EffectDescriptor effectDescriptor) {
         ResourceLocation id = effectDescriptor.getKey();
+        if (registry.containsKey(id)) {
+            return new RegisteredUniversalEffect(PlatformInstanceMobEffect.from(registry.get(id)).toPlatform());
+        }
+
         registry.put(id, effectDescriptor);
+
+        String name = id.getPath();
+
+        if (!registeredEffects.containsKey(id)) {
+            RegistryObject<MobEffect> ro = EFFECTS.register(name,
+                    () -> PlatformInstanceMobEffect.from(effectDescriptor));
+            registeredEffects.put(id, ro);
+        }
+
         return new RegisteredUniversalEffect(PlatformInstanceMobEffect.from(effectDescriptor).toPlatform());
     }
+
 
     @Override
     public @Nullable RegisteredUniversalEffect getEffect(@NotNull ResourceLocation id) {

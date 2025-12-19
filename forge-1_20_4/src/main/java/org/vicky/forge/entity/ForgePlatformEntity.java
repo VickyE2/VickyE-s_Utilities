@@ -10,12 +10,14 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.vicky.forge.forgeplatform.ForgePlatformAnimationController;
 import org.vicky.forge.forgeplatform.ForgePlatformLocationAdapter;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
 import org.vicky.forge.forgeplatform.useables.ForgeVec3;
 import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.defaults.AABB;
+import org.vicky.platform.entity.PlatformAnimationController;
 import org.vicky.platform.entity.PlatformEntity;
 import org.vicky.platform.utils.Direction;
 import org.vicky.platform.utils.ResourceLocation;
@@ -32,9 +34,12 @@ import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 public class ForgePlatformEntity implements PlatformEntity {
 
     public final Entity ordinal;
+    private final @NotNull PlatformAnimationController animationController;
 
     protected ForgePlatformEntity(Entity ordinal) {
         this.ordinal = ordinal;
+        this.animationController =
+                ForgePlatformAnimationController.from(ordinal);
     }
 
     public static ForgePlatformEntity from(Entity e) {
@@ -239,5 +244,15 @@ public class ForgePlatformEntity implements PlatformEntity {
     @Override
     public boolean isPlayer() {
         return ordinal instanceof Player;
+    }
+
+    @Override
+    public @NotNull PlatformAnimationController getAnimationsController() {
+        return animationController;
+    }
+
+    @Override
+    public int getNativeEntityId() {
+        return ordinal.getId();
     }
 }

@@ -14,7 +14,7 @@ public class PacketHandler {
 	public static final ResourceLocation CHANNEL_NAME = new ResourceLocation(VickyUtilitiesForge.MODID, "main");
 	public static final ResourceLocation SYNTH_CHANNEL_NAME = new ResourceLocation(VickyUtilitiesForge.MODID, "synth");
 	private static final int PROTOCOL_VERSION = 1;
-	public static final SimpleChannel INSTANCE = ChannelBuilder.named(CHANNEL_NAME)
+	public static final SimpleChannel MAIN_CHNNEL = ChannelBuilder.named(CHANNEL_NAME)
 			.serverAcceptedVersions(((status, version) -> version == PROTOCOL_VERSION))
 			.clientAcceptedVersions(((status, version) -> version == PROTOCOL_VERSION))
 			.networkProtocolVersion(PROTOCOL_VERSION).simpleChannel();
@@ -28,21 +28,25 @@ public class PacketHandler {
 	private static int synthPacketId = 0;
 
 	public static void register() {
-		INSTANCE.messageBuilder(CreateSSBossBar.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+		MAIN_CHNNEL.messageBuilder(CreateSSBossBar.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
 				.encoder(CreateSSBossBar::encode).decoder(CreateSSBossBar::decode)
 				.consumerMainThread(CreateSSBossBar::handle).add();
-		INSTANCE.messageBuilder(UpdateSSBossBar.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+		MAIN_CHNNEL.messageBuilder(UpdateSSBossBar.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
 				.encoder(UpdateSSBossBar::encode).decoder(UpdateSSBossBar::decode)
 				.consumerMainThread(UpdateSSBossBar::handle).add();
-		INSTANCE.messageBuilder(RemoveSSBossBar.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+		MAIN_CHNNEL.messageBuilder(RemoveSSBossBar.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
 				.encoder(RemoveSSBossBar::encode).decoder(RemoveSSBossBar::decode)
 				.consumerMainThread(RemoveSSBossBar::handle).add();
-		INSTANCE.messageBuilder(OpenOwnedRecordsScreen.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+		MAIN_CHNNEL.messageBuilder(OpenOwnedRecordsScreen.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
 				.encoder(OpenOwnedRecordsScreen::encode).decoder(OpenOwnedRecordsScreen::decode)
 				.consumerMainThread(OpenOwnedRecordsScreen::handle).add();
-		INSTANCE.messageBuilder(PlaySpecifyableSong.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
+		MAIN_CHNNEL.messageBuilder(PlaySpecifyableSong.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
 				.encoder(PlaySpecifyableSong::encode).decoder(PlaySpecifyableSong::decode)
 				.consumerMainThread(PlaySpecifyableSong::handle).add();
+		MAIN_CHNNEL.messageBuilder(PlayAnimationPacket.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
+				.encoder(PlayAnimationPacket::encode)
+				.decoder(PlayAnimationPacket::decode)
+				.consumerMainThread(PlayAnimationPacket::handle).add();
 		SYNTH_CHANNEL.messageBuilder(NoteOnPacket.class, synthPacketId++, NetworkDirection.PLAY_TO_CLIENT)
 				.encoder(NoteOnPacket::encode).decoder(NoteOnPacket::decode).consumerMainThread(NoteOnPacket::handle)
 				.add();
@@ -52,7 +56,7 @@ public class PacketHandler {
 	}
 
 	public static void sendToServer(Packetable packet) {
-		INSTANCE.send(packet, PacketDistributor.SERVER.noArg());
+		MAIN_CHNNEL.send(packet, PacketDistributor.SERVER.noArg());
 	}
 
 	public static void sendToClient(ServerPlayer player, Packetable packet) {
@@ -62,6 +66,6 @@ public class PacketHandler {
 	}
 
 	public static void sendToAllClient(Packetable packet) {
-		INSTANCE.send(packet, PacketDistributor.ALL.noArg());
+		MAIN_CHNNEL.send(packet, PacketDistributor.ALL.noArg());
 	}
 }

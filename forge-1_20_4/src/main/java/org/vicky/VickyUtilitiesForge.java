@@ -3,6 +3,7 @@ package org.vicky;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -24,6 +25,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 import org.vicky.forge.client.audio.MidiSynthManager;
+import org.vicky.forge.entity.PlatformBasedLivingEntityRenderer;
 import org.vicky.forge.entity.bridge.EffectBootstrap;
 import org.vicky.forge.entity.bridge.EntityFactoryBootstrap;
 import org.vicky.forge.entity.effects.ForgePlatformEffectBridge;
@@ -128,6 +130,8 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 			Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 				MidiSynthManager.getInstance().close();
 			}));
+			for (var entityType : ForgePlatformEntityFactory.INSTANCE.getRegisteredEntities().values())
+				EntityRenderers.register(entityType.get(), PlatformBasedLivingEntityRenderer::new);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}

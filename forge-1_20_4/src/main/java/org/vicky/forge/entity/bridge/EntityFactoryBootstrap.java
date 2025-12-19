@@ -9,10 +9,7 @@ import java.lang.reflect.Method;
 import java.util.ServiceLoader;
 
 import org.slf4j.Logger;
-import org.vicky.forge.entity.effects.ForgePlatformEffectBridge;
 import org.vicky.platform.PlatformPlugin;
-import org.vicky.platform.entity.EffectDescriptor;
-import org.vicky.platform.entity.EffectProvider;
 import org.vicky.platform.entity.MobRegisteringClass;
 import org.vicky.platform.entity.RegisterFactory;
 

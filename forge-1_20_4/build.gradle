@@ -130,6 +130,14 @@ repositories {
         name = 'Kyori'
         url = 'https://repo.spongepowered.org/maven'
     }
+    maven {
+        name = 'GeckoLib'
+        url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        content {
+            includeGroupByRegex("software\\.bernie.*")
+            includeGroup("com.eliotlash.mclib")
+        }
+    }
 }
 
 configurations.configureEach {
@@ -165,7 +173,8 @@ dependencies {
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     api(group: 'io.github.vickye2', name: 'vicky-utils-core', version: '0.0.1')
-    implementation "software.bernie.geckolib:geckolib-forge-1.20.4:4.4.4"
+    implementation fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}")
+    implementation("com.eliotlash.mclib:mclib:20")
     runtimeOnly "org.jetbrains.kotlin:kotlin-stdlib:1.9.10"
     api(group: 'org.xerial', name: 'sqlite-jdbc', version: '3.48.0.0')
     api(group: 'net.kyori', name: 'adventure-api', version: '4.17.0')

@@ -81,16 +81,16 @@ data class MobSounds(
 )
 
 data class AnimationDefinition(
-    val idle: ResourceLocation,
-    val walk: ResourceLocation,
-    val hurt: ResourceLocation? = null,
-    val step: ResourceLocation? = null,
-    val fall: ResourceLocation? = null,
-    val attack: ResourceLocation? = null,
-    val shoot: ResourceLocation? = null,
-    val swim: ResourceLocation? = null,
-    val flap: ResourceLocation? = null,
-    val custom: Map<String, ResourceLocation> = emptyMap()
+    val idle: String,
+    val walk: String,
+    val hurt: String? = null,
+    val step: String? = null,
+    val fall: String? = null,
+    val attack: String? = null,
+    val shoot: String? = null,
+    val swim: String? = null,
+    val flap: String? = null,
+    val custom: Map<String, String> = emptyMap()
 )
 
 interface PlatformAnimationController {
@@ -230,7 +230,9 @@ class MobDefaults(
     val category: MobCategory = MobCategory.MISC,
 
     // --- Model / Appearance ---
-    val modelId: ResourceLocation? = null,               // e.g., GeckoLib model, ItemsAdder model, etc.
+    val modelId: ResourceLocation,
+    val texture: ResourceLocation,
+    val animationsFile: ResourceLocation,
     val scale: Double = 1.0,
     val baby: Boolean = false,
 
@@ -431,14 +433,20 @@ interface MobEntityEventHandler {
 fun mob(
     key: ResourceLocation,
     handler: PlatformEntityFactory.RegisteredMobEntityEventHandler,
+    modelId: ResourceLocation,
+    texture: ResourceLocation,
+    animationsFile: ResourceLocation,
     block: MobEntityDescriptorBuilder.() -> Unit
 ): MobEntityDescriptor {
-    return MobEntityDescriptorBuilder(key, handler).apply(block).build()
+    return MobEntityDescriptorBuilder(key, handler, modelId, texture, animationsFile).apply(block).build()
 }
 
 class MobEntityDescriptorBuilder(
     private val mobKey: ResourceLocation,
-    private val handler: PlatformEntityFactory.RegisteredMobEntityEventHandler
+    private val handler: PlatformEntityFactory.RegisteredMobEntityEventHandler,
+    private val modelId: ResourceLocation,
+    private val texture: ResourceLocation,
+    private val animationsFile: ResourceLocation
 ) {
     private val dataMap = mutableMapOf<String, Any>()
 
@@ -458,7 +466,7 @@ class MobEntityDescriptorBuilder(
     }
 
     fun defaults(displayName: String, block: MobDefaultsBuilder.() -> Unit) {
-        defaults = MobDefaultsBuilder(mobKey, displayName).apply(block).build()
+        defaults = MobDefaultsBuilder(mobKey, displayName, modelId, texture, animationsFile).apply(block).build()
     }
 
     fun physical(block: PhysicalBuilder.() -> Unit) {
@@ -504,11 +512,13 @@ class PhysicalBuilder {
 
 class MobDefaultsBuilder(
     private val mobKey: ResourceLocation,
-    private val displayName: String
+    private val displayName: String,
+    val modelId: ResourceLocation,
+    val texture: ResourceLocation,
+    val animationsFile: ResourceLocation
 ) {
     var category: MobCategory = MobCategory.MISC
 
-    var modelId: ResourceLocation? = null
     var scale: Double = 1.0
     var baby: Boolean = false
 
@@ -534,8 +544,8 @@ class MobDefaultsBuilder(
     }
 
     fun animations(
-        idle: ResourceLocation,
-        walk: ResourceLocation,
+        idle: String,
+        walk: String,
         block: AnimationBuilder.() -> Unit = {}
     ) {
         animations = AnimationBuilder(idle, walk).apply(block).build()
@@ -559,6 +569,8 @@ class MobDefaultsBuilder(
             displayName = displayName,
             category = category,
             modelId = modelId,
+            texture = texture,
+            animationsFile = animationsFile,
             scale = scale,
             baby = baby,
             maxHealth = maxHealth,
@@ -599,14 +611,19 @@ class MobSoundsBuilder {
 }
 
 class AnimationBuilder(
-    private val idle: ResourceLocation,
-    private val walk: ResourceLocation
+    private val idle: String,
+    private val walk: String
 ) {
-    var hurt: ResourceLocation? = null
-    var attack: ResourceLocation? = null
-    private val custom = mutableMapOf<String, ResourceLocation>()
+    var hurt: String? = null
+    var attack: String? = null
+    var step: String? = null
+    var fall: String? = null
+    var shoot: String? = null
+    var swim: String? = null
+    var flap: String? = null
+    private val custom = mutableMapOf<String, String>()
 
-    fun custom(name: String, anim: ResourceLocation) {
+    fun custom(name: String, anim: String) {
         custom[name] = anim
     }
 
@@ -616,7 +633,12 @@ class AnimationBuilder(
             walk = walk,
             hurt = hurt,
             attack = attack,
-            custom = custom
+            step = step,
+            fall = fall,
+            shoot = shoot,
+            swim = swim,
+            flap = flap,
+            custom = custom,
         )
 }
 

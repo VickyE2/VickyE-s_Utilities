@@ -18,15 +18,21 @@ interface MobRegisteringClass {
 class DefaultEntities : MobRegisteringClass {
     private val testDummy = mob(
         key = "core" rli "test_dummy_mob",
-        handler = DefaultHandlers.MobDefaultHandler
+        handler = DefaultHandlers.MobDefaultHandler,
+        "core" rli "models/entities/test_dummy.geo.json",
+        "core" rli "textures/entities/test_dummy.png",
+        "core" rli "animations/test_dummy.animation.json"
     ) {
         defaults("Dummy") {
             maxHealth = 40.0
             movementSpeed = 0.22
-            modelId = PlatformPlugin.id() rli "default_dummy"
             spawn {
                 condition { _ -> false }
             }
+            animations(
+                "animation.test_dummy.idle",
+                "animation.test_dummy.walk"
+            )
         }
 
         physical {

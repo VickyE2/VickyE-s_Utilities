@@ -10,12 +10,12 @@ public class ResourceLocation {
         if (path.isEmpty()) throw new IllegalArgumentException("The path of a resource locator cannot be null.");
         if (path.contains(":")) {
             String[] parts = path.split(":", 2);
-            if (!parts[0].matches("[a-z0-9_.-]+")) throw new IllegalArgumentException("Invalid namespace " + namespace);
-            if (!parts[1].matches("[a-z0-9_.-]+")) throw new IllegalArgumentException("Invalid path " + path);
+            if (!parts[0].matches("[a-z0-9_.-/]+")) throw new IllegalArgumentException("Invalid namespace " + namespace);
+            if (!parts[1].matches("[a-z0-9_.-/]+")) throw new IllegalArgumentException("Invalid path " + path);
             this.namespace = parts[0];
             this.path = parts[1];
         } else {
-            if (!path.matches("[a-z0-9_.-]+")) throw new IllegalArgumentException("Invalid path " + path);
+            if (!path.matches("[a-z0-9_.-/]+")) throw new IllegalArgumentException("Invalid path " + path);
             this.path = path;
         }
     }
@@ -24,8 +24,8 @@ public class ResourceLocation {
         if (path.isEmpty()) throw new IllegalArgumentException("The path of a resource locator cannot be null.");
         if (namespace.isEmpty())
             throw new IllegalArgumentException("The namespace of a resource locator cannot be null.");
-        if (!namespace.matches("[a-z0-9_.-]+")) throw new IllegalArgumentException("Invalid namespace " + namespace);
-        if (!path.matches("[a-z0-9_.-]+")) throw new IllegalArgumentException("Invalid path " + path);
+        if (!namespace.matches("[a-z0-9_.-/]+")) throw new IllegalArgumentException("Invalid namespace " + namespace);
+        if (!path.matches("[a-z0-9_.-/]+")) throw new IllegalArgumentException("Invalid path " + path);
         this.path = path;
         this.namespace = namespace;
     }

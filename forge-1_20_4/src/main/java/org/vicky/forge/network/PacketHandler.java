@@ -11,8 +11,10 @@ import org.vicky.VickyUtilitiesForge;
 import org.vicky.forge.network.registeredpackets.*;
 
 public class PacketHandler {
-	public static final ResourceLocation CHANNEL_NAME = new ResourceLocation(VickyUtilitiesForge.MODID, "main");
-	public static final ResourceLocation SYNTH_CHANNEL_NAME = new ResourceLocation(VickyUtilitiesForge.MODID, "synth");
+	public static final ResourceLocation CHANNEL_NAME =
+			ResourceLocation.fromNamespaceAndPath(VickyUtilitiesForge.MODID, "main");
+	public static final ResourceLocation SYNTH_CHANNEL_NAME =
+			ResourceLocation.fromNamespaceAndPath(VickyUtilitiesForge.MODID, "synth");
 	private static final int PROTOCOL_VERSION = 1;
 	public static final SimpleChannel MAIN_CHNNEL = ChannelBuilder.named(CHANNEL_NAME)
 			.serverAcceptedVersions(((status, version) -> version == PROTOCOL_VERSION))

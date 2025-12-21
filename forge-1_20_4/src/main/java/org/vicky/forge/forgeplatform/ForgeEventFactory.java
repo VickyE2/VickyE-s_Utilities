@@ -8,7 +8,13 @@ import org.vicky.platform.events.PlatformEventFactory;
 import org.vicky.platform.exceptions.UnsupportedEventException;
 
 public class ForgeEventFactory implements PlatformEventFactory {
+    public static final ForgeEventFactory INSTANCE =
+            new ForgeEventFactory();
+
+    private ForgeEventFactory() {}
+
     @Override
+    @SuppressWarnings("unchecked")
     public <T extends PlatformEvent> T firePlatformEvent(T event) throws UnsupportedEventException {
         if (event instanceof ForgeEvent forgeEvent) {
             return (T) MinecraftForge.EVENT_BUS.fire(forgeEvent.getEvent());

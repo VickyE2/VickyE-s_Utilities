@@ -30,10 +30,10 @@ public record UpdateSSBossBar(UUID id, Component title, Component subTitle, floa
         float progress = buf.readFloat();
         String hex = buf.readUtf();
 
-        ResourceLocation image = new ResourceLocation("minecraft:dirt");
+        ResourceLocation image = ResourceLocation.parse("minecraft:dirt");
         if (buf.readBoolean()) {
             try {
-                image = new ResourceLocation(buf.readUtf());
+                image = ResourceLocation.parse(buf.readUtf());
             } catch (Exception ex) {
                 VickyUtilitiesForge.LOGGER.warn("Bad image resource in packet", ex);
             }

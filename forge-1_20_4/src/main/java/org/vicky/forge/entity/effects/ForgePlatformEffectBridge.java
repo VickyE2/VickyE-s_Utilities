@@ -14,6 +14,7 @@ import org.vicky.platform.utils.ResourceLocation;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.vicky.VickyUtilitiesForge.LOGGER;
 import static org.vicky.VickyUtilitiesForge.MODID;
 import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 
@@ -64,7 +65,6 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
      */
     private final Map<UUID, Map<ResourceLocation, PlatformEffectInstance>> active = new ConcurrentHashMap<>();
 
-    // DeferredRegister created on mod init
     public static final DeferredRegister<MobEffect> EFFECTS =
         DeferredRegister.create(ForgeRegistries.MOB_EFFECTS, MODID);
     private final Map<ResourceLocation, RegistryObject<MobEffect>> registeredEffects =
@@ -75,10 +75,11 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
     // Registration
     // -------------------------
     @Override
-    public @NotNull RegisteredUniversalEffect registerEffect(@NotNull EffectDescriptor effectDescriptor) {
+    public void registerEffect(@NotNull EffectDescriptor effectDescriptor) {
         ResourceLocation id = effectDescriptor.getKey();
-        if (registry.containsKey(id)) {
-            return new RegisteredUniversalEffect(PlatformInstanceMobEffect.from(registry.get(id)).toPlatform());
+        if (registeredEffects.containsKey(id)) {
+            LOGGER.warn("Effect with id {}, has already been registered.", id);
+            return;
         }
 
         registry.put(id, effectDescriptor);
@@ -90,15 +91,14 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
                     () -> PlatformInstanceMobEffect.from(effectDescriptor));
             registeredEffects.put(id, ro);
         }
-
-        return new RegisteredUniversalEffect(PlatformInstanceMobEffect.from(effectDescriptor).toPlatform());
     }
 
 
     @Override
     public @Nullable RegisteredUniversalEffect getEffect(@NotNull ResourceLocation id) {
         EffectDescriptor d = registry.get(id);
-        return d == null ? null : new RegisteredUniversalEffect(PlatformInstanceMobEffect.from(d).toPlatform());
+        MobEffect effect = registeredEffects.get(id).get();
+        return d == null ? null : new RegisteredUniversalEffect(ForgePlatformEffect.from(effect));
     }
 
     // -------------------------
@@ -115,7 +115,8 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
         int amp = Math.min(amplifier, d.getMaxAmplifier());
         int dur = Math.max(0, duration > 0 ? duration : d.getDefaultDuration());
 
-        PlatformEffectInstance inst = new PlatformEffectInstance(PlatformInstanceMobEffect.from(d).toPlatform(), amp, dur);
+        var effect = (PlatformInstanceMobEffect) registeredEffects.get(d.getKey()).get();
+        PlatformEffectInstance inst = new PlatformEffectInstance(effect.toPlatform(), amp, dur);
         map.put(effectId, inst);
 
         // fire start callback

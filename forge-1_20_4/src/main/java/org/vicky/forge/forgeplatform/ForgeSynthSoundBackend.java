@@ -1,7 +1,6 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.forge.forgeplatform;
 
-import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.forge.client.audio.InstrumentMapper;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
@@ -22,6 +21,10 @@ import java.util.Set;
 
 public class ForgeSynthSoundBackend implements PlatformSoundBackend {
     private static final Set<Integer> keys = new HashSet<>();
+    public static final ForgeSynthSoundBackend INSTANCE =
+            new ForgeSynthSoundBackend();
+
+    private ForgeSynthSoundBackend() {}
 
     private static @NotNull NoteOnPacket getNoteOnPacket(@NotNull MusicEvent event, ADSR adsr, Integer uid) {
         int[] midiId = event.sound() != null ? InstrumentMapper.getBankAndProgram(event.sound()) : new int[]{0, 0};

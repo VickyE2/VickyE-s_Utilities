@@ -257,12 +257,12 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
 	@Override
 	public PlatformEventFactory getEventFactory() {
-		return new ForgeEventFactory();
+		return ForgeEventFactory.INSTANCE;
 	}
 
 	@Override
 	public PlatformSoundBackend getSoundBackend() {
-		return new ForgeSynthSoundBackend();
+		return ForgeSynthSoundBackend.INSTANCE;
 	}
 
 	@Override

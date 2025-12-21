@@ -8,7 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class ForgeVec3 extends PlatformLocation {
+public final class ForgeVec3 extends PlatformLocation {
 	private final Level world;
 	private final PlatformWorld<BlockState, Level> platworld;
 
@@ -35,4 +35,5 @@ public class ForgeVec3 extends PlatformLocation {
 	public Level getForgeWorld() {
 		return world;
 	}
+	@Override public String toString() { return "ForgeVec3[" + x + "," + y + "," + z + "]"; }
 }

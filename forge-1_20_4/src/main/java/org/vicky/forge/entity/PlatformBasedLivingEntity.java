@@ -86,14 +86,13 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 
 	@Override
 	public boolean hurt(@NotNull DamageSource source, float amount) {
-		// build AntagonisticDamageSource wrapper from DamageSource as needed
 		AntagonisticDamageSource wrap = convert(source);
 		if (handler != null) {
 			EventResult r = handler.getHandler().onHurt(asPlatform(), wrap, amount);
 			if (r == EventResult.CONSUME)
-				return true; // consumed
+				return true;
 			if (r == EventResult.CANCEL)
-				return false; // cancelled
+				return false;
 		}
 		return super.hurt(source, amount);
 	}

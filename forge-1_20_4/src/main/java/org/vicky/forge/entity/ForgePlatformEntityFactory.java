@@ -103,10 +103,10 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
 						.add(Attributes.ARMOR_TOUGHNESS, descriptor.getMobDetails().getBaseArmorToughness())
 						.add(Attributes.MAX_ABSORPTION, descriptor.getMobDetails().getMaxAbsorption())
 						.add(Attributes.LUCK, descriptor.getMobDetails().getLuck())
-						.add(ForgeMod.ENTITY_GRAVITY.get(), 0.08) // add overrideable
-						.add(ForgeMod.SWIM_SPEED.get(), 1.0) // add overrideable
-						.add(ForgeMod.ENTITY_REACH.get(), 0.0) // add overrideable
-						.add(ForgeMod.STEP_HEIGHT_ADDITION.get(), 0.0) // add overrideable
+						.add(ForgeMod.ENTITY_GRAVITY.get(), descriptor.getMobDetails().getEntityGravity())
+						.add(ForgeMod.SWIM_SPEED.get(), descriptor.getMobDetails().getSwimSpeed())
+						.add(ForgeMod.ENTITY_REACH.get(), descriptor.getMobDetails().getEntityReach())
+						.add(ForgeMod.STEP_HEIGHT_ADDITION.get(), descriptor.getMobDetails().getStepHeightAddition())
 						.build());
 	}
 

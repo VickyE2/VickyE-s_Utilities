@@ -171,12 +171,16 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 
 	@Override
 	public @Nullable PlatformLivingEntity getLastAttacker() {
-		return ForgePlatformLivingEntity.from(ordinal.getLastAttacker());
+		LivingEntity last = ordinal.getLastAttacker();
+		if (last == null || last == ordinal) return null; // prevent recursion
+		return ForgePlatformLivingEntity.from(last);
 	}
 
 	@Override
 	public @Nullable PlatformLivingEntity getLastHurtByMob() {
-		return ForgePlatformLivingEntity.from(ordinal.getLastHurtByMob());
+		LivingEntity last = ordinal.getLastHurtByMob();
+		if (last == null || last == ordinal) return null; // prevent recursion
+		return ForgePlatformLivingEntity.from(last);
 	}
 
 	@Override
@@ -193,7 +197,9 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 
 	@Override
 	public @Nullable PlatformLivingEntity getLastHurtMob() {
-		return ForgePlatformLivingEntity.from(ordinal.getLastHurtMob());
+		LivingEntity last = ordinal.getLastHurtMob();
+		if (last == null || last == ordinal) return null; // prevent recursion
+		return ForgePlatformLivingEntity.from(last);
 	}
 
 	@Override
@@ -321,5 +327,13 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 	@Override
 	public boolean getCanFreeze() {
 		return ordinal.canFreeze();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (!(obj instanceof ForgePlatformLivingEntity e)) {
+			return false;
+		}
+		return e.ordinal == this.ordinal;
 	}
 }

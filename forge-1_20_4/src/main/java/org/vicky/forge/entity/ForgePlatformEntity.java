@@ -44,6 +44,7 @@ public class ForgePlatformEntity implements PlatformEntity {
 	}
 
 	public static ForgePlatformEntity from(Entity e) {
+		if (e == null) return null;
 		return new ForgePlatformEntity(e);
 	}
 
@@ -227,5 +228,13 @@ public class ForgePlatformEntity implements PlatformEntity {
 	@Override
 	public int getNativeEntityId() {
 		return ordinal.getId();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (!(obj instanceof ForgePlatformEntity e)) {
+			return false;
+		}
+		return e.ordinal == this.ordinal;
 	}
 }

@@ -24,10 +24,12 @@ class DefaultEntities : MobRegisteringClass {
         "core" rli "animations/test_dummy.animation.json"
     ) {
         defaults("Dummy") {
-            maxHealth = 40.0
-            movementSpeed = 0.22
             spawn {
                 condition { _ -> false }
+            }
+            attributes {
+                maxHealth = 40.0
+                movementSpeed = 0.22
             }
             animations(
                 "animation.testdummy.idle",

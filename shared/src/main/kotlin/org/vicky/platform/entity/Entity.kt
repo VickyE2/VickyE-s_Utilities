@@ -251,6 +251,9 @@ class MobDefaults(
     val attackKnockback: Double = 1.0,
     val followRange: Double = 16.0,
     val luck: Double = 0.0,
+    val entityGravity: Double = 0.08,
+    val entityReach: Double  = 0.0,
+    val stepHeightAddition: Double  = 0.0,
 
     // --- Combat Behavior ---
     val aggressive: Boolean = true,
@@ -509,6 +512,25 @@ class PhysicalBuilder {
         MobEntityPhysicalProperties(hitBox, eggColors, eyeHeight, isFireImmune, isPushable, noGravity)
 }
 
+class MobAttributeBuilder {
+    var maxHealth: Double = 20.0
+    var maxAbsorption: Double = 0.0
+    var baseArmor: Double = 0.0
+    var baseArmorToughness: Double = 0.0
+    var knockbackResistance: Double = 0.0
+    var movementSpeed: Double = 0.25
+    var swimSpeed: Double = 1.0
+    var flySpeed: Double = 0.8
+    var jumpStrength: Double = 0.8
+    var attackDamage: Double = 2.0
+    var attackSpeed: Double = 0.7
+    var attackKnockback: Double = 1.0
+    var followRange: Double = 16.0
+    var luck: Double = 0.0
+    var entityGravity: Double = 0.08
+    var entityReach: Double  = 0.0
+    var stepHeightAddition: Double  = 0.0
+}
 
 class MobDefaultsBuilder(
     private val mobKey: ResourceLocation,
@@ -521,12 +543,6 @@ class MobDefaultsBuilder(
 
     var scale: Double = 1.0
     var baby: Boolean = false
-
-    var maxHealth: Double = 20.0
-    var armor: Double = 0.0
-    var movementSpeed: Double = 0.25
-    var attackDamage: Double = 2.0
-    var followRange: Double = 16.0
 
     var aggressive: Boolean = false
     var persistent: Boolean = false
@@ -563,6 +579,11 @@ class MobDefaultsBuilder(
         metadata[key] = value
     }
 
+    var attributes = MobAttributeBuilder()
+    fun attributes(block: MobAttributeBuilder.() -> Unit) {
+        attributes = MobAttributeBuilder().apply(block)
+    }
+
     fun build(): MobDefaults =
         MobDefaults(
             mobKey = mobKey,
@@ -573,11 +594,6 @@ class MobDefaultsBuilder(
             animationsFile = animationsFile,
             scale = scale,
             baby = baby,
-            maxHealth = maxHealth,
-            baseArmor = armor,
-            movementSpeed = movementSpeed,
-            attackDamage = attackDamage,
-            followRange = followRange,
             aggressive = aggressive,
             persistent = persistent,
             isImmuneToFire = immuneToFire,
@@ -587,7 +603,24 @@ class MobDefaultsBuilder(
                 ?: error("Animations must be defined for mob '$mobKey'"),
             spawn = spawn,
             drops = drops,
-            metadata = metadata
+            metadata = metadata,
+            maxHealth = attributes.maxHealth,
+            maxAbsorption = attributes.maxAbsorption,
+            baseArmor = attributes.baseArmor,
+            baseArmorToughness = attributes.baseArmorToughness,
+            knockbackResistance = attributes.knockbackResistance,
+            movementSpeed = attributes.movementSpeed,
+            swimSpeed = attributes.swimSpeed,
+            flySpeed = attributes.flySpeed,
+            jumpStrength = attributes.jumpStrength,
+            attackDamage = attributes.attackDamage,
+            attackSpeed = attributes.attackSpeed,
+            attackKnockback = attributes.attackKnockback,
+            followRange = attributes.followRange,
+            luck = attributes.luck,
+            entityGravity = attributes.entityGravity,
+            entityReach = attributes.entityReach,
+            stepHeightAddition = attributes.stepHeightAddition,
         )
 }
 

@@ -1,5 +1,8 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.network;
+
+import org.vicky.VickyUtilitiesForge;
+import org.vicky.forge.network.registeredpackets.*;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -7,14 +10,12 @@ import net.minecraftforge.network.ChannelBuilder;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.SimpleChannel;
-import org.vicky.VickyUtilitiesForge;
-import org.vicky.forge.network.registeredpackets.*;
 
 public class PacketHandler {
-	public static final ResourceLocation CHANNEL_NAME =
-			ResourceLocation.fromNamespaceAndPath(VickyUtilitiesForge.MODID, "main");
-	public static final ResourceLocation SYNTH_CHANNEL_NAME =
-			ResourceLocation.fromNamespaceAndPath(VickyUtilitiesForge.MODID, "synth");
+	public static final ResourceLocation CHANNEL_NAME = ResourceLocation.fromNamespaceAndPath(VickyUtilitiesForge.MODID,
+			"main");
+	public static final ResourceLocation SYNTH_CHANNEL_NAME = ResourceLocation
+			.fromNamespaceAndPath(VickyUtilitiesForge.MODID, "synth");
 	private static final int PROTOCOL_VERSION = 1;
 	public static final SimpleChannel MAIN_CHNNEL = ChannelBuilder.named(CHANNEL_NAME)
 			.serverAcceptedVersions(((status, version) -> version == PROTOCOL_VERSION))
@@ -46,8 +47,7 @@ public class PacketHandler {
 				.encoder(PlaySpecifyableSong::encode).decoder(PlaySpecifyableSong::decode)
 				.consumerMainThread(PlaySpecifyableSong::handle).add();
 		MAIN_CHNNEL.messageBuilder(PlayAnimationPacket.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
-				.encoder(PlayAnimationPacket::encode)
-				.decoder(PlayAnimationPacket::decode)
+				.encoder(PlayAnimationPacket::encode).decoder(PlayAnimationPacket::decode)
 				.consumerMainThread(PlayAnimationPacket::handle).add();
 		SYNTH_CHANNEL.messageBuilder(NoteOnPacket.class, synthPacketId++, NetworkDirection.PLAY_TO_CLIENT)
 				.encoder(NoteOnPacket::encode).decoder(NoteOnPacket::decode).consumerMainThread(NoteOnPacket::handle)

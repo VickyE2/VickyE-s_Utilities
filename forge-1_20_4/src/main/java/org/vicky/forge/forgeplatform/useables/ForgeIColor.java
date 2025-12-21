@@ -1,65 +1,65 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform.useables;
 
 import org.vicky.platform.IColor;
 
 public class ForgeIColor implements IColor {
 
-    private final float red;
-    private final float green;
-    private final float blue;
+	private final float red;
+	private final float green;
+	private final float blue;
 
-    public ForgeIColor(float red, float green, float blue) {
-        this.red = red;
-        this.green = green;
-        this.blue = blue;
-    }
+	public ForgeIColor(float red, float green, float blue) {
+		this.red = red;
+		this.green = green;
+		this.blue = blue;
+	}
 
-    @Override
-    public float getRed() {
-        return red;
-    }
+	@Override
+	public float getRed() {
+		return red;
+	}
 
-    @Override
-    public float getGreen() {
-        return green;
-    }
+	@Override
+	public float getGreen() {
+		return green;
+	}
 
-    @Override
-    public float getBlue() {
-        return blue;
-    }
+	@Override
+	public float getBlue() {
+		return blue;
+	}
 
-    public static ForgeIColor decode(String hex) {
-        // Strip leading # if present
-        if (hex.startsWith("#")) {
-            hex = hex.substring(1);
-        }
+	public static ForgeIColor decode(String hex) {
+		// Strip leading # if present
+		if (hex.startsWith("#")) {
+			hex = hex.substring(1);
+		}
 
-        if (hex.length() != 6) {
-            throw new IllegalArgumentException("Invalid hex color: " + hex);
-        }
+		if (hex.length() != 6) {
+			throw new IllegalArgumentException("Invalid hex color: " + hex);
+		}
 
-        try {
-            int r = Integer.parseInt(hex.substring(0, 2), 16);
-            int g = Integer.parseInt(hex.substring(2, 4), 16);
-            int b = Integer.parseInt(hex.substring(4, 6), 16);
+		try {
+			int r = Integer.parseInt(hex.substring(0, 2), 16);
+			int g = Integer.parseInt(hex.substring(2, 4), 16);
+			int b = Integer.parseInt(hex.substring(4, 6), 16);
 
-            return new ForgeIColor(r / 255.0f, g / 255.0f, b / 255.0f);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid hex color format: " + hex, e);
-        }
-    }
+			return new ForgeIColor(r / 255.0f, g / 255.0f, b / 255.0f);
+		} catch (NumberFormatException e) {
+			throw new IllegalArgumentException("Invalid hex color format: " + hex, e);
+		}
+	}
 
-    public int toNativeInt() {
-        int r = (int) (red * 255) & 0xFF;
-        int g = (int) (green * 255) & 0xFF;
-        int b = (int) (blue * 255) & 0xFF;
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
-    }
+	public int toNativeInt() {
+		int r = (int) (red * 255) & 0xFF;
+		int g = (int) (green * 255) & 0xFF;
+		int b = (int) (blue * 255) & 0xFF;
+		return 0xFF000000 | (r << 16) | (g << 8) | b;
+	}
 
-    @Override
-    public String toHex() {
-        return String.format("#%02X%02X%02X", (int) (red * 255), (int) (green * 255), (int) (blue * 255));
-    }
+	@Override
+	public String toHex() {
+		return String.format("#%02X%02X%02X", (int) (red * 255), (int) (green * 255), (int) (blue * 255));
+	}
 }

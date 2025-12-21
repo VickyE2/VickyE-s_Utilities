@@ -57,7 +57,7 @@ allprojects {
             removeUnusedImports()
             formatAnnotations()
             eclipse()
-            licenseHeader("/* Licensed under Apache-2.0 \$YEAR. */")
+            licenseHeader("/* Licensed under Apache-2.0 $YEAR. */")
         }
     }
 
@@ -133,9 +133,6 @@ subprojects {
                 )
             )
         }
-    }
-    tasks.jar {
-        enabled = false
     }
 
     afterEvaluate {

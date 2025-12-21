@@ -81,7 +81,7 @@ data class RegisteredUniversalEffect internal constructor(
 )
 
 interface PlatformEffectBridge<T: PlatformLivingEntity> {
-    fun registerEffect(effect: EffectDescriptor) : RegisteredUniversalEffect
+    fun registerEffect(effect: EffectDescriptor)
     fun getEffect(id: ResourceLocation) : RegisteredUniversalEffect?
 
     fun applyEffect(

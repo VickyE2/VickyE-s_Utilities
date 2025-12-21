@@ -25,7 +25,6 @@ public interface PlatformPlugin {
             instance.getPlatformEffectBridge()
                     .registerEffect(new DefaultMarkedMobEffect().create());
             CoreEntityRegistry.installInto(instance);
-            CoreEntityRegistry.installInto(instance);
         } else {
             throw new IllegalStateException("Cannot set PlatformPlugin after its already been set.");
         }

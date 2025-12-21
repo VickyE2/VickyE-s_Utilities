@@ -1,10 +1,12 @@
 package org.vicky.forge.entity;
 
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
+import static org.vicky.VickyUtilitiesForge.MODID;
 import static org.vicky.forge.forgeplatform.useables.ForgeHacks.fromVicky;
 
 /**
@@ -13,30 +15,29 @@ import static org.vicky.forge.forgeplatform.useables.ForgeHacks.fromVicky;
  */
 public class PlatformBasedLivingEntityRenderer extends GeoEntityRenderer<PlatformBasedLivingEntity> {
     public PlatformBasedLivingEntityRenderer(EntityRendererProvider.Context context) {
-        super(context, new DefaultedEntityGeoModel<PlatformBasedLivingEntity>() {
+        super(context, new DefaultedEntityGeoModel<>(ResourceLocation.fromNamespaceAndPath(MODID, "")) {
             @Override
             public ResourceLocation getModelResource(PlatformBasedLivingEntity object) {
                 org.vicky.platform.utils.ResourceLocation model =
-                        object.getDescriptor().getMobDetails().getModelId(); // make not null
+                        object.getDescriptor().getMobDetails().getModelId();
                 return fromVicky(model);
             }
 
             @Override
             public ResourceLocation getTextureResource(PlatformBasedLivingEntity object) {
                 org.vicky.platform.utils.ResourceLocation explicit =
-                        object.getDescriptor().getMobDetails().getTexture(); // add this field
+                        object.getDescriptor().getMobDetails().getTexture();
                 return fromVicky(explicit);
             }
 
             @Override
             public ResourceLocation getAnimationResource(PlatformBasedLivingEntity object) {
                 org.vicky.platform.utils.ResourceLocation explicitAnim =
-                        object.getDescriptor().getMobDetails().getAnimationsFile(); // add this field
+                        object.getDescriptor().getMobDetails().getAnimationsFile();
                 return fromVicky(explicitAnim);
             }
         });
 
-        // Set a reasonable shadow size; optionally base on your descriptor scale.
         this.shadowRadius = 0.5f;
     }
 }

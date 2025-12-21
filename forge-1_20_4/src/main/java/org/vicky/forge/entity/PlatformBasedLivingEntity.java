@@ -151,22 +151,22 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
         controllers.add(new AnimationController<>(this,
                 "Idle", 5,
                 (event) -> animationControllerOf(event,
-                        animations.getIdle().getPath(),
+                        animations.getIdle(),
                         /* shouldBeStationary = */ true)));
 
         // Walk: plays when the entity IS moving
         controllers.add(new AnimationController<>(this,
                 "Walk", 5,
                 (event) -> animationControllerOf(event,
-                        animations.getWalk().getPath(),
+                        animations.getWalk(),
                         /* shouldBeStationary = */ false)));
 
         if (animations.getHurt() != null) {
             controllers.add(new AnimationController<>(this,
                     "Hurt", 2,
                     (event) -> {
-                        if (isForcedAnimation(event, animations.getHurt().getPath())) {
-                            return playForcedAnimation(event, animations.getHurt().getPath(), false);
+                        if (isForcedAnimation(event, animations.getHurt())) {
+                            return playForcedAnimation(event, animations.getHurt(), false);
                         }
                         return PlayState.STOP;
                     }));
@@ -176,8 +176,8 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
             controllers.add(new AnimationController<>(this,
                     "Attack", 2,
                     (event) -> {
-                        if (isForcedAnimation(event, animations.getAttack().getPath())) {
-                            return playForcedAnimation(event, animations.getAttack().getPath(), false);
+                        if (isForcedAnimation(event, animations.getAttack())) {
+                            return playForcedAnimation(event, animations.getAttack(), false);
                         }
                         return PlayState.STOP;
                     }));
@@ -187,8 +187,8 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
             controllers.add(new AnimationController<>(this,
                     "Shoot", 4,
                     (event) -> {
-                        if (isForcedAnimation(event, animations.getShoot().getPath())) {
-                            return playForcedAnimation(event, animations.getShoot().getPath(), false);
+                        if (isForcedAnimation(event, animations.getShoot())) {
+                            return playForcedAnimation(event, animations.getShoot(), false);
                         }
                         return PlayState.STOP;
                     }));
@@ -198,8 +198,8 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
             controllers.add(new AnimationController<>(this,
                     "Step", 4,
                     (event) -> {
-                        if (isForcedAnimation(event, animations.getStep().getPath())) {
-                            return playForcedAnimation(event, animations.getStep().getPath(), false);
+                        if (isForcedAnimation(event, animations.getStep())) {
+                            return playForcedAnimation(event, animations.getStep(), false);
                         }
                         return PlayState.STOP;
                     }));
@@ -209,7 +209,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
             controllers.add(new AnimationController<>(this,
                     "Fly", 2,
                     (event) -> animationControllerOf(event,
-                            animations.getFlap().getPath(),
+                            animations.getFlap(),
                             false)));
         }
 
@@ -217,7 +217,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
             controllers.add(new AnimationController<>(this,
                     "Swim", 2,
                     (event) -> animationControllerOf(event,
-                            animations.getSwim().getPath(),
+                            animations.getSwim(),
                             false)));
         }
 
@@ -225,7 +225,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
             controllers.add(new AnimationController<>(this,
                     "Swim", 2,
                     (event) -> animationControllerOf(event,
-                            animations.getFall().getPath(),
+                            animations.getFall(),
                             false)));
         }
 
@@ -233,7 +233,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
         animations.getCustom().forEach((key, rl) -> {
             controllers.add(new AnimationController<>(this,
                     key, 5,
-                    (event) -> animationControllerOf(event, rl.getPath(), /* stationary? */ false)));
+                    (event) -> animationControllerOf(event, rl, /* stationary? */ false)));
         });
     }
 
@@ -255,7 +255,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
         }
 
         // Decide whether this controller should play based on movement vs stationary
-        final boolean shouldPlay = shouldBeStationary ? !moving : moving;
+        final boolean shouldPlay = shouldBeStationary != moving;
         if (!shouldPlay) return PlayState.STOP;
 
         // Choose whether to loop or play once based on animation name heuristics.

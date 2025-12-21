@@ -30,8 +30,8 @@ class DefaultEntities : MobRegisteringClass {
                 condition { _ -> false }
             }
             animations(
-                "animation.test_dummy.idle",
-                "animation.test_dummy.walk"
+                "animation.testdummy.idle",
+                "animation.testdummy.walk"
             )
         }
 

@@ -94,15 +94,6 @@ object DefaultHandlers {
                     self.setLastHurtMob(null)
                 }
 
-                override fun onHurt(
-                    self: PlatformLivingEntity,
-                    source: AntagonisticDamageSource,
-                    amount: Float
-                ): EventResult {
-                    self.hurt(amount, source)
-                    return EventResult.CONSUME
-                }
-
                 override fun onAttack(self: PlatformLivingEntity, victim: PlatformLivingEntity): EventResult {
                     if (victim is PlatformPlayer) {
                         self.setLastHurtByPlayer(victim)

@@ -1,11 +1,26 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity;
 
+import kotlin.ranges.IntRange;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.*;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.phys.AABB;
+import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
+import org.vicky.platform.utils.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.entity.*;
+import org.vicky.platform.entity.distpacher.CompiledTaskRegistry;
 import org.vicky.platform.entity.distpacher.EntityTaskManager;
 
 import net.minecraft.nbt.CompoundTag;
@@ -16,8 +31,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.ServerLevelAccessor;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -26,6 +39,10 @@ import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
+
+import java.lang.reflect.Method;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntity {
 	private final MobEntityDescriptor descriptor;
@@ -101,7 +118,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 	public void die(@NotNull DamageSource cause) {
 		if (handler != null) {
 			EventResult r = handler.getHandler().onDeath(asPlatform(), convert(cause));
-			if (r == EventResult.CONSUME) {
+			if (r == EventResult.CONSUME || r == EventResult.PASS) {
 				super.die(cause);
 			}
 		}
@@ -126,21 +143,201 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 	@Override
 	public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor world, @NotNull DifficultyInstance difficulty,
 			@NotNull MobSpawnType reason, @Nullable SpawnGroupData spawnData, @Nullable CompoundTag dataTag) {
-		// install AI goals from descriptor.ai
-		MobEntityAIBasedGoals ai = descriptor.getAi();
-		installGoals(ai);
-		// call onSpawn
+		onLoadOrReload();
 		if (handler != null)
 			handler.getHandler().onSpawn(asPlatform());
+
 		return super.finalizeSpawn(world, difficulty, reason, spawnData, dataTag);
 	}
 
+	@Override
+	public boolean checkSpawnRules(LevelAccessor world, MobSpawnType reason) {
+		// The descriptor is where your Kotlin MobSpawnSettings lives
+		MobSpawnSettings settings = descriptor.getMobDetails().getSpawn();
+		if (settings == null) return super.checkSpawnRules(world, reason);
+		BlockPos pos = this.blockPosition(); // entity's candidate spawn position
+
+		// 1) Spawn type allowlist (example: prevent spawner spawns if you want)
+		if (reason == MobSpawnType.SPAWNER && !settings.getTags().contains("allow_spawner")) {
+			return false;
+		}
+
+		switch (settings.getSpawnHeight()) {
+			case ON_GROUND:
+				if (!isValidGroundSpawn(world, pos)) return false;
+				break;
+			case IN_WATER:
+				if (!isInWaterSpawn(world, pos)) return false;
+				break;
+			case UNDERGROUND:
+				if (!isUndergroundSpawn(world, pos)) return false;
+				break;
+			case IN_AIR:
+				if (!isInAirSpawn(world, pos)) return false;
+				break;
+		}
+
+		// 3) Light level
+		int light = getBlockLightLevel(world, pos);
+		IntRange range = settings.getLightLevel();
+		if (!range.contains(light)) return false;
+
+		// 4) Biome checks (allowed / prohibited)
+		String biomeId = getBiomeId(world, pos);
+		if (!settings.getAllowedBiomes().isEmpty() && !settings.getAllowedBiomes().contains(biomeId)) {
+			return false;
+		}
+		if (settings.getProhibitedBiomes().contains(biomeId)) {
+			return false;
+		}
+
+		// 5) Custom spawn conditions (user-defined predicates)
+		for (SpawnCondition cond : settings.getConditions()) {
+			// assume SpawnCondition has a boolean test(...) method you implement
+			if (!cond.canSpawn(
+					new SpawnContext(
+							pos.getX(), pos.getY(), pos.getZ(),
+							biomeId, light, world.dayTime(), new ForgePlatformWorldAdapter(world)
+					)
+			)) return false;
+		}
+
+		// 6) Population caps: per-chunk and global
+		if (settings.getMaxPerChunk() > 0 && countSameMobInChunk(world, pos, settings.getMobId()) >= settings.getMaxPerChunk()) {
+			return false;
+		}
+		if (settings.getMaxGlobal() > 0 && countSameMobGlobally(world, settings.getMobId()) >= settings.getMaxGlobal()) {
+			return false;
+		}
+
+		// 7) Modifiers could be used to tweak spawn (e.g., chance), but typically don't block:
+		for (SpawnModifier mod : settings.getModifiers()) {
+			mod.apply(asPlatform(),
+					new SpawnContext(
+							pos.getX(), pos.getY(), pos.getZ(),
+							biomeId, light, world.dayTime(),
+							new ForgePlatformWorldAdapter(world)
+					));
+		}
+
+		// finally, fall back to the vanilla check to preserve standard rules like collision and pathfinding spots
+		return super.checkSpawnRules(world, reason);
+	}
+
+	protected boolean isValidGroundSpawn(LevelAccessor world, BlockPos pos) {
+		// ensure block below is solid and target pos is not submerged
+		BlockPos below = pos.below();
+		BlockState belowState = world.getBlockState(below);
+		if (!belowState.isSolidRender(world, below)) return false; // API name might differ
+		if (world.getFluidState(pos).is(FluidTags.WATER)) return false;
+		// ensure spawn position is not colliding with blocks
+		return world.noCollision(this);
+	}
+
+	protected boolean isInWaterSpawn(LevelAccessor world, BlockPos pos) {
+		return world.getFluidState(pos).is(FluidTags.WATER);
+	}
+
+	protected boolean isUndergroundSpawn(LevelAccessor world, BlockPos pos) {
+		// Must be air where entity spawns
+		if (!world.getBlockState(pos).isAir()) return false;
+
+		// No direct sky access (this is key)
+		if (world.canSeeSky(pos)) return false;
+
+		// Light should be low-ish (optional, but very common)
+		int blockLight = world.getBrightness(LightLayer.BLOCK, pos);
+		if (blockLight > 7) return false;
+
+		// Require solid ground somewhere nearby (below)
+		BlockPos below = pos.below();
+		BlockState belowState = world.getBlockState(below);
+		if (!belowState.isSolidRender(world, below)) return false;
+
+		// Collision safety
+		return world.noCollision(this);
+	}
+
+	protected boolean isInAirSpawn(LevelAccessor world, BlockPos pos) {
+		// Must be air
+		if (!world.getBlockState(pos).isAir()) return false;
+
+		// Block below must NOT be solid (otherwise it's ground)
+		BlockPos below = pos.below();
+		if (world.getBlockState(below).isSolidRender(world, below)) return false;
+
+		// Require some vertical clearance (avoid spawning inside trees)
+		for (int i = 1; i <= 2; i++) {
+			if (!world.getBlockState(pos.above(i)).isAir()) return false;
+		}
+
+		// Optional: prevent cave air spawns
+		if (!world.canSeeSky(pos)) return false;
+
+		return world.noCollision(this);
+	}
+
+	private int getBlockLightLevel(LevelAccessor world, BlockPos pos) {
+		try {
+			Method m = world.getClass().getMethod("getMaxLocalRawBrightness", BlockPos.class);
+			return (int) m.invoke(world, pos);
+		} catch (Exception ignored) { }
+
+		try {
+			return world.getBrightness(LightLayer.BLOCK, pos);
+		} catch (Exception ignored) { }
+		// safest fallback
+		return world.getMaxLocalRawBrightness(pos); // if available, else might throw — adapt accordingly
+	}
+
+	private String getBiomeId(LevelAccessor world, BlockPos pos) {
+		try {
+			Holder<Biome> holder = world.getBiome(pos);
+			Optional<ResourceKey<Biome>> opt = holder.unwrapKey();
+			if (opt.isPresent()) {
+				return opt.get().location().toString();
+			}
+		} catch (Exception ignored) {}
+		return "";
+	}
+
+	private int countSameMobInChunk(LevelAccessor world, BlockPos pos, org.vicky.platform.utils.ResourceLocation mobId) {
+		ChunkAccess chunk = world.getChunk(pos);
+		if (!(chunk instanceof LevelChunk levelChunk)) {
+			return 0;
+		}
+		AtomicInteger count = new AtomicInteger();
+		ChunkPos cp = levelChunk.getPos();
+		AABB box = new AABB(
+				cp.getMinBlockX(), levelChunk.getMinBuildHeight(), cp.getMinBlockZ(),
+				cp.getMaxBlockX() + 1, levelChunk.getMaxBuildHeight(), cp.getMaxBlockZ() + 1
+		);
+
+		levelChunk.getLevel().getEntities(getType(), box, (p_312249_) -> true)
+				.forEach((p_313067_) -> {
+			count.getAndIncrement();
+		});
+
+		return count.get();
+	}
+
+	private int countSameMobGlobally(LevelAccessor world, ResourceLocation mobId) {
+		// expensive on server - try to keep this conservative or cache counts periodically.
+		if (!(world instanceof ServerLevel serverWorld)) return 0;
+        int count = 0;
+		for (Entity e : serverWorld.getEntities().getAll()) {
+			if (e.getType().builtInRegistryHolder().key().location().equals(mobId)) count++;
+		}
+		return count;
+	}
+
+
 	private void installGoals(MobEntityAIBasedGoals ai) {
-		// translate descriptor goals into actual Goal instances and add to
-		// goalSelector/targetSelector
-		// e.g. goalSelector.addGoal(priority, new MeleeAttackGoal(this, speed,
-		// useLongMemory));
-		// implement a mapping from your ProducerIntendedTask -> Goal factory
+		ai.getGoals().forEach((goal, params) -> {
+			var compiledGoal = goal.produce(asPlatform(), params);
+			CompiledTaskRegistry.INSTANCE.register(compiledGoal);
+			EntityTaskManager.INSTANCE.assignTask(asPlatform(), compiledGoal.getId());
+		});
 	}
 
 	private AntagonisticDamageSource convert(DamageSource s) {
@@ -311,6 +508,24 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 	@Override
 	public AnimatableInstanceCache getAnimatableInstanceCache() {
 		return geoCache;
+	}
+
+	private boolean initialized = false;
+
+	@Override
+	public void onAddedToWorld() {
+		super.onAddedToWorld();
+
+		if (!initialized) {
+			initialized = true;
+			onLoadOrReload();
+		}
+	}
+
+	private void onLoadOrReload() {
+		if (!level().isClientSide) {
+			installGoals(descriptor.getAi());
+		}
 	}
 
 }

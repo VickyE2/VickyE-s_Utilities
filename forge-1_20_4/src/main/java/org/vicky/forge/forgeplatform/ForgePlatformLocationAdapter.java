@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform;
 
+import net.minecraft.world.level.CommonLevelAccessor;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
 import org.vicky.forge.forgeplatform.useables.ForgeVec3;
 import org.vicky.platform.PlatformLocationAdapter;
@@ -12,7 +13,7 @@ public class ForgePlatformLocationAdapter implements PlatformLocationAdapter<For
 	@Override
 	public ForgeVec3 toNative(PlatformLocation location) {
 		ForgePlatformWorldAdapter adapter = (ForgePlatformWorldAdapter) location.getWorld();
-		Level world = adapter.world();
+		CommonLevelAccessor world = adapter.world();
 		return new ForgeVec3(world, location.getX(), location.getY(), location.getZ(), location.yaw, location.pitch);
 	}
 
@@ -23,7 +24,7 @@ public class ForgePlatformLocationAdapter implements PlatformLocationAdapter<For
 
 	public static ForgeVec3 toNativeS(PlatformLocation location) {
 		ForgePlatformWorldAdapter adapter = (ForgePlatformWorldAdapter) location.getWorld();
-		Level world = adapter.world();
+		CommonLevelAccessor world = adapter.world();
 		return new ForgeVec3(world, location.getX(), location.getY(), location.getZ(), location.yaw, location.pitch);
 	}
 

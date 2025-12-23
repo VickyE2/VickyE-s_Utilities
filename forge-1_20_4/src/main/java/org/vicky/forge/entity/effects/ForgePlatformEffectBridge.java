@@ -3,6 +3,7 @@ package org.vicky.forge.entity.effects;
 
 import static org.vicky.VickyUtilitiesForge.LOGGER;
 import static org.vicky.VickyUtilitiesForge.MODID;
+import static org.vicky.forge.forgeplatform.useables.ForgeHacks.fromVicky;
 import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 
 import java.util.*;
@@ -84,10 +85,37 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
 
 	@Override
 	public @Nullable RegisteredUniversalEffect getEffect(@NotNull ResourceLocation id) {
-		EffectDescriptor d = registry.get(id);
-		MobEffect effect = registeredEffects.get(id).get();
-		return d == null ? null : new RegisteredUniversalEffect(ForgePlatformEffect.from(effect));
+		RegistryObject<MobEffect> ro = registeredEffects.get(id);
+		if (ro != null) {
+			if (ro.isPresent()) {
+				return new RegisteredUniversalEffect(ForgePlatformEffect.from(ro.get()));
+			}
+		}
+
+		MobEffect found = ForgeRegistries.MOB_EFFECTS.getValue(fromVicky(id));
+		if (found != null) {
+			var holder = ForgeRegistries.MOB_EFFECTS.getHolder(found);
+			if (holder.isPresent())
+				if (!registry.containsKey(toVicky(holder.get().unwrapKey().get().location())))
+					registry.put(toVicky(holder.get().unwrapKey().get().location()),
+							new EffectDescriptor(toVicky(holder.get().unwrapKey().get().location()),
+									MobEffectCategory.valueOf(found.getCategory().name()), found.getDisplayName().getString(),
+									found.getColor(), 225, found.isInstantenous(), 200, (ctx) -> {
+								if (ctx.getEntity() instanceof ForgePlatformLivingEntity e)
+									found.onEffectStarted(e.ordinal, ctx.getAmplifier());
+							}, (ctx) -> {
+								if (ctx.getEntity() instanceof ForgePlatformLivingEntity e)
+									found.applyEffectTick(e.ordinal, ctx.getAmplifier());
+							}, (ctx) -> {
+								if (ctx.getEntity() instanceof ForgePlatformLivingEntity e)
+									found.applyEffectTick(e.ordinal, ctx.getAmplifier());
+							}));
+			return new RegisteredUniversalEffect(ForgePlatformEffect.from(found));
+		}
+
+		return null;
 	}
+
 
 	// -------------------------
 	// Apply / Remove / Query
@@ -95,9 +123,13 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
 	@Override
 	public void applyEffect(@NotNull ForgePlatformLivingEntity entity, @NotNull ResourceLocation effectId, int duration,
 			int amplifier) {
+
+		var effect = getEffect(effectId);
+		if (effect == null) return;
+
 		EffectDescriptor d = registry.get(effectId);
 		if (d == null)
-			return; // not registered
+			return;
 
 		UUID uuid = entity.getUuid();
 		Map<ResourceLocation, PlatformEffectInstance> map = active.computeIfAbsent(uuid,
@@ -106,8 +138,7 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
 		int amp = Math.min(amplifier, d.getMaxAmplifier());
 		int dur = Math.max(0, duration > 0 ? duration : d.getDefaultDuration());
 
-		var effect = (PlatformInstanceMobEffect) registeredEffects.get(d.getKey()).get();
-		PlatformEffectInstance inst = new PlatformEffectInstance(effect.toPlatform(), amp, dur);
+		PlatformEffectInstance inst = new PlatformEffectInstance(effect.getEffect(), amp, dur);
 		map.put(effectId, inst);
 
 		// fire start callback

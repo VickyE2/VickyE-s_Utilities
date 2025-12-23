@@ -183,6 +183,25 @@ dependencies {
     jarJar(group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '[2.15.2]')
     jarJar(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '[2.15.2]')
     jarJar(group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '[2.15.2]')
+
+    implementation(group: 'io.github.vickye2', name: 'vicky-utils-core', version: '[0.0.1]')
+    implementation(group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib', version: '[1.9.10]')
+    implementation(group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '[1.9.10]')
+    implementation(group: 'org.xerial', name: 'sqlite-jdbc', version: '[3.48.0.0]')
+    implementation(group: 'net.kyori', name: 'examination-api', version :'[1.3.0]')
+    implementation(group: 'net.kyori', name: 'examination-string', version :'[1.3.0]')
+    implementation(group: 'net.kyori', name: 'adventure-api', version: '[4.17.0]')
+    implementation(group: 'net.kyori', name: 'adventure-key', version: '[4.17.0]')
+    implementation(group: 'net.kyori', name: 'adventure-text-serializer-plain', version: '[4.17.0]')
+    implementation(group: 'net.kyori', name: 'adventure-text-serializer-gson', version: '[4.17.0]')
+    implementation(group: 'io.leangen.geantyref', name: 'geantyref', version: '[1.3.13]')
+    implementation(group: 'org.spongepowered', name: 'configurate-yaml', version: '[4.1.2]')
+    implementation(group: 'org.spongepowered', name: 'configurate-core', version: '[4.1.2]')
+    implementation(group: 'org.spongepowered', name: 'configurate-jackson', version: '[4.1.2]')
+    implementation(group: 'org.spongepowered', name: 'configurate-xml', version: '[4.1.2]')
+    implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '[2.15.2]')
+    implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '[2.15.2]')
+    implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '[2.15.2]')
 }
 
 tasks.named('processResources', ProcessResources).configure {

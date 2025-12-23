@@ -21,13 +21,11 @@ public class ForgeParticleProvider implements PlatformParticleProvider {
 			double spreadZ, float speed, float size) {
 		if (!(type instanceof ForgePlatformParticle))
 			throw new IllegalArgumentException("Expected ForgePlatformParticle type");
-		Level world = ((ForgeVec3) PlatformPlugin.locationAdapter().toNative(loc)).getForgeWorld(); // Get the actual
-		// Minecraft world
-		if (world instanceof ServerLevel serverLevel) {
+		if (((ForgeVec3) PlatformPlugin.locationAdapter().toNative(loc)).getForgeWorld() instanceof ServerLevel serverLevel) {
 			ParticleOptions particle = ((ForgePlatformParticle) type).particleOptions(); // Your PlatformParticle maps
-			// to a ParticleOptions
 			serverLevel.sendParticles(particle, loc.x, loc.y, loc.z, count, spreadX, spreadY, spreadZ, speed);
 		}
+
 	}
 
 	@Override
@@ -35,8 +33,7 @@ public class ForgeParticleProvider implements PlatformParticleProvider {
 			double spreadZ, float speed, IColor color, float size) {
 		if (!(type instanceof ForgePlatformParticle))
 			throw new IllegalArgumentException("Expected ForgePlatformParticle type");
-		Level world = ((ForgeVec3) PlatformPlugin.locationAdapter().toNative(loc)).getForgeWorld();
-		if (world instanceof ServerLevel serverLevel && type.supportsColor()) {
+		if (((ForgeVec3) PlatformPlugin.locationAdapter().toNative(loc)).getForgeWorld() instanceof ServerLevel serverLevel) {
 			DustParticleOptions dust = (DustParticleOptions) ((ForgePlatformParticle) type).particleOptions();
 			serverLevel.sendParticles(dust, loc.x, loc.y, loc.z, count, spreadX, spreadY, spreadZ, speed);
 		}
@@ -47,8 +44,7 @@ public class ForgeParticleProvider implements PlatformParticleProvider {
 			double spreadZ, float speed, IColor from, IColor to, float size) {
 		if (!(type instanceof ForgePlatformParticle))
 			throw new IllegalArgumentException("Expected ForgePlatformParticle type");
-		Level world = ((ForgeVec3) PlatformPlugin.locationAdapter().toNative(loc)).getForgeWorld();
-		if (world instanceof ServerLevel serverLevel && type.supportsTransition()) {
+		if (((ForgeVec3) PlatformPlugin.locationAdapter().toNative(loc)).getForgeWorld() instanceof ServerLevel serverLevel) {
 			DustColorTransitionOptions transition = (DustColorTransitionOptions) ((ForgePlatformParticle) type)
 					.particleOptions();
 			serverLevel.sendParticles(transition, loc.x, loc.y, loc.z, count, spreadX, spreadY, spreadZ, speed);

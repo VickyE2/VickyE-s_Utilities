@@ -29,22 +29,6 @@ public final class ForgeMobEventBridge {
 	private ForgeMobEventBridge() {
 	}
 
-	/*
-	 * ------------------------------------------------------------ ATTACKED
-	 * (incoming damage)
-	 * ------------------------------------------------------------
-	 */
-
-	@SubscribeEvent
-	public static void onLivingTicked(LivingEvent.LivingTickEvent event) {
-		if (event.getEntity().level().isClientSide())
-			return;
-		if (event.getEntity() instanceof PlatformBasedLivingEntity e) {
-			long worldTick = event.getEntity().level().getGameTime();
-			EntityTaskManager.INSTANCE.tickEntity(e.asPlatform(), worldTick);
-		}
-	}
-
 	@SubscribeEvent
 	public static void onLivingAttacked(LivingAttackEvent event) {
 		if (!(event.getEntity() instanceof PlatformBasedLivingEntity victim))
@@ -57,7 +41,7 @@ public final class ForgeMobEventBridge {
 		EventResult result = handler.getHandler().onAttacked(victim.asPlatform(),
 				ForgePlatformLivingEntity.from(attacker));
 
-		if (result == EventResult.CONSUME || result == EventResult.CANCEL) {
+		if (result == EventResult.CANCEL) {
 			event.setCanceled(true);
 		}
 	}
@@ -77,7 +61,7 @@ public final class ForgeMobEventBridge {
 		EventResult result = handler.getHandler().onAttack(attacker.asPlatform(),
 				ForgePlatformLivingEntity.from(attacker));
 
-		if (result == EventResult.CONSUME || result == EventResult.CANCEL) {
+		if (result == EventResult.CANCEL) {
 			event.setCanceled(true);
 		}
 	}
@@ -94,7 +78,8 @@ public final class ForgeMobEventBridge {
 
 		var handler = entity.getDescriptor().getEventHandler();
 
-		EventResult result = handler.getHandler().onApplyPotion(entity.asPlatform(), PlatformPlugin.effectBridge()
+		EventResult result = handler.getHandler().onApplyPotion(entity.asPlatform(),
+				PlatformPlugin.effectBridge()
 				.getEffect(toVicky(event.getEffectInstance().getEffect().builtInRegistryHolder().key().location())));
 
 		if (result == EventResult.CANCEL) {

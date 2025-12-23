@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform.useables;
 
+import net.minecraft.world.level.CommonLevelAccessor;
 import org.vicky.platform.world.PlatformBlock;
 import org.vicky.platform.world.PlatformBlockState;
 import org.vicky.platform.world.PlatformLocation;
@@ -11,7 +12,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 public record ForgePlatformBlockAdapter(BlockPos pos, BlockState state,
-		Level world) implements PlatformBlock<BlockState> {
+		CommonLevelAccessor world) implements PlatformBlock<BlockState> {
 	@Override
 	public boolean isSolid() {
 		return state.isSolid();

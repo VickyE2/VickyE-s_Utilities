@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import net.minecraft.world.level.CommonLevelAccessor;
+import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.forge.entity.ForgePlatformEntity;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
@@ -39,15 +42,17 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraftforge.registries.ForgeRegistries;
 
-public record ForgePlatformWorldAdapter(Level world) implements PlatformWorld<BlockState, Level> {
+public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements PlatformWorld<BlockState, CommonLevelAccessor> {
 
 	@Override
 	public String getName() {
-		return world.dimension().location().toString();
+		if (world instanceof Level level)
+			return level.dimension().location().toString();
+		return "NAMELESS";
 	}
 
 	@Override
-	public Level getNative() {
+	public CommonLevelAccessor getNative() {
 		return world;
 	}
 
@@ -206,7 +211,9 @@ public record ForgePlatformWorldAdapter(Level world) implements PlatformWorld<Bl
 	@Override
 	public void loadChunkIfNeeded(int chunkX, int chunkZ) {
 		// Force-load chunk if not loaded
-		world.getChunkSource().getChunk(chunkX, chunkZ, true);
+		world.getChunk(chunkX, chunkZ,
+				ChunkStatus.FULL,
+				true);
 	}
 
 	@Override

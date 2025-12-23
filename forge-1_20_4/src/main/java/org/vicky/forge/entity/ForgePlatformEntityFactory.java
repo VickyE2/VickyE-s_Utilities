@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.ForgeMod;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -128,8 +129,10 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
 	public @Nullable PlatformEntity spawnArrowAt(@Nullable PlatformLocation platformLocation) {
 		if (!(platformLocation instanceof ForgeVec3 loc))
 			return null;
-		return ForgePlatformEntity
-				.from(new Arrow(loc.getForgeWorld(), loc.x, loc.y, loc.z, Items.ARROW.getDefaultInstance()));
+		if (loc.getForgeWorld() instanceof ServerLevel level)
+			return ForgePlatformEntity
+					.from(new Arrow(level, loc.x, loc.y, loc.z, Items.ARROW.getDefaultInstance()));
+		return null;
 	}
 
 	// make nullable
@@ -138,14 +141,13 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
 			double x, double y, double z) {
 		if (!(world instanceof ForgePlatformWorldAdapter level))
 			return null;
+		if (!(level.getNative() instanceof ServerLevel serverLevel))
+			return null;
 		RegistryObject<EntityType<? extends PlatformBasedLivingEntity>> ro = REGISTERED_ENTITIES.get(id);
 		EntityType<?> r1 = ForgeRegistries.ENTITY_TYPES.getValue(fromVicky(id));
 		if (ro != null) {
 			EntityType<?> type = ro.get();
-			if (level.getNative().isClientSide())
-				return null;
-
-			Entity entity = type.create(level.getNative());
+			Entity entity = type.create(serverLevel);
 			if (!(entity instanceof PathfinderMob mob))
 				return null;
 
@@ -156,14 +158,15 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
 			RegisteredMobEntityEventHandler handler = HANDLERS.get(id);
 			var platformed = ForgePlatformLivingEntity.from(mob);
 			if (handler != null) {
-				handler.getHandler().onSpawn(platformed);
+				var r = handler.getHandler().onSpawn(platformed);
+				if (r == EventResult.CANCEL)
+					return null;
+				if (r == EventResult.CONSUME)
+					return platformed;
 			}
 			return platformed;
 		} else if (r1 != null) {
-			if (level.getNative().isClientSide())
-				return null;
-
-			Entity entity = r1.create(level.getNative());
+			Entity entity = r1.create(serverLevel);
 			if (!(entity instanceof PathfinderMob mob))
 				return null;
 

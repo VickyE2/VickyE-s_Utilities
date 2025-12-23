@@ -20,7 +20,7 @@ fun interface ProducerIntendedTask {
      * ```
      * TaskBuilder.random(
      *     self,
-     *     ResourceLocation.from("core", "look_at_nearest_player_${self.uuid}"),
+     *     ResourceLocation.from("core", "look_at_nearest_player_${self.uuid.toString().replace("-", "_")}"),
      * )
      * .withRange(...)
      * ```
@@ -35,14 +35,14 @@ object DefaultTasks {
     object LookAtNearestPlayer : ProducerIntendedTask {
         override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.random(
             self,
-            ResourceLocation.from("core", "look_at_nearest_player_${self.uuid}"),
+            ResourceLocation.from("core", "look_at_nearest_player_${self.uuid.toString().replace("-", "_")}"),
             TaskLifecycle.REPEATING
         )
             .cooldownTicks((params["cooldown"] as Int?) ?: 120)
-            .withRange(ResourceLocation.from("look_at_nearest_player", "find_closest_entity_${self.uuid}"), self.lookDistance)
+            .withRange(ResourceLocation.from("look_at_nearest_player", "find_closest_entity_${self.uuid.toString().replace("-", "_")}"), self.lookDistance)
                 .filter(PlayersOnly)
                 .withSingleResult()
-            .performOnTarget(ResourceLocation.from("look_at_nearest_player", "set_target_${self.uuid}"))
+            .performOnTarget(ResourceLocation.from("look_at_nearest_player", "set_target_${self.uuid.toString().replace("-", "_")}"))
                 .doingTimed(SetTargetToLookAt, 60, runBlocking = false)
                 .end()
             .build()
@@ -50,9 +50,9 @@ object DefaultTasks {
     object LookAtAttacker : ProducerIntendedTask {
         override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.conditioned(
             self,
-            ResourceLocation.from("core", "look_at_attacker_${self.uuid}"),
+            ResourceLocation.from("core", "look_at_attacker_${self.uuid.toString().replace("-", "_")}"),
         )
-            .performOnSelf(ResourceLocation.from("look_at_attacker", "set_target_${self.uuid}"))
+            .performOnSelf(ResourceLocation.from("look_at_attacker", "set_target_${self.uuid.toString().replace("-", "_")}"))
                 .doingTimed(BBLookAtAttacker, 40, runBlocking = false)
                 .end()
             .build()
@@ -64,15 +64,15 @@ object DefaultTasks {
      */
     object PassiveWander : ProducerIntendedTask {
         override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask =
-            TaskBuilder.random(self, ResourceLocation.from("core", "wander_${self.uuid}"), TaskLifecycle.REPEATING, priority = 0)
+            TaskBuilder.random(self, ResourceLocation.from("core", "wander_${self.uuid.toString().replace("-", "_")}"), TaskLifecycle.REPEATING, priority = 0)
                 .blockMode()
                 .cooldownTicks((params["cooldown"] as Int?) ?: 60)
-                .withBlockRange(ResourceLocation.from("core", "find_block_${self.uuid}"),
+                .withBlockRange(ResourceLocation.from("core", "find_block_${self.uuid.toString().replace("-", "_")}"),
                     range = (params["range"] as Double?) ?: 12.0)
                     .filter(BlockIsWalkableFilter)
                     .filter(BlockIsHighest)
                     .withRandomSingleResult()
-                .performOnBlockTarget(ResourceLocation.from("core", "walk_to_block_${self.uuid}"))
+                .performOnBlockTarget(ResourceLocation.from("core", "walk_to_block_${self.uuid.toString().replace("-", "_")}"))
                     .doingTimedBlock(WalkToBlock, runBlocking = false)
                     .end()
                 .build()

@@ -332,7 +332,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 	}
 
 
-	private void installGoals(MobEntityAIBasedGoals ai) {
+	protected void installGoals(MobEntityAIBasedGoals ai) {
 		ai.getGoals().forEach((goal, params) -> {
 			var compiledGoal = goal.produce(asPlatform(), params);
 			CompiledTaskRegistry.INSTANCE.register(compiledGoal);
@@ -527,5 +527,4 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 			installGoals(descriptor.getAi());
 		}
 	}
-
 }

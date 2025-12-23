@@ -25,7 +25,6 @@ public class ForgeParticleProvider implements PlatformParticleProvider {
 			ParticleOptions particle = ((ForgePlatformParticle) type).particleOptions(); // Your PlatformParticle maps
 			serverLevel.sendParticles(particle, loc.x, loc.y, loc.z, count, spreadX, spreadY, spreadZ, speed);
 		}
-
 	}
 
 	@Override

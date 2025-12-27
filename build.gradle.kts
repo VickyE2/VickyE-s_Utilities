@@ -28,7 +28,6 @@ allprojects {
     }
 }
 
-
 project(":shared") {
     val javaVersion = 17
     val YEAR = 2024;

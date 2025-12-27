@@ -10,7 +10,7 @@ repositories {
 }
 
 bbDissolver {
-    modid.set("core")
+    modid = "core"
 }
 
 dependencies {

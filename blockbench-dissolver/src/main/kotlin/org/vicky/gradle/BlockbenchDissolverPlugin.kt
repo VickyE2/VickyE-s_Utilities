@@ -62,7 +62,7 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                     BbCache()
                 }
 
-                if (runEveryBuildProvider.get() == true) {
+                if (runEveryBuildProvider.get()) {
                     log("Currently the conversion system is set to run everytime `processResources` task is called. this is really resource intensive for larger file amount and should only be done if you know what you're doing")
                 }
 
@@ -110,17 +110,17 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
 
                         // Geometry
                         val geoFolder = File(outputBase, "geo").apply { mkdirs() }
-                        File(geoFolder, "${bbModel.model_identifier}.geo.json")
-                            .writeText(json.encodeToString(GeoGeometry.serializer(), geo))
+                        File(geoFolder, "${bbModel.modelIdentifier}.geo.json")
+                            .writeText(json.encodeToString(GeoModel.serializer(), geo))
 
                         // Animations
                         val animFolder = File(outputBase, "animations").apply { mkdirs() }
-                        File(animFolder, "${bbModel.model_identifier}.animation.json")
+                        File(animFolder, "${bbModel.modelIdentifier}.animation.json")
                             .writeText(json.encodeToString(GeoAnimation.serializer(), anim))
 
                     }
                     catch (e: Exception) {
-                        log("An error occurred while processing ${bbModel.model_identifier}", true)
+                        log("An error occurred while processing ${bbModel.modelIdentifier}", true)
                         e.printStackTrace()
                     }
                 }

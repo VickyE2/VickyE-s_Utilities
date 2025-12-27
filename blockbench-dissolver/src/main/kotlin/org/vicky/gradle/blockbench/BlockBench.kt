@@ -36,7 +36,7 @@ object GeoAnimatedDataSerializer : KSerializer<GeoAnimatedData> {
             )
 
             return GeoAnimatedData(
-                lerp_mode = "linear",
+                lerpMode = "linear",
                 post = vector
             )
         }
@@ -53,7 +53,7 @@ object GeoAnimatedDataSerializer : KSerializer<GeoAnimatedData> {
         }
 
         return GeoAnimatedData(
-            lerp_mode = lerp,
+            lerpMode = lerp,
             pre = pre,
             post = post
         )
@@ -64,7 +64,7 @@ object GeoAnimatedDataSerializer : KSerializer<GeoAnimatedData> {
             ?: error("GeoAnimatedData can only be serialized to JSON")
 
         val obj = buildJsonObject {
-            put("lerp_mode", JsonPrimitive(value.lerp_mode))
+            put("lerp_mode", JsonPrimitive(value.lerpMode))
             value.pre?.let {
                 put("pre", output.json.encodeToJsonElement(it))
             }
@@ -270,13 +270,13 @@ object StringVec3Serializer : KSerializer<StringVec3> {
 
 @Serializable
 data class GeoAnimation(
-    val format_version: String,
+    @SerialName("format_version") val formatVersion: String,
     val animations: Map<String, GeoAnimationData>
 )
 @Serializable
 data class GeoAnimationData(
     val loop: Boolean,
-    val animation_length: Double,
+    @SerialName("animation_length") val animationLength: Double,
     val bones: Map<String, GeoAnimated>
 )
 @Serializable
@@ -287,7 +287,7 @@ data class GeoAnimated(
 )
 @Serializable(with = GeoAnimatedDataSerializer::class)
 data class GeoAnimatedData(
-    val lerp_mode: String,
+    @SerialName("lerp_mode") val lerpMode: String,
     val pre: GeoTransformVector? = null,
     val post: GeoTransformVector? = null
 )
@@ -301,18 +301,23 @@ data class GeoGeometry(
     val bones: List<GeoBone>
 )
 @Serializable
-data class GeoGeometryDescription(
-    val identifier: String,
-    val texture_width: Int,
-    val texture_height: Int,
-    val visible_bounds_width: Double,
-    val visible_bounds_height: Double,
-    val visible_bounds_offset: List<Double>
+data class GeoModel(
+    @SerialName("minecraft:geometry") val geometries: List<GeoGeometry>,
+    @SerialName("format_version") val formatVersion: String
 )
 @Serializable
-data class GeoBone(
+data class GeoGeometryDescription(
+    val identifier: String,
+    @SerialName("texture_width") val textureWidth: Int,
+    @SerialName("texture_height") val textureHeight: Int,
+    @SerialName("visible_bounds_width") val  visibleBoundsWidth: Double,
+    @SerialName("visible_bounds_height") val visibleBoundsHeight: Double,
+    @SerialName("visible_bounds_offset") val visibleBoundsOffset: List<Double>
+)
+@Serializable
+data class GeoBone @OptIn(ExperimentalSerializationApi::class) constructor(
     val name: String,
-    val parent: String?,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val parent: String = "",
     val pivot: Vec3,
     val cubes: List<GeoCube>
 )
@@ -325,7 +330,7 @@ data class GeoCube(
 @Serializable
 data class GeoUvData(
     val uv: List<Double>,
-    val uv_size: List<Double>
+    @SerialName("uv_size") val uvSize: List<Double>
 )
 
 
@@ -335,29 +340,29 @@ data class GeoUvData(
 data class BlockBenchModel(
     val meta: Meta,
     val name: String,
-    val model_identifier: String = "",
-    val front_gui_light: Boolean = false,
-    val visible_box: List<Double> = listOf(),
-    val variable_placeholders: String = "",
-    val variable_placeholders_buttons: List<String> = listOf(),
-    val timeline_setups: List<String> = listOf(),
-    val unhandled_root_fields: Map<String, String> = mapOf(),
-    val activity_tracker: Int = 0,
-    val geckolib_modid: String = "",
-    val geckolib_model_type: String = "entity",
+    @SerialName("model_identifier") val modelIdentifier: String = "",
+    @SerialName("front_gui_light") val frontGuiLight: Boolean = false,
+    @SerialName("visible_box") val visibleBox: List<Double> = listOf(),
+    @SerialName("variable_placeholders") val variablePlaceholders: String = "",
+    @SerialName("variable_placeholders_buttons") val variablePlaceholdersButtons: List<String> = listOf(),
+    @SerialName("timeline_setups") val timelineSetups: List<String> = listOf(),
+    @SerialName("unhandled_root_fields") val unhandledRootFields: Map<String, String> = mapOf(),
+    @SerialName("activity_tracker") val activityTracker: Int = 0,
+    @SerialName("geckolib_modid") val geckolibModid: String = "",
+    @SerialName("geckolib_model_type") val geckolibModelType: String = "entity",
     val resolution: Resoulution,
     val elements: List<Element> = listOf(),
     val groups: List<Group> = listOf(),
     val outliner: List<OutlinerNode> = listOf(),
     val textures: List<Texture> = listOf(),
     val animations: List<Animations> = listOf(),
-    val animation_variable_placeholders: String = "",
+    @SerialName("animation_variable_placeholders") val animationVariablePlaceholders: String = "",
 )
 @Serializable
 data class Meta(
-    val format_version: String,
-    val model_format: String,
-    val box_uv: Boolean
+    @SerialName("format_version") val formatVersion: String,
+    @SerialName("model_format") val modelFormat: String,
+    @SerialName("box_uv") val boxUv: Boolean
 )
 @Serializable
 data class Resoulution(
@@ -397,14 +402,14 @@ data class Element(
     val origin: Vec3 = Vec3.ZERO,
     val color: Int = 0,
     val faces: Map<String, UvData> = mapOf(),
-    val box_uv: Boolean = false,
+    @SerialName("box_uv") val boxUv: Boolean = false,
     val locked: Boolean = false,
-    val allow_mirror_modeling: Boolean = false,
-    val render_order: String = "default",
+    @SerialName("allow_mirror_modeling") val allowMirrorModeling: Boolean = false,
+    @SerialName("render_order") val renderOrder: String = "default",
     val autouv: Int = 0,
     val rescale: Boolean = false,
-    val uv_offset: List<Int> = listOf(),
-    val light_emission: Int? = null,
+    @SerialName("uv_offset") val uvOffset: List<Int> = listOf(),
+    @SerialName("light_emission") val lightEmission: Int? = null,
 )
 @Serializable
 data class UvData(
@@ -418,9 +423,9 @@ data class Group(
     val locked: Boolean,
     val reset: Boolean,
     val shade: Boolean,
-    val mirror_uv: Boolean,
+    @SerialName("mirror_uv") val mirrorUv: Boolean,
     val isOpen: Boolean,
-    val primary_selected: Boolean,
+    @SerialName("primary_selected") val primarySelected: Boolean,
     val selected: Boolean,
     val visibility: Boolean,
     val origin: Vec3,
@@ -447,26 +452,26 @@ data class OutlinerLeaf(
 @Serializable
 data class Texture(
     val name: String,
-    val relative_path: String = "",
+    @SerialName("relative_path") val relativePath: String = "",
     val folder: String = "",
     val namespace: String,
     val id: String,
     val group: String,
     val width: Int,
     val height: Int,
-    val uv_width: Int,
-    val uv_height: Int,
+    @SerialName("uv_width") val uvWidth: Int,
+    @SerialName("uv_height") val uvHeight: Int,
     val particle: Boolean = true,
-    val use_as_default: Boolean = false,
-    val layers_enabled: Boolean = false,
-    val sync_to_project: String = "",
-    val render_mode: String = "default",
-    val render_sides: String = "auto",
-    val pbr_channel: String = "color",
-    val frame_time: Int = 20,
-    val frame_order_type: String = "",
-    val frame_order: String = "",
-    val frame_interpolate: Boolean = false,
+    @SerialName("use_as_default") val useAsDefault: Boolean = false,
+    @SerialName("layers_enabled") val layersEnabled: Boolean = false,
+    @SerialName("sync_to_project") val syncToProject: String = "",
+    @SerialName("render_mode") val renderMode: String = "default",
+    @SerialName("render_sides") val renderSides: String = "auto",
+    @SerialName("pbr_channel") val pbrChannel: String = "color",
+    @SerialName("frame_time") val frameTime: Int = 20,
+    @SerialName("frame_order_type") val frameOrderType: String = "",
+    @SerialName("frame_order") val frameOrder: String = "",
+    @SerialName("frame_interpolate") val frameInterpolate: Boolean = false,
     val visible: Boolean = true,
     val internal: Boolean = false,
     val saved: Boolean = true,
@@ -484,18 +489,18 @@ data class Animations(
     val selected: Boolean,
     val saved: Boolean,
     val path: String,
-    val anim_time_update: String,
-    val blend_weight: String,
-    val start_delay: String,
-    val loop_delay: String,
+    @SerialName("anim_time_update") val animTimeUpdate: String,
+    @SerialName("blend_weight") val blendWeight: String,
+    @SerialName("start_delay") val startDelay: String,
+    @SerialName("loop_delay") val loopDelay: String,
     val animators: Map<String, Animated>
 )
 @Serializable
 data class Animated(
     val name: String,
     val type: String,
-    val rotation_global: Boolean = false,
-    val quaternion_interpolation: Boolean = false,
+    @SerialName("rotation_global") val rotationGlobal: Boolean = false,
+    @SerialName("quaternion_interpolation") val quaternionInterpolation: Boolean = false,
     val keyframes: List<Keyframe>? = listOf()
 )
 @Serializable
@@ -505,7 +510,7 @@ data class Keyframe(
     val time: Double,
     val color: Int,
     val interpolation: String,
-    val data_points: List<Map<String, String>>
+    @SerialName("data_points") val dataPoints: List<Map<String, String>>
 )
 
 data class ResolvedTexture(
@@ -523,7 +528,7 @@ data class AnimationMeta(
     val frames: List<Int>? = null
 )
 
-fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoGeometry {
+fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoModel {
     val groupsByUuid = this.groups.associateBy { it.uuid }
 
     val elementParent = mutableMapOf<String, String?>()
@@ -590,7 +595,7 @@ fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoGeometry {
         val u1 = arr[0]; val v1 = arr[1]; val u2 = arr[2]; val v2 = arr[3]
         val w = u2 - u1
         val h = v2 - v1
-        return GeoUvData(uv = listOf(u1, v1), uv_size = listOf(w, h))
+        return GeoUvData(uv = listOf(u1, v1), uvSize = listOf(w, h))
     }
 
     val elementsByParent = this.elements.groupBy { elementParent[it.uuid] }
@@ -617,23 +622,23 @@ fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoGeometry {
 
         GeoBone(
             name = group.name,
-            parent = parentName,
+            parent = parentName ?: "",
             pivot = pivot,
             cubes = cubes
         )
     }
 
-    return GeoGeometry(
+    return GeoModel(listOf(GeoGeometry(
         GeoGeometryDescription(
-            "geometry.${this.model_identifier}",
+            "geometry.${this.modelIdentifier}",
             this.resolution.width,
             this.resolution.height,
-            this.visible_box[0],
-            this.visible_box[1],
-            listOf(0.0, this.visible_box[2], 0.0),
+            this.visibleBox[0],
+            this.visibleBox[1],
+            listOf(0.0, this.visibleBox[2], 0.0),
         ),
         bones
-    )
+    )), "1.12.0")
 }
 fun BlockBenchModel.geoAnim() : GeoAnimation {
     val anim = GeoAnimation(
@@ -655,9 +660,9 @@ fun BlockBenchModel.geoAnim() : GeoAnimation {
                                     null,
                                     GeoTransformVector(
                                         listOf(
-                                            keyframe.data_points[0]["x"] ?: "",
-                                            keyframe.data_points[0]["y"] ?: "",
-                                            keyframe.data_points[0]["z"] ?: ""
+                                            keyframe.dataPoints[0]["x"] ?: "",
+                                            keyframe.dataPoints[0]["y"] ?: "",
+                                            keyframe.dataPoints[0]["z"] ?: ""
                                         )
                                     )
                                 )
@@ -669,9 +674,9 @@ fun BlockBenchModel.geoAnim() : GeoAnimation {
                                     null,
                                     GeoTransformVector(
                                         listOf(
-                                            keyframe.data_points[0]["x"] ?: "",
-                                            keyframe.data_points[0]["y"] ?: "",
-                                            keyframe.data_points[0]["z"] ?: ""
+                                            keyframe.dataPoints[0]["x"] ?: "",
+                                            keyframe.dataPoints[0]["y"] ?: "",
+                                            keyframe.dataPoints[0]["z"] ?: ""
                                         )
                                     )
                                 )
@@ -683,9 +688,9 @@ fun BlockBenchModel.geoAnim() : GeoAnimation {
                                     null,
                                     GeoTransformVector(
                                         listOf(
-                                            keyframe.data_points[0]["x"] ?: "",
-                                            keyframe.data_points[0]["y"] ?: "",
-                                            keyframe.data_points[0]["z"] ?: ""
+                                            keyframe.dataPoints[0]["x"] ?: "",
+                                            keyframe.dataPoints[0]["y"] ?: "",
+                                            keyframe.dataPoints[0]["z"] ?: ""
                                         )
                                     )
                                 )
@@ -719,18 +724,18 @@ fun BlockBenchModel.resolveTextures() : List<ResolvedTexture> {
             ?: error("Invalid image data for texture ${texture.id}")
     }
     for (texture in this.textures) {
-        val isAnimated = texture.height/texture.uv_height > texture.width/texture.uv_width
+        val isAnimated = texture.height/texture.uvHeight > texture.width/texture.uvWidth
         var mcMeta: McMeta? = null
         if (isAnimated) {
             val frames =
-                if (texture.frame_order_type == "custom")
-                    texture.frame_order.split(",").map { it.trim().toInt() }
+                if (texture.frameOrderType == "custom")
+                    texture.frameOrder.split(",").map { it.trim().toInt() }
                 else
                     null
             mcMeta = McMeta(
                 AnimationMeta(
-                    texture.frame_time,
-                    texture.frame_interpolate,
+                    texture.frameTime,
+                    texture.frameInterpolate,
                     frames
                 )
             )
@@ -752,7 +757,7 @@ fun BlockBenchModel.saveAt(path: Path) {
     }
 
     Files.createDirectories(path)
-    val file = path.resolve("${this.model_identifier}.bbmodel")
+    val file = path.resolve("${this.modelIdentifier}.bbmodel")
     Files.writeString(file, json.encodeToString(this))
 }
 

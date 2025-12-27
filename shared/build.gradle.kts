@@ -11,6 +11,7 @@ repositories {
 
 bbDissolver {
     modid = "core"
+    runEveryBuild = true
 }
 
 dependencies {

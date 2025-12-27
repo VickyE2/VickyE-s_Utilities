@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.platform.entity
 
 import org.vicky.coreregistry.CoreEntityRegistry

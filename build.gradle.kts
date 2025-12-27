@@ -13,10 +13,12 @@ plugins {
     //id("com.vanniktech.maven.publish.base") version "0.34.0" apply true
     signing apply true
     kotlin("jvm") version "2.1.10" apply true
+    kotlin("plugin.serialization") version "2.1.10" apply true
     id("com.diffplug.spotless") version "6.19.0" apply true
     id("io.github.goooler.shadow") version "8.1.8" apply true
     id("xyz.wagyourtail.jvmdowngrader") version "1.0.0" apply true
     // id("org.jetbrains.dokka") version "1.9.10" apply true
+    id("org.vicky.blockbench-dissolver") version "0.0.1-HANA" apply false
 }
 
 allprojects {
@@ -27,7 +29,7 @@ allprojects {
 }
 
 
-allprojects {
+project(":shared") {
     val javaVersion = 17
     val YEAR = 2024;
     group = "io.github.vickye2"
@@ -35,14 +37,13 @@ allprojects {
 
     apply(plugin = "java")
     apply(plugin = "kotlin")
+    apply(plugin = "org.jetbrains.kotlin.plugin.serialization")
     apply(plugin = "signing")
     apply(plugin = "java-library")
     apply(plugin = "maven-publish")
     apply(plugin = "com.diffplug.spotless")
     apply(plugin = "io.github.goooler.shadow")
     apply(plugin = "xyz.wagyourtail.jvmdowngrader")
-    // apply("org.jetbrains.dokka")
-
 
     val downgrade = configurations.create("downgrade")
     configurations.implementation {
@@ -141,8 +142,7 @@ allprojects {
         enabled = true
     }
 }
-
-subprojects {
+project(":shared") {
     afterEvaluate {
         publishing {
             publications {
@@ -244,14 +244,14 @@ subprojects {
 
             repositories {
                 mavenLocal()
-                maven {
+                /*maven {
                     name = "GitHubPackages"
                     url = uri("https://maven.pkg.github.com/VickyE2/VickyE-s_Utilities")
                     credentials {
                         username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
                         password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
                     }
-                }
+                }*/
                 /*maven {
                     name = "OSSRH"
                     url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
@@ -271,7 +271,6 @@ subprojects {
             )
             sign(the<PublishingExtension>().publications["maven"])
         }
-
         tasks.named<ShadowJar>("shadowJar") {
             relocate("org.reflections", "org.vicky.shaded.reflections")
             relocate("com.google.code.gson", "org.vicky.google.gson")
@@ -300,99 +299,5 @@ subprojects {
             exclude("org/jetbrains/**")
             exclude("com/google/**")
         }
-        /*mavenPublishing {
-            publishToMavenCentral()
-            signAllPublications()
-            configure(JavaLibrary(JavadocJar.Javadoc()))
-            coordinates(
-                project.group as String,
-                when {
-                    project.name.startsWith("paper") -> "vicky-utils-bukkit"
-                    project.name.startsWith("fabric") -> "vicky-utils-fabric"
-                    project.name.startsWith("forge") -> "vicky-utils-forge"
-                    project.name == "shared" -> "vicky-utils-core"
-                    else -> project.name
-                },
-                project.version.toString()
-            )
-
-            pom {
-                name.set("Vicky's Utilities ${when {
-                    project.name.startsWith("paper") -> "Bukkit"
-                    project.name.startsWith("fabric") -> "Fabric"
-                    project.name.startsWith("forge") -> "Forge"
-                    project.name == "shared" -> "Core"
-                    else -> "Defaulted"
-                }}")
-                description.set("Custom utilities for Minecraft ${when {
-                    project.name.startsWith("paper") -> "Bukkit Plugin"
-                    project.name.startsWith("fabric") -> "Fabric Mod"
-                    project.name.startsWith("forge") -> "Forge Mod"
-                    project.name == "shared" -> "Core"
-                    else -> project.name
-                }}.")
-                inceptionYear.set("2024")
-                url.set("https://github.com/VickyE2/VickyE-s_Utilities")
-                licenses {
-                    license {
-                        name.set("MIT License")
-                        url.set("https://opensource.org/licenses/MIT")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("vickye")
-                        name.set("VickyE2")
-                        url.set("https://github.com/VickyE2/")
-                        email.set("f.b.cgamingco@gmail.com")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://github.com/VickyE2/VickyE-s_Utilities.git")
-                    developerConnection.set("scm:git:ssh://github.com/VickyE2/VickyE-s_Utilities.git")
-                    url.set("https://github.com/VickyE2/VickyE-s_Utilities")
-                }
-            }
-        }*/
-        /*
-        publishing {
-            publications {
-                create<MavenPublication>("gpr") {
-
-                }
-            }
-            repositories {
-                // mavenLocal()
-                maven {
-                    name = "Central"
-                    url = uri("https://central.sonatype.com/api/v1/publish")
-                    credentials {
-                        username = project.findProperty("centralUsername") as String
-                        password = project.findProperty("centralPassword") as String
-                    }
-                }
-                /*
-                maven {
-                    name = "GitHubPackages"
-                    url = uri("https://maven.pkg.github.com/VickyE2/VickyE-s_Utilities")
-                    credentials {
-                        username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
-                        password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
-                    }
-                }
-                 */
-            }
-        }
-        signing {
-            val signingKey = Paths.get((findProperty("signing.secretKeyRingFile") as String)).toFile().readText()
-            // println(signingKey)
-            useInMemoryPgpKeys(
-                findProperty("signing.keyId") as String,
-                signingKey,
-                findProperty("signing.password") as String
-            )
-            sign(the<PublishingExtension>().publications["gpr"])
-        }
-        */
     }
 }

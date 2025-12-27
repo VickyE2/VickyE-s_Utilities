@@ -1,8 +1,11 @@
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.platform.entity.distpacher
 
 import org.vicky.platform.entity.*
 import org.vicky.platform.utils.ResourceLocation
 import org.vicky.platform.world.PlatformBlock
+import org.vicky.utilities.ContextLogger.AsyncContextLogger
+import org.vicky.utilities.ContextLogger.ContextLogger
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -28,6 +31,7 @@ class EntityTaskState {
 object EntityTaskManager {
     private val executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors().coerceAtMost(4))
     private val states = ConcurrentHashMap<UUID, EntityTaskState>()
+    private val LOGGER = AsyncContextLogger(ContextLogger.ContextType.SYSTEM, "ENTITY-TASK-MANAGER")
 
     // small config
     private var selectorThrottleTicks = 4L
@@ -44,7 +48,10 @@ object EntityTaskManager {
     fun assignTask(entity: PlatformLivingEntity, taskId: ResourceLocation) {
         CompiledTaskRegistry.get(taskId) ?: error("No compiled task $taskId")
         val st = stateFor(entity)
-        if (!st.assignedTasks.contains(taskId)) st.assignedTasks += taskId
+        if (!st.assignedTasks.contains(taskId)) {
+            st.assignedTasks += taskId
+            LOGGER.print("Assigned task $taskId to ${entity.uuid}", ContextLogger.LogType.BASIC)
+        }
     }
 
     fun clearTasks(entity: PlatformLivingEntity) {
@@ -54,6 +61,8 @@ object EntityTaskManager {
     /** Called every server tick (or from per-entity tick) */
     fun tickEntity(entity: PlatformLivingEntity, worldTick: Long) {
         val st = states[entity.uuid] ?: return
+        LOGGER.debug("tickEntity: ${entity.uuid} assigned=${st.assignedTasks.size} " +
+                "cooldown=${st.cooldownTicksRemaining}")
 
         tickActiveTimed(entity, st)
 
@@ -112,19 +121,14 @@ object EntityTaskManager {
         for (step in task.steps) {
             when (step) {
                 is CompiledStep.EntitySelectorStep -> {
-                    // Throttle selectors: per-entity per-selector last-run time
                     val last = st.lastSelectorTick[step.selector.id] ?: -Long.MAX_VALUE
                     if (worldTick - last < selectorThrottleTicks) {
-                        // reuse previous working if any; else run lightweight fallback (skip selection)
-                        if (worldTick - last < selectorThrottleTicks) {
-                            if (working == null) return TaskRunOutcome.NOT_RUN
-                        } else {
-                            working = step.selector.select(ctx)
+                        if (working == null) {
+                            LOGGER.debug("Task ${task.id} entity selector ${step.selector.id} returned no targets — skipping")
+                            return TaskRunOutcome.NOT_RUN
                         }
                     } else {
                         st.lastSelectorTick[step.selector.id] = worldTick
-                        // Option: if selector is expensive, run async and process when ready.
-                        // Here we treat selectors as sync. If you want async, see notes below.
                         working = step.selector.select(ctx)
                     }
                 }
@@ -200,12 +204,12 @@ object EntityTaskManager {
                     // Throttle selectors: per-entity per-selector last-run time
                     val last = st.lastSelectorTick[step.selector.id] ?: -Long.MAX_VALUE
                     if (worldTick - last < selectorThrottleTicks) {
-                        // reuse previous working if any; else run lightweight fallback (skip selection)
-                        workingBlock = workingBlock ?: AmountableResult(ResultType.MULTIPLE, emptyList())
+                        if (workingBlock == null) {
+                            LOGGER.debug("Task ${task.id} block selector ${step.selector.id} returned no targets — skipping")
+                            return TaskRunOutcome.NOT_RUN
+                        }
                     } else {
                         st.lastSelectorTick[step.selector.id] = worldTick
-                        // Option: if selector is expensive, run async and process when ready.
-                        // Here we treat selectors as sync. If you want async, see notes below.
                         workingBlock = step.selector.select(ctx)
                     }
                 }
@@ -302,7 +306,7 @@ object EntityTaskManager {
                 // slot & runBlocking handling
                 val slot = ref.slot
                 if (slot != null && st.activeEntityTimed.any { it.slot == slot }) {
-                    // slot busy -> skip or refresh; choose policy: skip
+                    LOGGER.debug("Skipping timed ref $ref for task ${task.id} because slot $slot is busy for entity ${owner.uuid}")
                     return@forEachIndexed
                 }
 
@@ -313,7 +317,7 @@ object EntityTaskManager {
                 if (compiledTimed.onStart(owner, target)) {
                     // create active timed
                     val active = ActiveTimedAction(compiledTimed, owner, target,
-                        ticksLeft, interval, 0, slot, compiledTimed.id)
+                        ticksLeft, interval, 0, slot, task.id, compiledTimed.id)
                     st.activeEntityTimed.add(active)
                 }
             }
@@ -351,7 +355,7 @@ object EntityTaskManager {
                 if (compiledTimed.onStart(owner, target)) {
                     // create active timed
                     val active = ActiveTimedBlockAction(compiledTimed, owner, target,
-                        ticksLeft, interval, 0, slot, compiledTimed.id)
+                        ticksLeft, interval, 0, slot, task.id, compiledTimed.id)
                     st.activeBlockTimed.add(active)
                 }
             }

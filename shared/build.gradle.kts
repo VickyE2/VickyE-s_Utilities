@@ -1,11 +1,16 @@
 plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("org.vicky.blockbench-dissolver") version "0.0.1-HANA"
 }
 
 version = "0.0.1"
 
 repositories {
     mavenCentral()
+}
+
+bbDissolver {
+    modid.set("core")
 }
 
 dependencies {

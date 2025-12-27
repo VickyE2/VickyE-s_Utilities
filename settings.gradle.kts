@@ -5,12 +5,18 @@
  */
 
 rootProject.name = "v-utls"
-include("shared")
 
 pluginManagement {
     repositories {
+        maven {
+            url = file("./blockbench-dissolver/build/local-repo").toURI()
+        }
+        mavenLocal()
         gradlePluginPortal()
-        maven("https://repo.papermc.io/repository/maven-public/")
     }
 }
-include("shared")
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
+include(":shared")
+include(":blockbench-dissolver")

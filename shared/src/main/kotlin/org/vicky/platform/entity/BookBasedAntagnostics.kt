@@ -1,5 +1,7 @@
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.platform.entity
 
+import kotlinx.serialization.Contextual
 import org.vicky.platform.entity.distpacher.EntityTaskState
 import org.vicky.platform.utils.ResourceLocation
 import org.vicky.platform.world.PlatformBlock
@@ -20,7 +22,8 @@ data class ActiveTimedAction(
     val interval: Int = 1,
     var intervalTicksLeft: Int = 0,
     val slot: String? = null,
-    val taskId: ResourceLocation
+    val taskId: ResourceLocation,
+    val timedId: ResourceLocation
 )
 data class ActiveTimedBlockAction(
     val compiled: CompiledBlockTimedAction,
@@ -30,7 +33,8 @@ data class ActiveTimedBlockAction(
     val interval: Int = 1,
     var intervalTicksLeft: Int = 0,
     val slot: String? = null,
-    val taskId: ResourceLocation
+    val taskId: ResourceLocation,
+    val timedId: ResourceLocation
 )
 
 /**
@@ -923,7 +927,7 @@ data class TaskSpecDTO(
     val chance: Double = 0.5,
     val steps: List<StepDTO> = emptyList(),
     val cooldownTicks: Int = -1,
-    val completionPredicate: (PlatformEntity, EntityTaskState) -> Boolean
+    val completionPredicate: (PlatformEntity, @Contextual EntityTaskState) -> Boolean
 )
 
 enum class TaskType { CONDITIONED, RANDOM }

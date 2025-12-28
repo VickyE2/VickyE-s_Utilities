@@ -20,9 +20,9 @@ class DefaultEntities : MobRegisteringClass {
     private val testDummy = mob(
         key = "core" rli "test_dummy_mob",
         handler = DefaultHandlers.MobDefaultHandler,
-        "core" rli "models/entities/test_dummy.geo.json",
-        "core" rli "textures/entities/test_dummy.png",
-        "core" rli "animations/test_dummy.animation.json"
+        "core" rli "test_dummy",
+        "core" rli "test_dummy",
+        "core" rli "test_dummy"
     ) {
         defaults("Dummy") {
             spawn {
@@ -33,8 +33,8 @@ class DefaultEntities : MobRegisteringClass {
                 movementSpeed = 0.22
             }
             animations(
-                "animation.testdummy.idle",
-                "animation.testdummy.walk"
+                "animation.test_dummy.idle",
+                "animation.test_dummy.walk"
             )
         }
 

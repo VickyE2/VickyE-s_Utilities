@@ -109,7 +109,7 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                         }
 
                         // Geometry
-                        val geoFolder = File(outputBase, "geo").apply { mkdirs() }
+                        val geoFolder = File(outputBase, "geo/models").apply { mkdirs() }
                         File(geoFolder, "${bbModel.modelIdentifier}.geo.json")
                             .writeText(json.encodeToString(GeoModel.serializer(), geo))
 

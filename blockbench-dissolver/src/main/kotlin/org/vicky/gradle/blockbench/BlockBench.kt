@@ -12,6 +12,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import javax.imageio.ImageIO
+import kotlin.math.pow
 
 object GeoAnimatedDataSerializer : KSerializer<GeoAnimatedData> {
 
@@ -166,10 +167,11 @@ object Vec3Serializer : KSerializer<Vec3> {
 
     override fun serialize(encoder: Encoder, value: Vec3) {
         val out = encoder as? JsonEncoder ?: error("Vec3Serializer only supports JSON")
+        val rounded = value.round(4)
         val arr = buildJsonArray {
-            add(JsonPrimitive(value.x))
-            add(JsonPrimitive(value.y))
-            add(JsonPrimitive(value.z))
+            add(JsonPrimitive(rounded.x))
+            add(JsonPrimitive(rounded.y))
+            add(JsonPrimitive(rounded.z))
         }
         out.encodeJsonElement(arr)
     }
@@ -319,12 +321,15 @@ data class GeoBone @OptIn(ExperimentalSerializationApi::class) constructor(
     val name: String,
     @EncodeDefault(EncodeDefault.Mode.NEVER) val parent: String = "",
     val pivot: Vec3,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val rotation: Vec3 = Vec3.ZERO,
     val cubes: List<GeoCube>
 )
 @Serializable
-data class GeoCube(
+data class GeoCube @OptIn(ExperimentalSerializationApi::class) constructor(
     val origin: Vec3,
     val size: Vec3,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val rotation: Vec3 = Vec3.ZERO,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val pivot: Vec3 = Vec3.ZERO,
     val uv: Map<String, GeoUvData>
 )
 @Serializable
@@ -370,16 +375,48 @@ data class Resoulution(
     val height: Int
 )
 @Serializable(with = Vec3Serializer::class)
-data class Vec3(val x: Double, val y: Double, val z: Double) {
+class Vec3 {
+    val x: Double
+    val y: Double
+    val z: Double
     companion object {
         val ZERO: Vec3 = Vec3(0.0, 0.0, 0.0)
     }
 
+    constructor(x: Double, y: Double, z: Double) {
+        this.x = x
+        this.y = y
+        this.z = z
+    }
     constructor(from: List<Double>) : this(
-        from[0], from[1], from[2]
-    )
+        Math.round(from[0] * 100.0) / 100.0, Math.round(from[1] * 100.0) / 100.0, Math.round(from[2] * 100.0) / 100.0
+    ) { }
     fun toList(): List<Double> = listOf(x, y, z)
     override fun toString(): String = "[$x, $y, $z]"
+}
+operator fun Vec3.plus(other: Vec3): Vec3 =
+    Vec3(
+        x + other.x,
+        y + other.y,
+        z + other.z
+    )
+operator fun Vec3.minus(other: Vec3) = Vec3(
+    x - other.x,
+    y - other.y,
+    z - other.z
+)
+operator fun Vec3.times(scale: Double) = Vec3(
+    x * scale,
+    y * scale,
+    z * scale
+)
+fun Vec3.round(decimals: Int): Vec3 {
+    val factor = 10.0.pow(decimals)
+    return Vec3(
+        kotlin.math.round(x * factor) / factor,
+        kotlin.math.round(y * factor) / factor,
+        kotlin.math.round(z * factor) / factor
+    )
 }
 @Serializable(with = StringVec3Serializer::class)
 data class StringVec3(val x: String, val y: String, val z: String) {
@@ -400,6 +437,7 @@ data class Element(
     val from: Vec3 = Vec3.ZERO,
     val to: Vec3 = Vec3.ZERO,
     val origin: Vec3 = Vec3.ZERO,
+    val rotation: Vec3 = Vec3.ZERO,
     val color: Int = 0,
     val faces: Map<String, UvData> = mapOf(),
     @SerialName("box_uv") val boxUv: Boolean = false,
@@ -591,7 +629,7 @@ fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoModel {
     fun sub(a: Vec3, b: Vec3) = Vec3(a.x - b.x, a.y - b.y, a.z - b.z)
 
     fun faceUvFromRaw(face: UvData): GeoUvData {
-        val arr = face.uv.map { it.toDouble() }
+        val arr = face.uv.map { it }
         val u1 = arr[0]; val v1 = arr[1]; val u2 = arr[2]; val v2 = arr[3]
         val w = u2 - u1
         val h = v2 - v1
@@ -609,12 +647,13 @@ fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoModel {
             val from = elem.from
             val to = elem.to
             val size = sizeFrom(from, to)
-            val originAbsolute = from
-            val origin = if (makeOriginRelative) sub(originAbsolute, pivot) else originAbsolute
 
             val uvMap = elem.faces.mapValues { (_, uvData) -> faceUvFromRaw(uvData) }
 
-            GeoCube(origin = origin, size = size, uv = uvMap)
+            GeoCube(
+                origin = from, size = size,
+                rotation = elem.rotation, uv = uvMap
+            )
         }
 
         val parentGroupUuid = groupParent[group.uuid]
@@ -624,6 +663,7 @@ fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoModel {
             name = group.name,
             parent = parentName ?: "",
             pivot = pivot,
+            rotation = group.rotation,
             cubes = cubes
         )
     }

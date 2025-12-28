@@ -18,21 +18,21 @@ public class PlatformBasedLivingEntityRenderer extends GeoEntityRenderer<Platfor
 			@Override
 			public ResourceLocation getModelResource(PlatformBasedLivingEntity object) {
 				org.vicky.platform.utils.ResourceLocation model = object.getDescriptor().getMobDetails().getModelId();
-				return ResourceLocation.fromNamespaceAndPath(model.getNamespace(), "geo/" + model.getPath());
+				return ResourceLocation.fromNamespaceAndPath(model.getNamespace(), "geo/models/" + model.getPath() + ".geo.json");
 			}
 
 			@Override
 			public ResourceLocation getTextureResource(PlatformBasedLivingEntity object) {
 				org.vicky.platform.utils.ResourceLocation explicit = object.getDescriptor().getMobDetails()
 						.getTexture();
-				return fromVicky(explicit);
+				return ResourceLocation.fromNamespaceAndPath(explicit.getNamespace(), "textures/entity/" + explicit.getPath() + ".png");
 			}
 
 			@Override
 			public ResourceLocation getAnimationResource(PlatformBasedLivingEntity object) {
 				org.vicky.platform.utils.ResourceLocation explicitAnim = object.getDescriptor().getMobDetails()
 						.getAnimationsFile();
-				return fromVicky(explicitAnim);
+				return ResourceLocation.fromNamespaceAndPath(explicitAnim.getNamespace(), "animations/" + explicitAnim.getPath() + ".animation.json");
 			}
 		});
 

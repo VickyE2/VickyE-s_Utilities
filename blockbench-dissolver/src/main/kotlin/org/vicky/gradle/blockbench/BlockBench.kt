@@ -252,6 +252,16 @@ object StringVec3Serializer : KSerializer<StringVec3> {
         element<String>("z")
     }
 
+    private fun String.clean(): String = this.replace(Regex("[\r\n]+$"), "").trim()
+    private fun String.toPossibleDoubleJsonPrimitive(): JsonPrimitive =
+        if (this.clean().isBlank()) {
+            JsonPrimitive(0)
+        } else {
+            this.toDoubleOrNull()
+                ?.let { JsonPrimitive(it) }
+                ?: JsonPrimitive(this.clean())
+        }
+
     private fun JsonElement.toStringLenient(): String =
         this.jsonPrimitive.let { prim ->
             prim.contentOrNull?.trim()
@@ -261,9 +271,9 @@ object StringVec3Serializer : KSerializer<StringVec3> {
     override fun serialize(encoder: Encoder, value: StringVec3) {
         val out = encoder as? JsonEncoder ?: error("StringVec3Serializer only supports JSON")
         val arr = buildJsonArray {
-            add(JsonPrimitive(value.x))
-            add(JsonPrimitive(value.y))
-            add(JsonPrimitive(value.z))
+            add(value.x.toPossibleDoubleJsonPrimitive())
+            add(value.y.toPossibleDoubleJsonPrimitive())
+            add(value.z.toPossibleDoubleJsonPrimitive())
         }
         out.encodeJsonElement(arr)
     }
@@ -330,7 +340,7 @@ data class GeoAnimatedData(
 )
 @Serializable
 data class GeoTransformVector(
-    val vector: List<String>
+    val vector: StringVec3
 )
 @Serializable
 data class GeoGeometry(
@@ -686,11 +696,11 @@ fun BlockBenchModel.geoGeom() : GeoModel {
 
         return when(side.lowercase()) {
             "up" -> GeoUvData(
-                uv = listOf(u1, v1),
+                uv = listOf(u2, v2),
                 uvSize = listOf(kotlin.math.abs(w), kotlin.math.abs(h)) // X and Y must be positive
             )
             "down" -> GeoUvData(
-                uv = listOf(u1, v2),
+                uv = listOf(u2, v2),
                 uvSize = listOf(kotlin.math.abs(w), -kotlin.math.abs(h)) // X positive, Y negative
             )
             else -> GeoUvData(
@@ -766,7 +776,7 @@ fun BlockBenchModel.geoAnim() : GeoAnimation {
                                     keyframe.interpolation,
                                     null,
                                     GeoTransformVector(
-                                        listOf(
+                                        StringVec3(
                                             keyframe.dataPoints[0]["x"] ?: "",
                                             keyframe.dataPoints[0]["y"] ?: "",
                                             keyframe.dataPoints[0]["z"] ?: ""
@@ -780,7 +790,7 @@ fun BlockBenchModel.geoAnim() : GeoAnimation {
                                     keyframe.interpolation,
                                     null,
                                     GeoTransformVector(
-                                        listOf(
+                                        StringVec3(
                                             keyframe.dataPoints[0]["x"] ?: "",
                                             keyframe.dataPoints[0]["y"] ?: "",
                                             keyframe.dataPoints[0]["z"] ?: ""
@@ -794,7 +804,7 @@ fun BlockBenchModel.geoAnim() : GeoAnimation {
                                     keyframe.interpolation,
                                     null,
                                     GeoTransformVector(
-                                        listOf(
+                                        StringVec3(
                                             keyframe.dataPoints[0]["x"] ?: "",
                                             keyframe.dataPoints[0]["y"] ?: "",
                                             keyframe.dataPoints[0]["z"] ?: ""

@@ -166,21 +166,25 @@ object Vec3Serializer : KSerializer<Vec3> {
         }
 
     override fun serialize(encoder: Encoder, value: Vec3) {
-        val out = encoder as? JsonEncoder ?: error("Vec3Serializer only supports JSON")
-        val rounded = value.round(4)
-        val arr = buildJsonArray {
-            add(JsonPrimitive(rounded.x))
-            add(JsonPrimitive(rounded.y))
-            add(JsonPrimitive(rounded.z))
-        }
-        out.encodeJsonElement(arr)
+        val jsonEncoder = encoder as? JsonEncoder
+            ?: error("Vec3 serializer only works with JSON")
+
+        val r = value.round(4)
+
+        jsonEncoder.encodeJsonElement(
+            JsonArray(
+                listOf(
+                    JsonPrimitive(r.x),
+                    JsonPrimitive(r.y),
+                    JsonPrimitive(r.z)
+                )
+            )
+        )
     }
 
     override fun deserialize(decoder: Decoder): Vec3 {
         val input = decoder as? JsonDecoder ?: error("Vec3Serializer only supports JSON")
-        val elem = input.decodeJsonElement()
-
-        return when (elem) {
+        return when (val elem = input.decodeJsonElement()) {
             is JsonArray -> {
                 if (elem.size != 3) error("Vec3 array must have 3 elements but had ${elem.size}")
                 Vec3(
@@ -208,6 +212,37 @@ object Vec3Serializer : KSerializer<Vec3> {
             }
             else -> error("Invalid Vec3 JSON: $elem")
         }
+    }
+}
+object InlineVec2Serializer : KSerializer<List<Double>> {
+    override val descriptor =
+        PrimitiveSerialDescriptor("InlineVec2", PrimitiveKind.STRING)
+
+    private fun Double.formatTrimZero(): String =
+        if (this % 1.0 == 0.0) this.toInt().toString() else this.toString()
+    override fun serialize(encoder: Encoder, value: List<Double>) {
+        val jsonEncoder = encoder as? JsonEncoder
+            ?: error("Vec3 serializer only works with JSON")
+        require(value.size == 2) { "Expected Vec2 (size 2), got ${value.size}" }
+        jsonEncoder.encodeJsonElement(
+            JsonArray(
+                listOf(
+                    JsonPrimitive(value[0].formatTrimZero()),
+                    JsonPrimitive(value[1].formatTrimZero())
+                )
+            )
+        )
+    }
+
+    override fun deserialize(decoder: Decoder): List<Double> {
+        val s = decoder.decodeString()
+            .removePrefix("[")
+            .removeSuffix("]")
+            .split(",")
+            .map { it.trim().toDouble() }
+
+        require(s.size == 2)
+        return s
     }
 }
 object StringVec3Serializer : KSerializer<StringVec3> {
@@ -321,24 +356,24 @@ data class GeoBone @OptIn(ExperimentalSerializationApi::class) constructor(
     val name: String,
     @EncodeDefault(EncodeDefault.Mode.NEVER) val parent: String = "",
     val pivot: Vec3,
-    @EncodeDefault(EncodeDefault.Mode.NEVER) val rotation: Vec3 = Vec3.ZERO,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val rotation: Vec3? = null,
     val cubes: List<GeoCube>
 )
 @Serializable
 data class GeoCube @OptIn(ExperimentalSerializationApi::class) constructor(
     val origin: Vec3,
     val size: Vec3,
-    @EncodeDefault(EncodeDefault.Mode.NEVER) val rotation: Vec3 = Vec3.ZERO,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val rotation: Vec3? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER) val pivot: Vec3 = Vec3.ZERO,
-    val uv: Map<String, GeoUvData>
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val uv: Map<String, GeoUvData> = emptyMap()
 )
 @Serializable
 data class GeoUvData(
+    @Serializable(with = InlineVec2Serializer::class)
     val uv: List<Double>,
+    @Serializable(with = InlineVec2Serializer::class)
     @SerialName("uv_size") val uvSize: List<Double>
 )
-
-
 
 
 @Serializable
@@ -393,13 +428,19 @@ class Vec3 {
     ) { }
     fun toList(): List<Double> = listOf(x, y, z)
     override fun toString(): String = "[$x, $y, $z]"
+    override fun equals(other: Any?): Boolean {
+        if (other !is Vec3) return false
+        return other.x == this.x && other.y == this.y && other.z == this.z
+    }
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
 }
-operator fun Vec3.plus(other: Vec3): Vec3 =
-    Vec3(
-        x + other.x,
-        y + other.y,
-        z + other.z
-    )
+operator fun Vec3.plus(other: Vec3): Vec3 = Vec3(
+    x + other.x,
+    y + other.y,
+    z + other.z
+)
 operator fun Vec3.minus(other: Vec3) = Vec3(
     x - other.x,
     y - other.y,
@@ -417,6 +458,13 @@ fun Vec3.round(decimals: Int): Vec3 {
         kotlin.math.round(y * factor) / factor,
         kotlin.math.round(z * factor) / factor
     )
+}
+fun Vec3.isZero(): Boolean {
+    val rounded = this.round(1)
+    return rounded.x == 0.0 && rounded.y == 0.0 && rounded.z == 0.0
+}
+fun Vec3.ifIsZero(toUse: () -> (Vec3?)): Vec3? {
+    return if (this.isZero()) toUse.invoke() else this
 }
 @Serializable(with = StringVec3Serializer::class)
 data class StringVec3(val x: String, val y: String, val z: String) {
@@ -566,7 +614,7 @@ data class AnimationMeta(
     val frames: List<Int>? = null
 )
 
-fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoModel {
+fun BlockBenchModel.geoGeom() : GeoModel {
     val groupsByUuid = this.groups.associateBy { it.uuid }
 
     val elementParent = mutableMapOf<String, String?>()
@@ -626,8 +674,6 @@ fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoModel {
         )
     }
 
-    fun sub(a: Vec3, b: Vec3) = Vec3(a.x - b.x, a.y - b.y, a.z - b.z)
-
     fun faceUvFromRaw(face: UvData): GeoUvData {
         val arr = face.uv.map { it }
         val u1 = arr[0]; val v1 = arr[1]; val u2 = arr[2]; val v2 = arr[3]
@@ -636,10 +682,12 @@ fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoModel {
         return GeoUvData(uv = listOf(u1, v1), uvSize = listOf(w, h))
     }
 
+    fun bbToGeo(v: Vec3) = Vec3(-v.x, v.y, v.z)
+
     val elementsByParent = this.elements.groupBy { elementParent[it.uuid] }
 
     val bones = this.groups.map { group ->
-        val pivot = group.origin
+        val pivot = bbToGeo(group.origin)
 
         val childrenElements = elementsByParent[group.uuid] ?: emptyList()
 
@@ -652,7 +700,7 @@ fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoModel {
 
             GeoCube(
                 origin = from, size = size,
-                rotation = elem.rotation, uv = uvMap
+                rotation = elem.rotation.ifIsZero { null }, uv = uvMap.ifEmpty { emptyMap() }
             )
         }
 
@@ -663,7 +711,7 @@ fun BlockBenchModel.geoGeom(makeOriginRelative: Boolean = true) : GeoModel {
             name = group.name,
             parent = parentName ?: "",
             pivot = pivot,
-            rotation = group.rotation,
+            rotation = group.rotation.ifIsZero { null },
             cubes = cubes
         )
     }

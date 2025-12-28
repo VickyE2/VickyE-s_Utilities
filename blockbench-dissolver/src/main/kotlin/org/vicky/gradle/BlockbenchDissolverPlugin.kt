@@ -1,5 +1,6 @@
 package org.vicky.gradle
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -22,6 +23,7 @@ abstract class BlockbenchExtension @Inject constructor(objects: ObjectFactory) {
 }
 
 class BlockbenchDissolverPlugin : Plugin<Project> {
+    @OptIn(ExperimentalSerializationApi::class)
     override fun apply(project: Project) {
         project.extensions.create("bbDissolver", BlockbenchExtension::class.java)
         val extension = project.extensions.getByType(BlockbenchExtension::class.java)
@@ -48,6 +50,8 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                 outputBase.mkdirs()
                 val json = Json {
                     prettyPrint = true
+                    encodeDefaults = false
+                    explicitNulls = false
                 }
                 log("Output directory will be: ${outputBase.path.toString().replace(Regex("^([A-Z]:)\\\\.*?(?=\\\\build)"), "$1\\***")}")
 

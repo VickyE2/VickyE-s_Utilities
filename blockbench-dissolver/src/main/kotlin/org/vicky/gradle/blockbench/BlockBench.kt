@@ -218,8 +218,8 @@ object InlineVec2Serializer : KSerializer<List<Double>> {
     override val descriptor =
         PrimitiveSerialDescriptor("InlineVec2", PrimitiveKind.STRING)
 
-    private fun Double.formatTrimZero(): String =
-        if (this % 1.0 == 0.0) this.toInt().toString() else this.toString()
+    private fun Double.formatTrimZero(): Number =
+        if (this % 1.0 == 0.0) this.toInt() else this
     override fun serialize(encoder: Encoder, value: List<Double>) {
         val jsonEncoder = encoder as? JsonEncoder
             ?: error("Vec3 serializer only works with JSON")
@@ -674,13 +674,32 @@ fun BlockBenchModel.geoGeom() : GeoModel {
         )
     }
 
-    fun faceUvFromRaw(face: UvData): GeoUvData {
-        val arr = face.uv.map { it }
-        val u1 = arr[0]; val v1 = arr[1]; val u2 = arr[2]; val v2 = arr[3]
+    fun faceUvFromRaw(face: UvData, side: String): GeoUvData {
+        val arr = face.uv
+        val u1 = arr[0]
+        val v1 = arr[1]
+        val u2 = arr[2]
+        val v2 = arr[3]
+
         val w = u2 - u1
         val h = v2 - v1
-        return GeoUvData(uv = listOf(u1, v1), uvSize = listOf(w, h))
+
+        return when(side.lowercase()) {
+            "up" -> GeoUvData(
+                uv = listOf(u1, v1),
+                uvSize = listOf(kotlin.math.abs(w), kotlin.math.abs(h)) // X and Y must be positive
+            )
+            "down" -> GeoUvData(
+                uv = listOf(u1, v2),
+                uvSize = listOf(kotlin.math.abs(w), -kotlin.math.abs(h)) // X positive, Y negative
+            )
+            else -> GeoUvData(
+                uv = listOf(u1, v1),
+                uvSize = listOf(kotlin.math.abs(w), kotlin.math.abs(h)) // all other faces
+            )
+        }
     }
+
 
     fun bbToGeo(v: Vec3) = Vec3(-v.x, v.y, v.z)
 
@@ -696,7 +715,7 @@ fun BlockBenchModel.geoGeom() : GeoModel {
             val to = elem.to
             val size = sizeFrom(from, to)
 
-            val uvMap = elem.faces.mapValues { (_, uvData) -> faceUvFromRaw(uvData) }
+            val uvMap = elem.faces.mapValues { (side, uvData) -> faceUvFromRaw(side = side, face = uvData) }
 
             GeoCube(
                 origin = from, size = size,

@@ -96,6 +96,7 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                         val resolvedTextures = bbModel.resolveTextures()
                         val geo = bbModel.geoGeom()
                         val anim = bbModel.geoAnim()
+                        outputBase.delete()
 
                         /* ---------- COMMIT TO DISK ---------- */
 

@@ -37,7 +37,7 @@ public class PlatformBasedLivingEntityRenderer extends GeoEntityRenderer<Platfor
 		});
 
 		if (getGeoModel().getBone("shadow").isPresent()) {
-			this.shadowRadius = getGeoModel().getBone("shadow").get().getScaleX();
+			this.shadowRadius = (float) getGeoModel().getBone("shadow").get().getCubes().get(0).size().x;
 		}
 	}
 }

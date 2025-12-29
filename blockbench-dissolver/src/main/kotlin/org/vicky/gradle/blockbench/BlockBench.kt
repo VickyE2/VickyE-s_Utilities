@@ -12,6 +12,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import javax.imageio.ImageIO
+import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.pow
 
 object GeoAnimatedDataSerializer : KSerializer<GeoAnimatedData> {
@@ -451,6 +453,16 @@ operator fun Vec3.plus(other: Vec3): Vec3 = Vec3(
     y + other.y,
     z + other.z
 )
+operator fun Vec3.div(magnitude: Double): Vec3 = Vec3(
+    x / magnitude,
+    y / magnitude,
+    z / magnitude
+)
+operator fun Vec3.div(magnitude: Int): Vec3 = Vec3(
+    x / magnitude,
+    y / magnitude,
+    z / magnitude
+)
 operator fun Vec3.minus(other: Vec3) = Vec3(
     x - other.x,
     y - other.y,
@@ -460,6 +472,11 @@ operator fun Vec3.times(scale: Double) = Vec3(
     x * scale,
     y * scale,
     z * scale
+)
+operator fun Vec3.times(scale: Vec3) = Vec3(
+    x * scale.x,
+    y * scale.y,
+    z * scale.z
 )
 fun Vec3.round(decimals: Int): Vec3 {
     val factor = 10.0.pow(decimals)
@@ -473,8 +490,17 @@ fun Vec3.isZero(): Boolean {
     val rounded = this.round(1)
     return rounded.x == 0.0 && rounded.y == 0.0 && rounded.z == 0.0
 }
-fun Vec3.ifIsZero(toUse: () -> (Vec3?)): Vec3? {
+fun Vec3.ifIsZero(toUse: () -> Vec3): Vec3 {
     return if (this.isZero()) toUse.invoke() else this
+}
+fun Vec3.ifIsZeroDoing(toUse: () -> Vec3, whenNotZero: (Vec3) -> Vec3): Vec3 {
+    return if (this.isZero()) toUse.invoke() else whenNotZero.invoke(this)
+}
+fun Vec3.ifIsZeroNullable(toUse: () -> Vec3?): Vec3? {
+    return if (this.isZero()) toUse.invoke() else this
+}
+fun Vec3.ifIsZeroNullableDoing(toUse: () -> Vec3?, whenNotZero: (Vec3) -> Vec3): Vec3? {
+    return if (this.isZero()) toUse.invoke() else whenNotZero.invoke(this)
 }
 @Serializable(with = StringVec3Serializer::class)
 data class StringVec3(val x: String, val y: String, val z: String) {
@@ -678,38 +704,32 @@ fun BlockBenchModel.geoGeom() : GeoModel {
 
     fun Vec3.size(to: Vec3): Vec3 {
         return Vec3(
-            to.x - this.x,
-            to.y - this.y,
-            to.z - this.z
+            abs(to.x - this.x),
+            abs(to.y - this.y),
+            abs(to.z - this.z)
         )
     }
 
     fun faceUvFromRaw(face: UvData, side: String): GeoUvData {
-        val arr = face.uv
-        val u1 = arr[0]
-        val v1 = arr[1]
-        val u2 = arr[2]
-        val v2 = arr[3]
+        val (u1, v1, u2, v2) = face.uv
 
-        val w = u1 - u2
-        val h = v1 - v2
+        val u = min(u1, u2)
+        val v = min(v1, v2)
 
-        return when(side.lowercase()) {
-            "up" -> GeoUvData(
-                uv = listOf(u2, v2),
-                uvSize = listOf(kotlin.math.abs(w), kotlin.math.abs(h)) // X and Y must be positive
-            )
+        val w = abs(u2 - u1)
+        val h = abs(v2 - v1)
+
+        return when (side) {
             "down" -> GeoUvData(
-                uv = listOf(u2, v2),
-                uvSize = listOf(kotlin.math.abs(w), -kotlin.math.abs(h)) // X positive, Y negative
+                uv = listOf(u, v + h),
+                uvSize = listOf(w, -h)
             )
             else -> GeoUvData(
-                uv = listOf(u1, v1),
-                uvSize = listOf(kotlin.math.abs(w), kotlin.math.abs(h)) // all other faces
+                uv = listOf(u, v),
+                uvSize = listOf(w, h)
             )
         }
     }
-
 
     fun bbToGeo(v: Vec3) = Vec3(-v.x, v.y, v.z)
 
@@ -726,10 +746,14 @@ fun BlockBenchModel.geoGeom() : GeoModel {
             val size = from.size(to)
 
             val uvMap = elem.faces.mapValues { (side, uvData) -> faceUvFromRaw(side = side, face = uvData) }
+            val geoOrigin = bbToGeo(to).minOf(bbToGeo(from))
 
             GeoCube(
-                origin = elem.origin, size = size,
-                rotation = elem.rotation.ifIsZero { null }, uv = uvMap.ifEmpty { emptyMap() }
+                origin = geoOrigin,
+                size = size,
+                rotation = elem.rotation.ifIsZeroNullableDoing({ null }) { bbToGeo(it) },
+                uv = uvMap.ifEmpty { emptyMap() },
+                pivot = elem.origin.ifIsZeroDoing({ Vec3.ZERO }) { bbToGeo(it) }
             )
         }
 
@@ -740,7 +764,7 @@ fun BlockBenchModel.geoGeom() : GeoModel {
             name = group.name,
             parent = parentName ?: "",
             pivot = pivot,
-            rotation = group.rotation.ifIsZero { null },
+            rotation = group.rotation.ifIsZeroNullable { null },
             cubes = cubes
         )
     }
@@ -757,6 +781,13 @@ fun BlockBenchModel.geoGeom() : GeoModel {
         bones
     )), "1.12.0")
 }
+
+fun Vec3.minOf(from: Vec3): Vec3 = Vec3(
+    min(this.x, from.x),
+    min(this.y, from.y),
+    min(this.z, from.z)
+)
+
 fun BlockBenchModel.geoAnim() : GeoAnimation {
     val anim = GeoAnimation(
         "1.8.0",

@@ -676,11 +676,11 @@ fun BlockBenchModel.geoGeom() : GeoModel {
         processOutlinerNode(top, null)
     }
 
-    fun sizeFrom(from: Vec3, to: Vec3): Vec3 {
+    fun Vec3.size(to: Vec3): Vec3 {
         return Vec3(
-            to.x - from.x,
-            to.y - from.y,
-            to.z - from.z
+            to.x - this.x,
+            to.y - this.y,
+            to.z - this.z
         )
     }
 
@@ -691,8 +691,8 @@ fun BlockBenchModel.geoGeom() : GeoModel {
         val u2 = arr[2]
         val v2 = arr[3]
 
-        val w = u2 - u1
-        val h = v2 - v1
+        val w = u1 - u2
+        val h = v1 - v2
 
         return when(side.lowercase()) {
             "up" -> GeoUvData(
@@ -723,12 +723,12 @@ fun BlockBenchModel.geoGeom() : GeoModel {
         val cubes = childrenElements.map { elem ->
             val from = elem.from
             val to = elem.to
-            val size = sizeFrom(from, to)
+            val size = from.size(to)
 
             val uvMap = elem.faces.mapValues { (side, uvData) -> faceUvFromRaw(side = side, face = uvData) }
 
             GeoCube(
-                origin = from, size = size,
+                origin = elem.origin, size = size,
                 rotation = elem.rotation.ifIsZero { null }, uv = uvMap.ifEmpty { emptyMap() }
             )
         }

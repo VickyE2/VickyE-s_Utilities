@@ -5,6 +5,8 @@ import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
+import org.vicky.gradle.BlockbenchDissolverPlugin
+import org.vicky.gradle.Utils
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -369,7 +371,8 @@ data class GeoBone @OptIn(ExperimentalSerializationApi::class) constructor(
     @EncodeDefault(EncodeDefault.Mode.NEVER) val parent: String = "",
     val pivot: Vec3,
     @EncodeDefault(EncodeDefault.Mode.NEVER) val rotation: Vec3? = null,
-    val cubes: List<GeoCube>
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val cubes: List<GeoCube> = emptyList(),
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val locators: Map<String, Vec3> = emptyMap()
 )
 @Serializable
 data class GeoCube @OptIn(ExperimentalSerializationApi::class) constructor(
@@ -378,6 +381,10 @@ data class GeoCube @OptIn(ExperimentalSerializationApi::class) constructor(
     @EncodeDefault(EncodeDefault.Mode.NEVER) val rotation: Vec3? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER) val pivot: Vec3 = Vec3.ZERO,
     @EncodeDefault(EncodeDefault.Mode.NEVER) val uv: Map<String, GeoUvData> = emptyMap()
+)
+@Serializable
+data class GeoLocator @OptIn(ExperimentalSerializationApi::class) constructor(
+    val position: Vec3
 )
 @Serializable
 data class GeoUvData(
@@ -512,6 +519,15 @@ data class StringVec3(val x: String, val y: String, val z: String) {
     )
     fun toList(): List<String> = listOf(x, y, z)
     override fun toString(): String = "[$x, $y, $z]"
+    fun invert(): StringVec3 = StringVec3(
+        x.isDoubleDo { "-$it" },
+        y.isDoubleDo { "-$it" },
+        z.isDoubleDo { "-$it" }
+    )
+}
+fun String.isDoubleDo(action: (Double) -> String) : String {
+    if (this.toDoubleOrNull() == null) return this
+    return action.invoke(this.toDouble())
 }
 @Serializable
 data class Element(
@@ -522,6 +538,7 @@ data class Element(
     val to: Vec3 = Vec3.ZERO,
     val origin: Vec3 = Vec3.ZERO,
     val rotation: Vec3 = Vec3.ZERO,
+    val position: Vec3 = Vec3.ZERO,
     val color: Int = 0,
     val faces: Map<String, UvData> = mapOf(),
     @SerialName("box_uv") val boxUv: Boolean = false,
@@ -650,6 +667,15 @@ data class AnimationMeta(
     val frames: List<Int>? = null
 )
 
+fun GeoCube.validate() {
+    val faces = uv.keys
+
+    val required = setOf("north","south","east","west","up","down")
+    require(faces.containsAll(required)) {
+        "Missing faces: ${required - faces}"
+    }
+}
+
 fun BlockBenchModel.geoGeom() : GeoModel {
     val groupsByUuid = this.groups.associateBy { it.uuid }
 
@@ -740,7 +766,8 @@ fun BlockBenchModel.geoGeom() : GeoModel {
 
         val childrenElements = elementsByParent[group.uuid] ?: emptyList()
 
-        val cubes = childrenElements.map { elem ->
+        val cubes: List<GeoCube> = childrenElements.mapNotNull cynrax@{ elem ->
+            if (elem.type != "cube") return@cynrax null
             val from = elem.from
             val to = elem.to
             val size = from.size(to)
@@ -748,13 +775,27 @@ fun BlockBenchModel.geoGeom() : GeoModel {
             val uvMap = elem.faces.mapValues { (side, uvData) -> faceUvFromRaw(side = side, face = uvData) }
             val geoOrigin = bbToGeo(to).minOf(bbToGeo(from))
 
-            GeoCube(
+            val cube = GeoCube(
                 origin = geoOrigin,
                 size = size,
                 rotation = elem.rotation.ifIsZeroNullableDoing({ null }) { bbToGeo(it) },
                 uv = uvMap.ifEmpty { emptyMap() },
                 pivot = elem.origin.ifIsZeroDoing({ Vec3.ZERO }) { bbToGeo(it) }
             )
+            try {
+                cube.validate()
+                return@cynrax cube
+            }
+            catch (e: Exception) {
+                Utils.log("Encountered error while on cube: ${elem.uuid}, it will be skipped", true)
+                e.printStackTrace()
+                return@cynrax null
+            }
+        }
+
+        val locators: Map<String, Vec3> = childrenElements.transformMapNotNull cynrax@{ elem ->
+            if (elem.type != "locator") return@cynrax null
+            elem.name to elem.position
         }
 
         val parentGroupUuid = groupParent[group.uuid]
@@ -765,7 +806,8 @@ fun BlockBenchModel.geoGeom() : GeoModel {
             parent = parentName ?: "",
             pivot = pivot,
             rotation = group.rotation.ifIsZeroNullable { null },
-            cubes = cubes
+            cubes = cubes.ifEmpty { emptyList() },
+            locators = locators.ifEmpty { emptyMap() }
         )
     }
 
@@ -825,7 +867,7 @@ fun BlockBenchModel.geoAnim() : GeoAnimation {
                                             keyframe.dataPoints[0]["x"] ?: "",
                                             keyframe.dataPoints[0]["y"] ?: "",
                                             keyframe.dataPoints[0]["z"] ?: ""
-                                        )
+                                        ).invert()
                                     )
                                 )
                         }
@@ -913,6 +955,15 @@ private fun <E, T> List<E>.transformMap(transformer: (E) -> Pair<String, T>): Ma
     val map = mutableMapOf<String, T>()
     for (thing in this) {
         val pair = transformer.invoke(thing)
+        map[pair.first] = pair.second
+    }
+    return map
+}
+
+private fun <E, T> List<E>.transformMapNotNull(transformer: (E) -> Pair<String, T>?): Map<String, T> {
+    val map = mutableMapOf<String, T>()
+    for (thing in this) {
+        val pair = transformer.invoke(thing) ?: continue
         map[pair.first] = pair.second
     }
     return map

@@ -42,7 +42,7 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
             doLast {
                 val resourcesDir = File(project.projectDir, "src/main/resources/${bbDirectoryProvider.get()}")
                 if (!resourcesDir.exists()) {
-                    log("No BlockBench folder found at $resourcesDir", true)
+                    Utils.log("No BlockBench folder found at $resourcesDir", true)
                     return@doLast
                 }
 
@@ -53,7 +53,7 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                     encodeDefaults = false
                     explicitNulls = false
                 }
-                log("Output directory will be: ${outputBase.path.toString().replace(Regex("^([A-Z]:)\\\\.*?(?=\\\\build)"), "$1\\***")}")
+                Utils.log("Output directory will be: ${outputBase.path.toString().replace(Regex("^([A-Z]:)\\\\.*?(?=\\\\build)"), "$1\\***")}")
 
 
                 val cacheDir = File(project.buildDir, "bb-dissolver")
@@ -67,26 +67,26 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                 }
 
                 if (runEveryBuildProvider.get()) {
-                    log("Currently the conversion system is set to run everytime `processResources` task is called. this is really resource intensive for larger file amount and should only be done if you know what you're doing")
+                    Utils.log("Currently the conversion system is set to run everytime `processResources` task is called. this is really resource intensive for larger file amount and should only be done if you know what you're doing")
                 }
 
                 // Iterate over all .bbmodel files
                 resourcesDir.walkTopDown().filter { it.isFile && it.extension == "bbmodel" }.forEach { bbFile ->
                     val fileKey = bbFile.relativeTo(resourcesDir).path
-                    val currentHash = sha256(bbFile)
+                    val currentHash = Utils.sha256(bbFile)
                     val previousHash = cache.hashes[fileKey]
 
                     if (previousHash == currentHash && !runEveryBuildProvider.get()) {
-                        log("Skipping ${bbFile.name} (unchanged)")
+                        Utils.log("Skipping ${bbFile.name} (unchanged)")
                         return@forEach
                     }
 
                     cache.hashes[fileKey] = currentHash
-                    log("Processing ${bbFile.name}")
+                    Utils.log("Processing ${bbFile.name}")
 
                     val bbModel = BBConverter.loadBBModel(bbFile)
                         ?: run {
-                            log("Failed to load ${bbFile.name}", true)
+                            Utils.log("Failed to load ${bbFile.name}", true)
                             return@forEach
                         }
 
@@ -125,7 +125,7 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
 
                     }
                     catch (e: Exception) {
-                        log("An error occurred while processing ${bbModel.modelIdentifier}", true)
+                        Utils.log("An error occurred while processing ${bbModel.modelIdentifier}", true)
                         e.printStackTrace()
                     }
                 }
@@ -133,7 +133,7 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                 cacheFile.writeText(
                     json.encodeToString(BbCache.serializer(), cache)
                 )
-                log("BlockBench conversion completed!")
+                Utils.log("BlockBench conversion completed!")
             }
         }
 
@@ -153,17 +153,20 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
     }
 }
 
-fun sha256(file: File): String {
-    val digest = java.security.MessageDigest.getInstance("SHA-256")
-    file.inputStream().use { input ->
-        val buffer = ByteArray(8_192)
-        var read: Int
-        while (input.read(buffer).also { read = it } != -1) {
-            digest.update(buffer, 0, read)
+object Utils{
+    fun sha256(file: File): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(8_192)
+            var read: Int
+            while (input.read(buffer).also { read = it } != -1) {
+                digest.update(buffer, 0, read)
+            }
         }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
-    return digest.digest().joinToString("") { "%02x".format(it) }
-}
-fun log(message: String, isError: Boolean = false) {
-    println("[BB-DISSOLVER] ${if (isError) "[\u001B[0;31mERROR\u001B[0m]\u001B[0;31m" else "[\u001B[0;34mINFO\u001B[0m]\u001B[0;34m"} $message \u001B[0m")
+
+    fun log(message: String, isError: Boolean = false) {
+        println("[BB-DISSOLVER] ${if (isError) "[\u001B[0;31mERROR\u001B[0m]\u001B[0;31m" else "[\u001B[0;34mINFO\u001B[0m]\u001B[0;34m"} $message \u001B[0m")
+    }
 }

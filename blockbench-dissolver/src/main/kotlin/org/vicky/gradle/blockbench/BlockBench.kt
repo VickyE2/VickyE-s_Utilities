@@ -257,12 +257,22 @@ object StringVec3Serializer : KSerializer<StringVec3> {
     }
 
     private fun String.clean(): String = this.replace(Regex("[\r\n]+$"), "").trim()
+    private fun Double.round(decimals: Int): Double {
+        val factor = 10.0.pow(decimals)
+        return kotlin.math.round(this * factor) / factor
+    }
+    private fun Double.ifZeroAbs(): Double {
+        return if (abs(this) == 0.0) 0.0 else this
+    }
+    private fun Double.ifZeroAbsElse(action: (Double) -> Double): Double {
+        return if (abs(this) == 0.0) 0.0 else action.invoke(this)
+    }
     private fun String.toPossibleDoubleJsonPrimitive(): JsonPrimitive =
         if (this.clean().isBlank()) {
             JsonPrimitive(0)
         } else {
             this.toDoubleOrNull()
-                ?.let { JsonPrimitive(it) }
+                ?.let { JsonPrimitive(it.ifZeroAbsElse { it.round(4) }) }
                 ?: JsonPrimitive(this.clean())
         }
 
@@ -520,14 +530,14 @@ data class StringVec3(val x: String, val y: String, val z: String) {
     fun toList(): List<String> = listOf(x, y, z)
     override fun toString(): String = "[$x, $y, $z]"
     fun invert(): StringVec3 = StringVec3(
-        x.isDoubleDo { "-$it" },
-        y.isDoubleDo { "-$it" },
-        z.isDoubleDo { "-$it" }
+        x.isDoubleDo { -it },
+        y.isDoubleDo { -it },
+        z.isDoubleDo { -it }
     )
 }
-fun String.isDoubleDo(action: (Double) -> String) : String {
+fun String.isDoubleDo(action: (Double) -> Double) : String {
     if (this.toDoubleOrNull() == null) return this
-    return action.invoke(this.toDouble())
+    return action.invoke(this.toDouble()).toString()
 }
 @Serializable
 data class Element(

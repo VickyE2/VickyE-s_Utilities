@@ -4,11 +4,13 @@ package org.vicky.platform;
 import java.io.File;
 import java.util.*;
 
-import org.vicky.coreregistry.CoreEntityRegistry;
 import org.vicky.musicPlayer.PlatformSoundBackend;
 import org.vicky.platform.entity.*;
 import org.vicky.platform.events.PlatformEventFactory;
+import org.vicky.platform.items.PlatformItemFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
+
+import static org.vicky.platform.AnnotationScannerKt.registerAllAnnotatedThings;
 
 public interface PlatformPlugin {
 
@@ -22,11 +24,23 @@ public interface PlatformPlugin {
 	static void set(PlatformPlugin instance) {
 		if (Holder.INSTANCE == null) {
 			Holder.INSTANCE = instance;
-			new DefaultEntities().register(instance);
-			instance.getPlatformEffectBridge().registerEffect(new DefaultMarkedMobEffect().create());
-			CoreEntityRegistry.installInto(instance);
+			registerAllAnnotatedThings(
+					instance.getClassProvider(),
+					instance.getPlatformItemFactory(),
+					instance.getPlatformEffectBridge(),
+					instance.getPlatformEntityFactory()
+			);
 		} else {
 			throw new IllegalStateException("Cannot set PlatformPlugin after its already been set.");
+		}
+	}
+
+	static boolean isInitialised() {
+		try {
+			get();
+			return true;
+		} catch (Exception e) {
+			return false;
 		}
 	}
 
@@ -164,6 +178,8 @@ public interface PlatformPlugin {
 	PlatformSoundBackend getSoundBackend();
 
 	PlatformEffectBridge<?> getPlatformEffectBridge();
+
+	PlatformClassProvider getClassProvider();
 
 	PlatformLocationAdapter<?> getPlatformLocationAdapter();
 	File getPlatformDataFolder();

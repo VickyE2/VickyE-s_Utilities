@@ -2,6 +2,7 @@
 package org.vicky.platform.entity
 
 import kotlinx.serialization.Contextual
+import org.vicky.platform.PlatformPlayer
 import org.vicky.platform.entity.distpacher.EntityTaskState
 import org.vicky.platform.utils.ResourceLocation
 import org.vicky.platform.world.PlatformBlock
@@ -386,12 +387,16 @@ object BookBasedAntagnosticCompiler {
         return CompiledTask(
             id = rl(dto.id),
             type = dto.type,
+            lifecycle = dto.lifecycle,
             priority = dto.priority,
+            chance = dto.chance,
             steps = compiledSteps,
             cooldownTicks = dto.cooldownTicks,
-            chance = dto.chance,
-            lifecycle = dto.lifecycle,
-            completionPredicate = dto.completionPredicate
+            completionPredicate = dto.completionPredicate,
+            waitForSignals = dto.waitSignals,
+            allSignalsRequired = dto.allSignalsRequired,
+            stopSignals = dto.stopSignals,
+            allStopSignalsRequired = dto.allStopSignalsRequired
         )
     }
 }
@@ -571,6 +576,40 @@ object SetTargetToLookAt : EntityTimedActionSpec<PlatformLivingEntity>(
         else return@lambda false
     },
     { self, _ -> self.setRotation(0f, 0f) }
+)
+
+class SayToTarget(private val message: String) : EntityActionSpec<PlatformLivingEntity>(
+    rl("core", "say_to_target"),
+    run@{ self, player ->
+        if (player == null) return@run false
+        if (!player.isPlayer) return@run false
+        player as PlatformPlayer
+        player.sendMessage(self, message)
+        true
+    }
+)
+
+class SayToAllPlayersInWorld(private val message: String) : EntityActionSpec<PlatformLivingEntity>(
+    rl("core", "say_to_target"),
+    run@{ self, _ ->
+        self.world.players.forEach {
+            it.sendMessage(self, message)
+        }
+        true
+    }
+)
+
+class SayToAttacker(private val message: String) : EntityActionSpec<PlatformLivingEntity>(
+    rl("core", "say_to_target"),
+    run@{ self, _ ->
+        if (self !is PlatformLivingEntity) return@run false
+        val attacker = self.getLastAttacker()
+        if (attacker is PlatformPlayer) {
+            attacker.sendMessage(self, message)
+            return@run true
+        }
+        false
+    }
 )
 
 object LookAtAttacker : EntityTimedActionSpec<PlatformLivingEntity>(
@@ -782,7 +821,7 @@ open class EntityActionSpec<T : PlatformEntity>(val id: ResourceLocation, val ru
             GlobalSpecRegistry.registerAction(id, { ref -> CompiledEntityAction(ref.id, runner) })
     }
     override fun id(): ResourceLocation = id
-    override fun perform(self: T, target: T?): Boolean = runner(self as PlatformEntity, target)
+    override fun perform(self: T, target: T?): Boolean = runner(self, target)
 }
 
 open class BlockActionSpec(val id: ResourceLocation, val runner: (PlatformLivingEntity, PlatformBlock<*>) -> Boolean) {
@@ -927,7 +966,11 @@ data class TaskSpecDTO(
     val chance: Double = 0.5,
     val steps: List<StepDTO> = emptyList(),
     val cooldownTicks: Int = -1,
-    val completionPredicate: (PlatformEntity, @Contextual EntityTaskState) -> Boolean
+    val completionPredicate: (PlatformEntity, @Contextual EntityTaskState) -> Boolean,
+    val waitSignals: Set<String>,
+    val allSignalsRequired: Boolean,
+    val stopSignals: Set<String>,
+    val allStopSignalsRequired: Boolean
 )
 
 enum class TaskType { CONDITIONED, RANDOM }
@@ -943,6 +986,10 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
     private enum class Mode { ENTITY, BLOCK }
     private var mode: Mode = Mode.ENTITY
     private var completionPredicate: ((PlatformEntity, EntityTaskState) -> Boolean) = { _, _ -> true }
+    private val waitSignals = mutableSetOf<String>()
+    private val stopSignals = mutableSetOf<String>()
+    private var allSignalsRequired = false
+    private var allStopSignalsRequired = false
 
     companion object {
         private fun of(ordinal: PlatformLivingEntity, id: ResourceLocation, type: TaskType, lifecycle: TaskLifecycle, priority: Int, chance: Double = 0.5): TaskBuilder =
@@ -957,6 +1004,24 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
 
     fun completionPredicate(sP: (PlatformEntity, EntityTaskState) -> Boolean): TaskBuilder {
         this.completionPredicate = sP
+        return this
+    }
+
+    fun untilReceive(signal: String): TaskBuilder {
+        waitSignals += signal
+        return this
+    }
+
+    fun runUntilReceive(signal: String): TaskBuilder {
+        stopSignals += signal
+        return this
+    }
+    fun allSignalsRequired(): TaskBuilder {
+        allSignalsRequired = true
+        return this
+    }
+    fun allStopSignalsRequired(): TaskBuilder {
+        allStopSignalsRequired = true
         return this
     }
 
@@ -1022,7 +1087,8 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
         }
 
         return CompiledTask(id = this.id, type = this.type, priority = this.priority, steps = compiledSteps.toList(), chance = this.chance,
-            completionPredicate = this.completionPredicate, lifecycle = this.lifecycle, cooldownTicks = this.cooldownTicks)
+            completionPredicate = this.completionPredicate, lifecycle = this.lifecycle, cooldownTicks = this.cooldownTicks, waitForSignals = waitSignals, allSignalsRequired = allSignalsRequired,
+            stopSignals = this.stopSignals, allStopSignalsRequired = this.allStopSignalsRequired)
     }
 
     // toDto left as-is for entity selection only in this snippet - extend DTO to mark block vs entity when serializing
@@ -1063,8 +1129,19 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
             }
         }
 
-        return TaskSpecDTO(id = this.id.toString(), type = this.type, priority = this.priority, steps = stepDtos, lifecycle = this.lifecycle,
-            completionPredicate = this.completionPredicate, cooldownTicks = this.cooldownTicks)
+        return TaskSpecDTO(
+            id = this.id.toString(),
+            type = this.type,
+            lifecycle = this.lifecycle,
+            priority = this.priority,
+            steps = stepDtos,
+            cooldownTicks = this.cooldownTicks,
+            completionPredicate = this.completionPredicate,
+            waitSignals = this.waitSignals,
+            allSignalsRequired = this.allSignalsRequired,
+            stopSignals = this.stopSignals,
+            allStopSignalsRequired = this.allStopSignalsRequired
+        )
     }
 
     // --------------------- step interfaces ---------------------
@@ -1280,5 +1357,9 @@ data class CompiledTask(
     val chance: Double,
     val steps: List<CompiledStep>,
     val cooldownTicks: Int = -1,
-    val completionPredicate: ((PlatformEntity, EntityTaskState) -> Boolean)
+    val completionPredicate: (PlatformEntity, EntityTaskState) -> Boolean,
+    val waitForSignals: Set<String>,
+    val allSignalsRequired: Boolean,
+    val stopSignals: Set<String>,
+    val allStopSignalsRequired: Boolean
 )

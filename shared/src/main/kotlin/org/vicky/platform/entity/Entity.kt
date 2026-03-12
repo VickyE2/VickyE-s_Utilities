@@ -2,9 +2,14 @@
 package org.vicky.platform.entity
 
 import de.pauleff.core.Tag
-import org.vicky.platform.PlatformItem
+import net.kyori.adventure.text.Component
+import org.vicky.platform.PlatformItemStack
 import org.vicky.platform.PlatformPlayer
 import org.vicky.platform.defaults.AABB
+import org.vicky.platform.entity.distpacher.CompiledTaskRegistry
+import org.vicky.platform.entity.distpacher.EntityTaskManager
+import org.vicky.platform.entity.distpacher.Trigger
+import org.vicky.platform.entity.distpacher.TriggerManager
 import org.vicky.platform.utils.*
 import org.vicky.platform.world.PlatformLocation
 import org.vicky.platform.world.PlatformWorld
@@ -18,11 +23,11 @@ class ErrorOnMobProductionException : RuntimeException {
 
 interface PlatformEntityFactory {
     class RegisteredMobEntityEventHandler internal constructor(
-        val handler: MobEntityEventHandler
+        val handler: DefaultTriggerMobEventHandler
     )
 
     fun spawnArrowAt(loc: PlatformLocation?): PlatformEntity?
-    fun registerHandler(id: ResourceLocation, handler: MobEntityEventHandler): RegisteredMobEntityEventHandler
+    fun registerHandler(id: ResourceLocation, handler: DefaultTriggerMobEventHandler): RegisteredMobEntityEventHandler
     fun getHandler(id: ResourceLocation): RegisteredMobEntityEventHandler?
 
     @Throws(ErrorOnMobProductionException::class)
@@ -142,8 +147,8 @@ interface PlatformEntity {
     fun setInvisible(invisible: Boolean)
     fun setInvulnerable(invulnerable: Boolean)
 
-    fun setCustomName(name: String)
-    val customName: Optional<String>
+    fun setCustomName(name: Component)
+    val customName: Optional<Component>
     fun <T> setPersistentData(key: String, value: Tag<T>)
     fun getPersistentData(key: String): Tag<*>?
 
@@ -190,12 +195,12 @@ interface PlatformLivingEntity : PlatformEntity {
     fun getLastHurtMob(): PlatformLivingEntity?
     fun setLastHurtMob(mob: PlatformLivingEntity?)
 
-    fun getOffhandItem(): PlatformItem?
-    fun getMainHandItem(): PlatformItem?
-    fun setItemSlot(slot: EquipmentSlot, item: PlatformItem)
-    fun getItemBySlot(slot: EquipmentSlot): PlatformItem?
+    fun getOffhandItem(): PlatformItemStack?
+    fun getMainHandItem(): PlatformItemStack?
+    fun setItemSlot(slot: EquipmentSlot, item: PlatformItemStack)
+    fun getItemBySlot(slot: EquipmentSlot): PlatformItemStack?
     fun hasItemInSlot(slot: EquipmentSlot): Boolean
-    fun isHolding(item: PlatformItem): Boolean
+    fun isHolding(item: PlatformItemStack): Boolean
 
     val isAffectedByPotions: Boolean
     val isCurrentlyGlowing: Boolean
@@ -334,7 +339,7 @@ data class SpawnContext(
 
 data class DropEntry(
     val weight: Int,
-    val items: List<PlatformItem>
+    val items: List<PlatformItemStack>
 )
 
 data class MobEntityPhysicalProperties(
@@ -348,8 +353,29 @@ data class MobEntityPhysicalProperties(
 )
 
 data class MobEntityAIBasedGoals(
-    val goals: Map<ProducerIntendedTask, Map<String, Any>> = mapOf()
-)
+    val goals: List<GoalEntry> = listOf()
+) {
+    /**
+     * Apply the goals for a given entity:
+     * - compile/produce a CompiledTask or look up the registered compiled id
+     * - assign unconditional goals immediately
+     * - register triggerable goals with TriggerManager
+     *
+     * Note: `produceToResourceId` is a stub — adapt to your compile pipeline.
+     */
+    fun applyToEntity(entity: PlatformLivingEntity) {
+        for (entry in goals) {
+            // produce/resolve compiled task (your ProducerIntendedTask -> CompiledTask pipeline)
+            val compiled = entry.producer.produce(entity, entry.params) // returns CompiledTask
+            CompiledTaskRegistry.register(compiled) // idempotent
+            if (entry.trigger == null) {
+                EntityTaskManager.assignTask(entity, compiled.id, entry.params)
+            } else {
+                TriggerManager.subscribe(entity.uuid, entry.trigger, compiled.id, entry.params)
+            }
+        }
+    }
+}
 
 enum class EventResult {
     PASS,      // let other handlers + default behavior proceed
@@ -421,17 +447,66 @@ interface PathNavigator {
     var canFloat: Boolean
 }
 
-interface MobEntityEventHandler {
+internal interface MobEntityEventHandler {
     fun onEnterCombat(self: PlatformLivingEntity) { }
     fun onLeaveCombat(self: PlatformLivingEntity) { }
     fun onTick(self: PlatformLivingEntity): EventResult = EventResult.PASS
     fun onSpawn(self: PlatformLivingEntity): EventResult = EventResult.PASS
+    fun onDeSpawn(self: PlatformLivingEntity): EventResult = EventResult.PASS
     fun onInteract(self: PlatformLivingEntity, interacter: PlatformLivingEntity): EventResult = EventResult.PASS
     fun onAttacked(self: PlatformLivingEntity, attacker: PlatformLivingEntity): EventResult = EventResult.PASS
     fun onAttack(self: PlatformLivingEntity, victim: PlatformLivingEntity): EventResult = EventResult.PASS
     fun onApplyPotion(self: PlatformLivingEntity, effect: RegisteredUniversalEffect): EventResult = EventResult.PASS
     fun onHurt(self: PlatformLivingEntity, source: AntagonisticDamageSource, amount: Float): EventResult = EventResult.PASS
     fun onDeath(self: PlatformLivingEntity, source: AntagonisticDamageSource): EventResult = EventResult.PASS
+}
+
+/**
+ * Classes that inherit this must call super.method(...) for all overridden methods or manually call to trigger manager
+ */
+open class DefaultTriggerMobEventHandler : MobEntityEventHandler {
+    override fun onEnterCombat(self: PlatformLivingEntity) {
+        TriggerManager.fire(self, Trigger.EnterCombat)
+    }
+    override fun onLeaveCombat(self: PlatformLivingEntity) {
+        TriggerManager.fire(self, Trigger.DropCombat)
+    }
+    override fun onTick(self: PlatformLivingEntity): EventResult {
+        TriggerManager.fire(self, Trigger.DropCombat)
+        return EventResult.PASS
+    }
+    override fun onSpawn(self: PlatformLivingEntity): EventResult {
+        TriggerManager.fire(self, Trigger.Spawn)
+        return EventResult.PASS
+    }
+    override fun onDeSpawn(self: PlatformLivingEntity): EventResult {
+        TriggerManager.fire(self, Trigger.DeSpawn)
+        return EventResult.PASS
+    }
+    override fun onInteract(self: PlatformLivingEntity, interacter: PlatformLivingEntity): EventResult {
+        TriggerManager.fire(self, Trigger.Interact)
+        return EventResult.PASS
+    }
+    override fun onAttacked(self: PlatformLivingEntity, attacker: PlatformLivingEntity): EventResult  {
+        TriggerManager.fire(self, Trigger.Attacked)
+        return EventResult.PASS
+    }
+    override fun onAttack(self: PlatformLivingEntity, victim: PlatformLivingEntity): EventResult {
+        TriggerManager.fire(self, Trigger.Attack)
+        return EventResult.PASS
+    }
+    override fun onApplyPotion(self: PlatformLivingEntity, effect: RegisteredUniversalEffect): EventResult {
+        TriggerManager.fire(self, Trigger.ApplyPotion)
+        return EventResult.PASS
+    }
+    override fun onHurt(self: PlatformLivingEntity, source: AntagonisticDamageSource, amount: Float): EventResult {
+        TriggerManager.fire(self, Trigger.Damaged)
+        return EventResult.PASS
+    }
+    override fun onDeath(self: PlatformLivingEntity, source: AntagonisticDamageSource): EventResult {
+        TriggerManager.fire(self, Trigger.Death)
+        return EventResult.PASS
+    }
 }
 
 fun mob(
@@ -463,7 +538,7 @@ class MobEntityDescriptorBuilder(
         true,
         false
     )
-    private val goals = mutableMapOf<ProducerIntendedTask, Map<String, Any>>()
+    private val goals = mutableListOf<GoalEntry>()
 
     fun metadata(key: String, value: Any) {
         dataMap[key] = value
@@ -572,7 +647,7 @@ class MobDefaultsBuilder(
         spawn = SpawnSettingsBuilder(mobKey).apply(block).build()
     }
 
-    fun drop(weight: Int, vararg items: PlatformItem) {
+    fun drop(weight: Int, vararg items: PlatformItemStack) {
         drops += DropEntry(weight, items.toList())
     }
 
@@ -714,12 +789,16 @@ class SpawnSettingsBuilder(private val mobId: ResourceLocation) {
         )
 }
 
+data class GoalEntry(val producer: ProducerIntendedTask, val params: Map<String, Any>, val trigger: Trigger? = null)
 class AIGoalsBuilder {
-    private val goals = mutableMapOf<ProducerIntendedTask, Map<String, Any>>()
+    private val goals = mutableListOf<GoalEntry>()
 
-    fun goal(task: ProducerIntendedTask, params: Map<String, Any>) {
-        goals[task] = params
+    fun goal(task: ProducerIntendedTask, params: Map<String, Any> = emptyMap()) {
+        goals += GoalEntry(task, params)
+    }
+    fun goal(task: ProducerIntendedTask, params: Map<String, Any> = emptyMap(), trigger: Trigger) {
+        goals += GoalEntry(task, params, trigger)
     }
 
-    fun build(): Map<ProducerIntendedTask, Map<String, Any>> = goals
+    fun build(): List<GoalEntry> = goals
 }

@@ -1,5 +1,6 @@
 package org.vicky.platform.world;
 
+import org.jetbrains.annotations.NotNull;
 import org.vicky.platform.utils.ResourceLocation;
 
 public interface PlatformMaterial {
@@ -10,5 +11,6 @@ public interface PlatformMaterial {
 
     boolean isAir();
 
+    @NotNull
     ResourceLocation getResourceLocation();
 }

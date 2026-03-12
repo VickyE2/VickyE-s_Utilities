@@ -5,21 +5,13 @@ import org.vicky.platform.utils.ResourceLocation
 import java.util.function.Consumer
 
 
-/** Mark a class that provides an EffectDescriptor to be auto-registered.  */
+/** Mark a class that provides an Effect to be auto-registered.  */
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.CLASS)
+@Target(AnnotationTarget.FIELD)
 annotation class RegisterEffect(
     /** Optional priority (higher -> registered earlier).  */
     val priority: Int = 0
 )
-
-interface EffectProvider {
-    /**
-     * Called by bootstrap to create the descriptor to register.
-     * Must be a cheap, side-effect-free creation method.
-     */
-    fun create(): EffectDescriptor
-}
 
 enum class MobEffectCategory {
     BENEFICIAL,

@@ -1,28 +1,22 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.platform.entity
 
-import org.vicky.coreregistry.CoreEntityRegistry
 import org.vicky.platform.PlatformPlugin
-import java.lang.annotation.ElementType
-import java.lang.annotation.RetentionPolicy
-
+import org.vicky.platform.entity.distpacher.Trigger
 
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.CLASS)
-annotation class RegisterFactory
+@Target(AnnotationTarget.FIELD)
+annotation class RegisterMob
 
-interface MobRegisteringClass {
-    fun register(registry: PlatformPlugin)
-}
-
-@RegisterFactory
-class DefaultEntities : MobRegisteringClass {
+object DefaultEntities {
+    @JvmStatic
+    @RegisterMob
     private val testDummy = mob(
-        key = "core" rli "test_dummy_mob",
+        key = "test_dummy_mob".core(),
         handler = DefaultHandlers.MobDefaultHandler,
-        "core" rli "test_dummy",
-        "core" rli "test_dummy",
-        "core" rli "test_dummy"
+        "test_dummy".core(),
+        "test_dummy".core(),
+        "test_dummy".core()
     ) {
         defaults("Dummy") {
             spawn {
@@ -43,14 +37,9 @@ class DefaultEntities : MobRegisteringClass {
         }
 
         ai {
-            goal(DefaultTasks.LookAtNearestPlayer, emptyMap())
-            goal(DefaultTasks.PassiveWander, emptyMap())
+            goal(DefaultTasks.LookAtNearestPlayer)
+            goal(DefaultTasks.LookAtAttackerTillOutOfCombat, trigger = Trigger.Attacked)
+            goal(DefaultTasks.PassiveWander)
         }
-    }
-
-    override fun register(registry: PlatformPlugin) {
-        registry.registerMobEntityDescriptor(
-            testDummy
-        )
     }
 }

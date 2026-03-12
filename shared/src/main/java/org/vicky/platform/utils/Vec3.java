@@ -5,7 +5,7 @@ import java.util.random.RandomGenerator;
 
 import static java.lang.Math.PI;
 
-public class Vec3 implements Cloneable, Serializable {
+public class Vec3 implements Vector3, Cloneable, Serializable {
     public final double x, y, z;
 
     public Vec3(double x, double y, double z) {
@@ -75,11 +75,11 @@ public class Vec3 implements Cloneable, Serializable {
         return of(this.x, this.y, z);
     }
 
-    public Vec3 subtract(Vec3 other) {
-        return new Vec3(x - other.x, y - other.y, z - other.z);
+    public Vec3 subtract(Vector3 other) {
+        return new Vec3(x - other.getX(), y - other.getY(), z - other.getZ());
     }
 
-    public double angleTo(Vec3 other) {
+    public double angleTo(Vector3 other) {
         double dot = this.dot(other);
         double magA = this.length();
         double magB = other.length();
@@ -121,11 +121,11 @@ public class Vec3 implements Cloneable, Serializable {
         return Math.toDegrees((t + tau) % tau);
     }
 
-    public Vec3 lerp(Vec3 b, double t) {
+    public Vec3 lerp(Vector3 b, double t) {
         double oneMinusT = 1.0 - t;
-        double x = this.x * oneMinusT + b.x * t;
-        double y = this.y * oneMinusT + b.y * t;
-        double z = this.z * oneMinusT + b.z * t;
+        double x = this.x * oneMinusT + b.getX() * t;
+        double y = this.y * oneMinusT + b.getY() * t;
+        double z = this.z * oneMinusT + b.getZ() * t;
         return new Vec3(x, y, z);
     }
 
@@ -142,38 +142,38 @@ public class Vec3 implements Cloneable, Serializable {
         return "[" + this.x + "," + this.y + "," + this.z + "]";
     }
 
-    public Vec3 getMinimum(Vec3 v2) {
-        return new Vec3(Math.min(this.x, v2.x), Math.min(this.y, v2.y), Math.min(this.z, v2.z));
+    public Vec3 getMinimum(Vector3 v2) {
+        return new Vec3(Math.min(this.x, v2.getX()), Math.min(this.y, v2.getY()), Math.min(this.z, v2.getZ()));
     }
 
-    public Vec3 getMaximum(Vec3 v2) {
-        return new Vec3(Math.max(this.x, v2.x), Math.max(this.y, v2.y), Math.max(this.z, v2.z));
+    public Vec3 getMaximum(Vector3 v2) {
+        return new Vec3(Math.max(this.x, v2.getX()), Math.max(this.y, v2.getY()), Math.max(this.z, v2.getZ()));
     }
 
-    public Vec3 subtract(Vec3... others) {
+    public Vec3 subtract(Vector3... others) {
         double newX = this.x;
         double newY = this.y;
         double newZ = this.z;
         int var9 = others.length;
 
-        for (Vec3 other : others) {
-            newX -= other.x;
-            newY -= other.y;
-            newZ -= other.z;
+        for (Vector3 other : others) {
+            newX -= other.getX();
+            newY -= other.getY();
+            newZ -= other.getZ();
         }
 
         return of(newX, newY, newZ);
     }
 
-    public Vec3 multiply(Vec3... others) {
+    public Vec3 multiply(Vector3... others) {
         double newX = this.x;
         double newY = this.y;
         double newZ = this.z;
 
-        for (Vec3 other : others) {
-            newX *= other.x;
-            newY *= other.y;
-            newZ *= other.z;
+        for (Vector3 other : others) {
+            newX *= other.getX();
+            newY *= other.getY();
+            newZ *= other.getZ();
         }
 
         return of(newX, newY, newZ);
@@ -184,10 +184,10 @@ public class Vec3 implements Cloneable, Serializable {
         double newY = this.y;
         double newZ = this.z;
 
-        for (Vec3 other : others) {
-            newX /= other.x;
-            newY /= other.y;
-            newZ /= other.z;
+        for (Vector3 other : others) {
+            newX /= other.getX();
+            newY /= other.getY();
+            newZ /= other.getZ();
         }
 
         return of(newX, newY, newZ);
@@ -197,23 +197,25 @@ public class Vec3 implements Cloneable, Serializable {
         return Math.sqrt(this.lengthSq());
     }
 
-    public double distance(Vec3 other) {
+    public double distance(Vector3 other) {
         return Math.sqrt(this.distanceSq(other));
     }
 
-    public double distanceSq(Vec3 other) {
-        double dx = other.x - this.x;
-        double dy = other.y - this.y;
-        double dz = other.z - this.z;
+    public double distanceSq(Vector3 other) {
+        double dx = other.getX() - this.x;
+        double dy = other.getY() - this.y;
+        double dz = other.getZ() - this.z;
         return dx * dx + dy * dy + dz * dz;
     }
 
-    public boolean containedWithin(Vec3 min, Vec3 max) {
-        return this.x >= min.x && this.x <= max.x && this.y >= min.y && this.y <= max.y && this.z >= min.z && this.z <= max.z;
+    public boolean containedWithin(Vector3 min, Vector3 max) {
+        return this.x >= min.getX() && this.x <= max.getX() &&
+                this.y >= min.getY() && this.y <= max.getY() &&
+                this.z >= min.getZ() && this.z <= max.getZ();
     }
 
-    public Vec3 add(Vec3 other) {
-        return new Vec3(x + other.x, y + other.y, z + other.z);
+    public Vec3 add(Vector3 other) {
+        return new Vec3(x + other.getX(), y + other.getY(), z + other.getZ());
     }
 
     public Vec3 add(Double x, Double y, Double z) {
@@ -224,15 +226,15 @@ public class Vec3 implements Cloneable, Serializable {
         return new Vec3(x + this.x, y + this.y, z + this.z);
     }
 
-    public Vec3 add(Vec3... others) {
+    public Vec3 add(Vector3... others) {
         double newX = this.x;
         double newY = this.y;
         double newZ = this.z;
 
-        for (Vec3 other : others) {
-            newX += other.x;
-            newY += other.y;
-            newZ += other.z;
+        for (Vector3 other : others) {
+            newX += other.getX();
+            newY += other.getY();
+            newZ += other.getZ();
         }
 
         return of(newX, newY, newZ);
@@ -281,8 +283,8 @@ public class Vec3 implements Cloneable, Serializable {
         return new Vec3(x * scalar, y * scalar, z * scalar);
     }
 
-    public Vec3 multiply(Vec3 other) {
-        return this.multiply(other.x, other.y, other.z);
+    public Vec3 multiply(Vector3 other) {
+        return this.multiply(other.getX(), other.getY(), other.getZ());
     }
 
     public Vec3 multiply(double x, double y, double z) {
@@ -293,28 +295,42 @@ public class Vec3 implements Cloneable, Serializable {
         return new Vec3(x / scalar, y / scalar, z / scalar);
     }
 
-    public Vec3 divide(Vec3 other) {
-        return this.divide(other.x, other.y, other.z);
+    public Vec3 divide(Vector3 other) {
+        return this.divide(other.getX(), other.getY(), other.getZ());
     }
 
     public Vec3 divide(double x, double y, double z) {
         return of(this.x / x, this.y / y, this.z / z);
     }
 
-    public Vec3 crossProduct(Vec3 v) {
+    public Vec3 crossProduct(Vector3 v) {
         return new Vec3(
-                y * v.z - z * v.y,
-                z * v.x - x * v.z,
-                x * v.y - y * v.x
+                y * v.getX() - z * v.getY(),
+                z * v.getX() - x * v.getZ(),
+                x * v.getY() - y * v.getX()
         );
     }
 
-    public double dot(Vec3 v) {
-        return x * v.x + y * v.y + z * v.z;
+    public Vec3 getOrtho() {
+        // Find the coordinate axis the vector is LEAST aligned with
+        Vec3 abs = new Vec3(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
+
+        // Cross product with that axis to get a guaranteed perpendicular vector
+        if (abs.x < abs.y && abs.x < abs.z) return this.crossProduct(new Vec3(1, 0, 0)).normalize();
+        if (abs.y < abs.z) return this.crossProduct(new Vec3(0, 1, 0)).normalize();
+        return this.crossProduct(new Vec3(0, 0, 1)).normalize();
+    }
+
+    public double dot(Vector3 v) {
+        return x * v.getX() + y * v.getY() + z * v.getZ();
     }
 
     public double lengthSq() {
         return x * x + y * y + z * z;
+    }
+
+    public Vec3 abs() {
+        return Vec3.of(Math.abs(x), Math.abs(y), Math.abs(z));
     }
 
     @Override

@@ -20,5 +20,6 @@ public interface PlatformBlock<T> {
 	@NotNull
 	PlatformBlockState<T> getBlockState();
 
-	void setBlockState(PlatformBlockState<T> state);
+	void setBlockState(
+			@NotNull PlatformBlockState<T> state);
 }

@@ -22,7 +22,7 @@ public class ContextLogger {
   protected final ContextType context;
   protected final String contextName;
   protected final PlatformLogger logger;
-  private int requiredLogLevel = PlatformPlugin.logLevel();
+  private int requiredLogLevel = PlatformPlugin.isInitialised() ? PlatformPlugin.logLevel() : 0;
 
   /**
    * Constructs a ContextLogger with the specified context type and context name.
@@ -103,6 +103,7 @@ public class ContextLogger {
    *
    * @param message The message to log.
    */
+  @Deprecated
   public void print(String message) {
     if (requiredLogLevel > LogType.BASIC.level) return;
     String contextTag =
@@ -118,6 +119,7 @@ public class ContextLogger {
    * @param message The message to log
    * @param isError If true, the message is treated as an error (red formatting); otherwise, cyan is used.
    */
+  @Deprecated
   public void print(String message, boolean isError) {
     if (requiredLogLevel > (isError ? LogType.ERROR.level : LogType.BASIC.level)) return;
     String contextTag =
@@ -138,6 +140,7 @@ public class ContextLogger {
    *
    * @param message The message to log.
    */
+  @Deprecated
   public void print(String message, boolean isError, Object... args) {
     if (requiredLogLevel > (isError ? LogType.ERROR.level : LogType.BASIC.level)) return;
     List<String> finalised = new ArrayList<>();
@@ -163,6 +166,7 @@ public class ContextLogger {
    *
    * @param message The message to log.
    */
+  @Deprecated
   public void print(String message, Object... args) {
     if (requiredLogLevel > LogType.BASIC.level) return;
     List<String> finalised = new ArrayList<>();
@@ -203,6 +207,7 @@ public class ContextLogger {
    * @param message The message to log.
    * @param type    The log type, which determines the color used for formatting.
    */
+  @Deprecated
   public void print(String message, LogType type) {
     if (requiredLogLevel > type.level) return;
     String contextTag =
@@ -221,6 +226,7 @@ public class ContextLogger {
    *
    * @param message The message to log.
    */
+  @Deprecated
   public void print(String message, LogType type, Object... args) {
     if (requiredLogLevel > type.level) return;
     List<String> finalised = new ArrayList<>();
@@ -239,6 +245,7 @@ public class ContextLogger {
    * @param type    The log type which determines the base color for formatting.
    * @param effect  The post-formatting effect to apply (e.g., bold, italic, underline).
    */
+  @Deprecated
   public void print(String message, LogType type, LogPostType effect) {
     if (requiredLogLevel > type.level) return;
     String contextTag =
@@ -259,6 +266,7 @@ public class ContextLogger {
    *
    * @param message The message to log.
    */
+  @Deprecated
   public void print(String message, LogType type, LogPostType effect, Object... args) {
     if (requiredLogLevel > type.level) return;
     List<String> finalised = new ArrayList<>();
@@ -277,6 +285,7 @@ public class ContextLogger {
    * @param type                The log type which determines the color formatting of the context tag.
    * @param shouldAffectMessage If true, the message is formatted with the log type's color; otherwise, it is not.
    */
+  @Deprecated
   public void print(String message, LogType type, boolean shouldAffectMessage) {
     if (requiredLogLevel > type.level) return;
     String contextTag =
@@ -300,6 +309,7 @@ public class ContextLogger {
    *
    * @param message The message to log.
    */
+  @Deprecated
   public void print(String message, LogType type, boolean shouldAffectMessage, Object... args) {
     if (requiredLogLevel > type.level) return;
     List<String> finalised = new ArrayList<>();
@@ -356,6 +366,7 @@ public class ContextLogger {
    * @param effect              The post-formatting effect to apply.
    * @param shouldAffectMessage If true, the message is additionally formatted with the log type's color; otherwise, only the effect is applied.
    */
+  @Deprecated
   public void print(String message, LogType type, LogPostType effect, boolean shouldAffectMessage) {
     if (requiredLogLevel > type.level) return;
     String contextTag =
@@ -381,6 +392,7 @@ public class ContextLogger {
    *
    * @param message The message to log.
    */
+  @Deprecated
   public void print(String message, LogType type, LogPostType effect, boolean shouldAffectMessage, Object... args) {
     if (requiredLogLevel > type.level) return;
     List<String> finalised = new ArrayList<>();
@@ -392,10 +404,52 @@ public class ContextLogger {
   }
 
   public void setLevel(LogType level) {
-    if (level.level > PlatformPlugin.logLevel()) {
+    if (level.level > this.requiredLogLevel) {
       this.requiredLogLevel = level.level;
     }
   }
+
+  public void info(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.BASIC, shouldAffectMessage, args);}
+  public void info(String message, boolean shouldAffectMessage) {print(message, LogType.BASIC, shouldAffectMessage);}
+  public void info(String message, LogPostType effect, Object... args) {print(message, LogType.BASIC, effect, args);}
+  public void info(String message, LogPostType effect) {print(message, LogType.BASIC, effect);}
+  public void info(String message, Object... args) {print(message, LogType.BASIC, args);}
+  public void info(String message) {print(message, LogType.BASIC);}
+
+  public void warn(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.WARNING, shouldAffectMessage, args);}
+  public void warn(String message, boolean shouldAffectMessage) {print(message, LogType.WARNING, shouldAffectMessage);}
+  public void warn(String message, LogPostType effect, Object... args) {print(message, LogType.WARNING, effect, args);}
+  public void warn(String message, LogPostType effect) {print(message, LogType.WARNING, effect);}
+  public void warn(String message, Object... args) {print(message, LogType.WARNING, args);}
+  public void warn(String message) {print(message, LogType.WARNING);}
+
+  public void severe(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.ERROR, shouldAffectMessage, args);}
+  public void severe(String message, boolean shouldAffectMessage) {print(message, LogType.ERROR, shouldAffectMessage);}
+  public void severe(String message, LogPostType effect, Object... args) {print(message, LogType.ERROR, effect, args);}
+  public void severe(String message, LogPostType effect) {print(message, LogType.ERROR, effect);}
+  public void severe(String message, Object... args) {print(message, LogType.ERROR, args);}
+  public void severe(String message) {print(message, LogType.ERROR);}
+
+  public void pending(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.PENDING, shouldAffectMessage, args);}
+  public void pending(String message, boolean shouldAffectMessage) {print(message, LogType.PENDING, shouldAffectMessage);}
+  public void pending(String message, LogPostType effect, Object... args) {print(message, LogType.PENDING, effect, args);}
+  public void pending(String message, LogPostType effect) {print(message, LogType.PENDING, effect);}
+  public void pending(String message, Object... args) {print(message, LogType.PENDING, args);}
+  public void pending(String message) {print(message, LogType.PENDING);}
+
+  public void success(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.SUCCESS, shouldAffectMessage, args);}
+  public void success(String message, boolean shouldAffectMessage) {print(message, LogType.SUCCESS, shouldAffectMessage);}
+  public void success(String message, LogPostType effect, Object... args) {print(message, LogType.SUCCESS, effect, args);}
+  public void success(String message, LogPostType effect) {print(message, LogType.SUCCESS, effect);}
+  public void success(String message, Object... args) {print(message, LogType.SUCCESS, args);}
+  public void success(String message) {print(message, LogType.SUCCESS);}
+
+  public void ambient(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.AMBIENCE, shouldAffectMessage, args);}
+  public void ambient(String message, boolean shouldAffectMessage) {print(message, LogType.AMBIENCE, shouldAffectMessage);}
+  public void ambient(String message, LogPostType effect, Object... args) {print(message, LogType.AMBIENCE, effect, args);}
+  public void ambient(String message, LogPostType effect) {print(message, LogType.AMBIENCE, effect);}
+  public void ambient(String message, Object... args) {print(message, LogType.AMBIENCE, args);}
+  public void ambient(String message) {print(message, LogType.AMBIENCE);}
 
   /**
    * Enumeration defining different logging contexts.

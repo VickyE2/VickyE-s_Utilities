@@ -1,20 +1,19 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.platform.entity
 
-@RegisterEffect
-class DefaultMarkedMobEffect : EffectProvider {
-    override fun create(): EffectDescriptor {
-        return EffectDescriptor(
-            "core" rli "marked",
-            MobEffectCategory.NEUTRAL,
-            "A simple Marker",
-            0x777777,
-            4,
-            false,
-            200,
-            { },
-            { },
-            { }
-        )
-    }
+object DefaultMobEffects {
+    @JvmStatic
+    @RegisterEffect
+    val marked =  EffectDescriptor(
+        "marked".core(),
+        MobEffectCategory.NEUTRAL,
+        "A simple Marker",
+        0x777777,
+        4,
+        false,
+        200,
+        { },
+        { },
+        { }
+    )
 }

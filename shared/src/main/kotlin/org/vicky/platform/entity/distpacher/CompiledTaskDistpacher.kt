@@ -20,11 +20,14 @@ object CompiledTaskRegistry {
 
 /** Per-entity lightweight state — keep very small. */
 class EntityTaskState {
-    var cooldownTicksRemaining: Int = 0
+    var cooldownTicksRemaining: MutableMap<ResourceLocation, Int> = mutableMapOf()
     val activeEntityTimed = ArrayList<ActiveTimedAction>(4) // small pre-sized list
     val activeBlockTimed = ArrayList<ActiveTimedBlockAction>(4) // small pre-sized list
     val lastSelectorTick = mutableMapOf<ResourceLocation, Long>() // throttle per-selector per-entity
-    val assignedTasks = ArrayList<ResourceLocation>(4) // list of task IDs assigned to this entity
+    val assignedTasks = LinkedHashMap<ResourceLocation, Map<String, Any>>(4) // list of task IDs assigned to this entity
+    // NEW: tasks currently blocked waiting for signals:
+    // map: taskId -> remainingSignalsSet
+    val waitingTasks = LinkedHashMap<ResourceLocation, MutableSet<String>>(4)
 }
 
 /** Manager that owns entity states; use WeakHashMap or remove entries when entity dies. */
@@ -42,17 +45,114 @@ object EntityTaskManager {
 
     fun removeEntity(entity: PlatformLivingEntity) {
         states.remove(entity.uuid)
+        SignalManager.clearEntity(entity.uuid)
+        TriggerManager.clearEntity(entity.uuid)
     }
 
-    /** Assign a compiled task to an entity (store ID only). */
-    fun assignTask(entity: PlatformLivingEntity, taskId: ResourceLocation) {
-        CompiledTaskRegistry.get(taskId) ?: error("No compiled task $taskId")
-        val st = stateFor(entity)
-        if (!st.assignedTasks.contains(taskId)) {
-            st.assignedTasks += taskId
-            LOGGER.print("Assigned task $taskId to ${entity.uuid}", ContextLogger.LogType.BASIC)
+    fun onStopSignal(entity: PlatformLivingEntity, signal: String, extraData: Map<String, Any> = emptyMap()) {
+        val st = states[entity.uuid] ?: return
+
+        // Cancel entity-timed actions belonging to tasks that stop on this signal
+        val itEnt = st.activeEntityTimed.listIterator()
+        while (itEnt.hasNext()) {
+            val a = itEnt.next()
+            val task = CompiledTaskRegistry.get(a.taskId)
+            if (task != null && task.stopSignals.contains(signal)) {
+                // call onEnd so the timed action can cleanly end
+                try {
+                    a.compiled.onEnd(a.self, a.targetEntity)
+                } catch (ex: Exception) {
+                    LOGGER.debug("Exception while ending timed action ${a.compiled.id} for ${entity.uuid}: $ex")
+                }
+                itEnt.remove()
+
+                if (task.lifecycle == TaskLifecycle.ONE_SHOT)
+                    st.assignedTasks.remove(a.taskId)
+                else
+                    st.cooldownTicksRemaining[task.id] = task.cooldownTicks
+            }
+        }
+
+        // Cancel block-timed actions similarly
+        val itBlock = st.activeBlockTimed.listIterator()
+        while (itBlock.hasNext()) {
+            val a = itBlock.next()
+            val task = CompiledTaskRegistry.get(a.taskId)
+            if (task != null && task.stopSignals.contains(signal)) {
+                try {
+                    a.compiled.onEnd(a.self, a.targetBlock)
+                } catch (ex: Exception) {
+                    LOGGER.debug("Exception while ending block timed action ${a.compiled.id} for ${entity.uuid}: $ex")
+                }
+                itBlock.remove()
+                st.assignedTasks.remove(a.taskId)
+            }
         }
     }
+
+    fun onSignalReceived(entity: PlatformLivingEntity, signal: String, extraData: Map<String, Any> = emptyMap()) {
+        val st = states[entity.uuid] ?: return
+        val toActivate = mutableListOf<ResourceLocation>()
+
+        val it = st.waitingTasks.entries.iterator()
+        while (it.hasNext()) {
+            val (taskId, remaining) = it.next()
+            if (remaining.remove(signal)) {
+                // merge any extraData into assignedTask params if desired:
+                val prevParams = st.assignedTasks[taskId] ?: emptyMap()
+                val merged = HashMap(prevParams)
+                merged.putAll(extraData)
+                st.assignedTasks[taskId] = merged
+
+                if (remaining.isEmpty()) {
+                    toActivate += taskId
+                    it.remove()
+                }
+                toActivate.forEach { tid ->
+                    // ensure instant eligibility (or decide a small wait)
+                    st.cooldownTicksRemaining[tid] = 0
+                }
+            }
+        }
+    }
+
+    private fun setTaskCooldown(st: EntityTaskState, taskId: ResourceLocation, ticks: Int) {
+        if (ticks <= 0) st.cooldownTicksRemaining.remove(taskId) else st.cooldownTicksRemaining[taskId] = ticks
+    }
+    private fun isTaskOnCooldown(st: EntityTaskState, taskId: ResourceLocation) =
+        (st.cooldownTicksRemaining[taskId] ?: 0) > 0
+
+
+    /** Assign a compiled task to an entity (store ID only). */
+    fun assignTask(entity: PlatformLivingEntity, taskId: ResourceLocation, params: Map<String, Any> = emptyMap()) {
+        val compiled = CompiledTaskRegistry.get(taskId) ?: error("No compiled task $taskId")
+        val st = stateFor(entity)
+
+        // store / merge params like before
+        val existing = st.assignedTasks[taskId]
+        if (existing == null) {
+            st.assignedTasks[taskId] = params
+        } else {
+            val merged = HashMap(existing)
+            merged.putAll(params)
+            st.assignedTasks[taskId] = merged
+        }
+
+        // If this compiled task must wait for signals, mark it and subscribe
+        if (compiled.waitForSignals.isNotEmpty()) {
+            // copy set so we can mutate remaining signals
+            val remaining = compiled.waitForSignals.toMutableSet()
+            st.waitingTasks[taskId] = remaining
+            // subscribe to each signal name (so SignalManager.fire will assign/notify)
+            for (sig in compiled.waitForSignals) {
+                SignalManager.subscribe(entity.uuid, sig, taskId, params)
+            }
+            LOGGER.print("Task $taskId for ${entity.uuid} will wait for signals=${compiled.waitForSignals}", ContextLogger.LogType.BASIC)
+        } else {
+            LOGGER.print("Assigned task $taskId to ${entity.uuid} with params=$params", ContextLogger.LogType.BASIC)
+        }
+    }
+
 
     fun clearTasks(entity: PlatformLivingEntity) {
         states[entity.uuid]?.assignedTasks?.clear()
@@ -66,14 +166,17 @@ object EntityTaskManager {
 
         tickActiveTimed(entity, st)
 
-        if (st.cooldownTicksRemaining > 0) {
-            st.cooldownTicksRemaining--
-            return
+        val keys = st.cooldownTicksRemaining.keys.toList()
+        for (k in keys) {
+            val v = st.cooldownTicksRemaining[k] ?: continue
+            if (v > 1) st.cooldownTicksRemaining[k] = v - 1
+            else st.cooldownTicksRemaining.remove(k) // remove zeros to keep map small
         }
+
         if (st.assignedTasks.isEmpty()) return
 
         val candidates = st.assignedTasks
-            .mapNotNull { CompiledTaskRegistry.get(it) }
+            .mapNotNull { CompiledTaskRegistry.get(it.key) }
             .sortedWith(compareByDescending<CompiledTask> { it.priority }.thenBy { Random.nextFloat() })
 
         val tasksToRemove = mutableListOf<ResourceLocation>()
@@ -82,12 +185,12 @@ object EntityTaskManager {
             when (tryRunTaskOnce(entity, task, st, worldTick)) {
                 TaskRunOutcome.NOT_RUN -> continue
                 TaskRunOutcome.RAN_INSTANT -> {
-                    st.cooldownTicksRemaining = task.cooldownTicks.coerceAtLeast(0)
+                    st.cooldownTicksRemaining[task.id] = task.cooldownTicks.coerceAtLeast(0)
                     if (task.lifecycle == TaskLifecycle.ONE_SHOT) tasksToRemove += task.id
                     break
                 }
                 TaskRunOutcome.RAN_SCHEDULED -> {
-                    st.cooldownTicksRemaining = task.cooldownTicks.coerceAtLeast(0)
+                    st.cooldownTicksRemaining[task.id] = task.cooldownTicks.coerceAtLeast(0)
                     // for scheduled tasks: if ONE_SHOT and no other timers, mark for removal only after timers end
                     if (task.lifecycle == TaskLifecycle.ONE_SHOT && !hasActiveTimersForTask(st, task.id)) {
                         tasksToRemove += task.id
@@ -102,7 +205,10 @@ object EntityTaskManager {
         }
 
         if (tasksToRemove.isNotEmpty()) {
-            st.assignedTasks.removeAll(tasksToRemove.toSet())
+            tasksToRemove.toSet().forEach {
+                st.assignedTasks.remove(it)
+                st.cooldownTicksRemaining.remove(it)
+            }
         }
     }
 
@@ -117,6 +223,12 @@ object EntityTaskManager {
         var working: AmountableResult<PlatformLivingEntity>? = null
         var workingBlock: AmountableResult<PlatformBlock<*>>? = null
         val ctx = SelectorContext.ofEntity(entity)
+
+        if (isTaskOnCooldown(st, task.id)) return TaskRunOutcome.NOT_RUN
+        if (st.waitingTasks.containsKey(task.id)) {
+            LOGGER.debug("Task ${task.id} is waiting on signals=${st.waitingTasks[task.id]} for entity ${entity.uuid}")
+            return TaskRunOutcome.NOT_RUN
+        }
 
         for (step in task.steps) {
             when (step) {
@@ -297,11 +409,10 @@ object EntityTaskManager {
     ) {
         // step.dto.timedRefs aligns to compiledTimedAction list by index (we kept them matched on compile)
         val dtoTimedRefs = step.dto.entityTimedRefs
-        val ct = step.compiledTimedAction
 
         // for each target schedule each timedRef
         targets.forEach { target ->
-            ct.forEachIndexed { idx, compiledTimed ->
+            step.compiledTimedAction.forEachIndexed { idx, compiledTimed ->
                 val ref = dtoTimedRefs.getOrNull(idx) ?: TimedRef(compiledTimed.id) // fallback
                 // slot & runBlocking handling
                 val slot = ref.slot
@@ -333,12 +444,11 @@ object EntityTaskManager {
         step: CompiledStep.BlockActionStep
     ) {
         // step.dto.timedRefs aligns to compiledTimedAction list by index (we kept them matched on compile)
-        val dtoTimedRefs = step.dto.entityTimedRefs
-        val ct = step
+        val dtoTimedRefs = step.dto.blockTimedActionRefs
 
         // for each target schedule each timedRef
         targets.forEach { target ->
-            ct.compiledTimedAction.forEachIndexed { idx, compiledTimed ->
+            step.compiledTimedAction.forEachIndexed { idx, compiledTimed ->
                 val ref = dtoTimedRefs.getOrNull(idx) ?: TimedRef(compiledTimed.id) // fallback
                 // slot & runBlocking handling
                 val slot = ref.slot
@@ -354,8 +464,10 @@ object EntityTaskManager {
                 // call onStart on main thread
                 if (compiledTimed.onStart(owner, target)) {
                     // create active timed
-                    val active = ActiveTimedBlockAction(compiledTimed, owner, target,
-                        ticksLeft, interval, 0, slot, task.id, compiledTimed.id)
+                    val active = ActiveTimedBlockAction(
+                        compiledTimed, owner, target,
+                        ticksLeft, interval, 0, slot, task.id, compiledTimed.id
+                    )
                     st.activeBlockTimed.add(active)
                 }
             }
@@ -477,5 +589,130 @@ object EntityTaskManager {
                 }
             }
         }
+    }
+}
+
+
+
+
+/* TRIGGER BASED TASKS */
+
+sealed class Trigger(val key: ResourceLocation) {
+    data object Spawn : Trigger("on_spawn".core())
+    data object DeSpawn : Trigger("on_despawn".core())
+    data object Death : Trigger("on_death".core())
+    data object Loaded : Trigger("on_loaded".core())
+    data object SpawnOrLoaded : Trigger("on_spawn_or_loaded".core())
+    data object Tick : Trigger("on_tick".core())
+    data object Attack : Trigger("on_attack".core())
+    data object ApplyPotion : Trigger("on_potion_received".core())
+    data object Damaged : Trigger("on_damaged".core())
+    data object Attacked : Trigger("on_attacked".core())
+    data object EnterCombat : Trigger("on_enter_combat".core())
+    data object DropCombat : Trigger("on_drop_combat".core())
+    data object TargetChanged : Trigger("on_target_changed".core())
+    data object Interact : Trigger("on_interacted_with".core())
+    data object PlayerKill : Trigger("on_killed_player".core())
+    data object Teleport : Trigger("on_teleported".core())
+    data object Shoot : Trigger("on_shoot".core())
+    data object ProjectileHit : Trigger("on_projectile_hit_entity".core())
+    data object ProjectileHitBlock : Trigger("on_projectile_hit_block".core())
+    data object Tame : Trigger("on_tame".core())
+    data object Breed : Trigger("on_breed".core())
+    data object Trade : Trigger("on_trade".core())
+    data object Bucketed : Trigger("on_milked_or_bucketed".core())
+    data object HearSound : Trigger("on_hear_sound".core())
+    data object Dismounted : Trigger("on_dismounted".core())
+    data class WorldChanged(val worldName: String) : Trigger("on_change_world/$worldName".core())
+    data class Signal(val signal: String) : Trigger("on_receive_signal/$signal".core())
+    data class HurtBy(val sourceId: String) : Trigger("on_hurt_by/$sourceId".core())
+    data class Custom(val name: String, val data: Map<String, Any> = emptyMap()) : Trigger("custom/$name".core())
+}
+const val TRIGGER_ALL_KEY = "all"
+
+object TriggerManager {
+    // entityUuid -> triggerKey -> list of (taskId, params)
+    private val subscriptions = ConcurrentHashMap<UUID, MutableMap<ResourceLocation, MutableList<Pair<ResourceLocation, Map<String, Any>>>>>()
+
+    /** Subscribe task to a trigger for an entity. */
+    fun subscribe(entityUuid: UUID, trigger: Trigger, taskId: ResourceLocation, params: Map<String, Any> = emptyMap()) {
+        val map = subscriptions.computeIfAbsent(entityUuid) { mutableMapOf() }
+        val list = map.computeIfAbsent(trigger.key) { mutableListOf() }
+        list += taskId to params
+    }
+
+    /** Unsubscribe a specific task for an entity (used on entity unload). */
+    fun unsubscribe(entityUuid: UUID, taskId: ResourceLocation) {
+        subscriptions[entityUuid]?.values?.forEach { it.removeIf { pair -> pair.first == taskId } }
+    }
+
+    /** Fire a trigger for a given entity; this will assign tasks to entity via EntityTaskManager. */
+    fun fire(entity: PlatformLivingEntity, trigger: Trigger, extraData: Map<String, Any> = emptyMap()) {
+        val map = subscriptions[entity.uuid] ?: return
+        val list = map[trigger.key] ?: return
+
+        // iterate snapshot so subscriptions can change from assignTask
+        val snapshot = ArrayList(list)
+        for ((taskId, params) in snapshot) {
+            val merged = HashMap(params)
+            merged.putAll(extraData)
+            EntityTaskManager.assignTask(entity, taskId, merged)
+        }
+    }
+
+    fun clearEntity(entityUuid: UUID) {
+        subscriptions.remove(entityUuid)
+    }
+}
+
+object Signals {
+    const val OUT_OF_COMBAT = "out_of_combat"
+    const val ENTER_COMBAT = "enter_combat"
+    const val ALL = "all_signals"
+}
+
+object SignalManager {
+    // entityUuid -> signalName -> list of (taskId, params)
+    private val subscriptions = ConcurrentHashMap<UUID, MutableMap<String, MutableList<Pair<ResourceLocation, Map<String, Any>>>>>()
+
+    private fun ensureMap(entityUuid: UUID) =
+        subscriptions.computeIfAbsent(entityUuid) { ConcurrentHashMap() }
+
+    /** subscribe a task to a signal for a particular entity (used when a CompiledTask requires a signal) */
+    fun subscribe(entityUuid: UUID, signal: String, taskId: ResourceLocation, params: Map<String, Any> = emptyMap()) {
+        val map = ensureMap(entityUuid)
+        val list = map.computeIfAbsent(signal) { Collections.synchronizedList(mutableListOf()) }
+        list += (taskId to params)
+    }
+
+    /** unsubscribe all subscriptions for an entity (on unload) */
+    fun clearEntity(entityUuid: UUID) {
+        subscriptions.remove(entityUuid)
+    }
+
+    /**
+     * Fire a signal for an entity. Any tasks subscribed (or tasks waiting for that signal) should be activated.
+     * extraData merged into params passed to assignTask.
+     */
+    fun fire(entity: PlatformLivingEntity, signal: String, extraData: Map<String, Any> = emptyMap()) {
+        // 1) assign tasks that were *subscribed* to this signal (these are trigger-like subscriptions)
+        val map = subscriptions[entity.uuid] ?: emptyMap()
+        val list = map[signal]?.toList() ?: emptyList()
+        for ((taskId, params) in list) {
+            val merged = HashMap(params)
+            merged.putAll(extraData)
+            EntityTaskManager.assignTask(entity, taskId, merged)
+        }
+
+        EntityTaskManager.onSignalReceived(entity, signal, extraData)
+        EntityTaskManager.onStopSignal(entity, signal, extraData)
+
+        EntityTaskManager.onSignalReceived(entity, Signals.ALL, extraData)
+        EntityTaskManager.onStopSignal(entity, Signals.ALL, extraData)
+    }
+
+    /** Unsubscribe a specific (task) subscription if needed */
+    fun unsubscribe(entityUuid: UUID, signal: String, taskId: ResourceLocation) {
+        subscriptions[entityUuid]?.get(signal)?.removeIf { it.first == taskId }
     }
 }

@@ -4,7 +4,7 @@ import java.util.random.RandomGenerator;
 
 import static java.lang.Math.PI;
 
-public class MutableVec3 implements Cloneable {
+public class MutableVec3 implements Vector3, Cloneable {
     public double x, y, z;
 
     public MutableVec3(double x, double y, double z) {
@@ -64,7 +64,7 @@ public class MutableVec3 implements Cloneable {
         return this.add(rand.multiply(strength)).normalize();
     }
 
-    public double angleTo(MutableVec3 other) {
+    public double angleTo(Vector3 other) {
         double dot = this.dot(other);
         double magA = this.length();
         double magB = other.length();
@@ -99,10 +99,10 @@ public class MutableVec3 implements Cloneable {
         return this;
     }
 
-    public MutableVec3 subtract(MutableVec3 other) {
-        this.x = x - other.x;
-        this.y = y - other.y;
-        this.z = z - other.z;
+    public MutableVec3 subtract(Vector3 other) {
+        this.x = x - other.getX();
+        this.y = y - other.getY();
+        this.z = z - other.getZ();
         return this;
     }
 
@@ -141,11 +141,11 @@ public class MutableVec3 implements Cloneable {
         return Math.toDegrees((t + tau) % tau);
     }
 
-    public MutableVec3 lerp(MutableVec3 b, double t) {
+    public MutableVec3 lerp(Vector3 b, double t) {
         double oneMinusT = 1.0 - t;
-        double x = this.x * oneMinusT + b.x * t;
-        double y = this.y * oneMinusT + b.y * t;
-        double z = this.z * oneMinusT + b.z * t;
+        double x = this.x * oneMinusT + b.getX() * t;
+        double y = this.y * oneMinusT + b.getY() * t;
+        double z = this.z * oneMinusT + b.getZ() * t;
         this.x = x;
         this.y = y;
         this.z = z;
@@ -161,24 +161,24 @@ public class MutableVec3 implements Cloneable {
         return this.x + "," + this.y + "," + this.z;
     }
 
-    public MutableVec3 getMinimum(MutableVec3 v2) {
-        return new MutableVec3(Math.min(this.x, v2.x), Math.min(this.y, v2.y), Math.min(this.z, v2.z));
+    public MutableVec3 getMinimum(Vector3 v2) {
+        return new MutableVec3(Math.min(this.x, v2.getX()), Math.min(this.y, v2.getY()), Math.min(this.z, v2.getZ()));
     }
 
-    public MutableVec3 getMaximum(MutableVec3 v2) {
-        return new MutableVec3(Math.max(this.x, v2.x), Math.max(this.y, v2.y), Math.max(this.z, v2.z));
+    public MutableVec3 getMaximum(Vector3 v2) {
+        return new MutableVec3(Math.max(this.x, v2.getX()), Math.max(this.y, v2.getY()), Math.max(this.z, v2.getZ()));
     }
 
-    public MutableVec3 subtract(MutableVec3... others) {
+    public MutableVec3 subtract(Vector3... others) {
         double newX = this.x;
         double newY = this.y;
         double newZ = this.z;
         int var9 = others.length;
 
-        for (MutableVec3 other : others) {
-            newX -= other.x;
-            newY -= other.y;
-            newZ -= other.z;
+        for (Vector3 other : others) {
+            newX -= other.getX();
+            newY -= other.getY();
+            newZ -= other.getZ();
         }
         this.x = newX;
         this.y = newY;
@@ -187,15 +187,15 @@ public class MutableVec3 implements Cloneable {
         return this;
     }
 
-    public MutableVec3 multiply(MutableVec3... others) {
+    public MutableVec3 multiply(Vector3... others) {
         double newX = this.x;
         double newY = this.y;
         double newZ = this.z;
 
-        for (MutableVec3 other : others) {
-            newX *= other.x;
-            newY *= other.y;
-            newZ *= other.z;
+        for (Vector3 other : others) {
+            newX *= other.getX();
+            newY *= other.getY();
+            newZ *= other.getZ();
         }
         this.x = newX;
         this.y = newY;
@@ -204,15 +204,15 @@ public class MutableVec3 implements Cloneable {
         return this;
     }
 
-    public MutableVec3 divide(MutableVec3... others) {
+    public MutableVec3 divide(Vector3... others) {
         double newX = this.x;
         double newY = this.y;
         double newZ = this.z;
 
-        for (MutableVec3 other : others) {
-            newX /= other.x;
-            newY /= other.y;
-            newZ /= other.z;
+        for (Vector3 other : others) {
+            newX /= other.getX();
+            newY /= other.getY();
+            newZ /= other.getZ();
         }
 
         this.x = newX;
@@ -226,14 +226,14 @@ public class MutableVec3 implements Cloneable {
         return Math.sqrt(this.lengthSq());
     }
 
-    public double distance(MutableVec3 other) {
+    public double distance(Vector3 other) {
         return Math.sqrt(this.distanceSq(other));
     }
 
-    public double distanceSq(MutableVec3 other) {
-        double dx = other.x - this.x;
-        double dy = other.y - this.y;
-        double dz = other.z - this.z;
+    public double distanceSq(Vector3 other) {
+        double dx = other.getX() - this.x;
+        double dy = other.getY() - this.y;
+        double dz = other.getZ() - this.z;
         return dx * dx + dy * dy + dz * dz;
     }
 
@@ -241,10 +241,10 @@ public class MutableVec3 implements Cloneable {
         return this.x >= min.x && this.x <= max.x && this.y >= min.y && this.y <= max.y && this.z >= min.z && this.z <= max.z;
     }
 
-    public MutableVec3 add(MutableVec3 other) {
-        this.x = this.x + other.x;
-        this.y = this.y + other.y;
-        this.z = this.z + other.z;
+    public MutableVec3 add(Vector3 other) {
+        this.x = this.x + other.getX();
+        this.y = this.y + other.getY();
+        this.z = this.z + other.getZ();
         return this;
     }
 
@@ -262,15 +262,15 @@ public class MutableVec3 implements Cloneable {
         return this;
     }
 
-    public MutableVec3 add(MutableVec3... others) {
+    public MutableVec3 add(Vector3... others) {
         double newX = this.x;
         double newY = this.y;
         double newZ = this.z;
 
-        for (MutableVec3 other : others) {
-            newX += other.x;
-            newY += other.y;
-            newZ += other.z;
+        for (Vector3 other : others) {
+            newX += other.getX();
+            newY += other.getY();
+            newZ += other.getZ();
         }
 
         this.x = newX;
@@ -325,10 +325,10 @@ public class MutableVec3 implements Cloneable {
         return this;
     }
 
-    public MutableVec3 multiply(MutableVec3 other) {
-        this.x = this.x * other.x;
-        this.y = this.y * other.y;
-        this.z = this.z * other.z;
+    public MutableVec3 multiply(Vector3 other) {
+        this.x = this.x * other.getX();
+        this.y = this.y * other.getY();
+        this.z = this.z * other.getZ();
         return this;
     }
 
@@ -346,10 +346,10 @@ public class MutableVec3 implements Cloneable {
         return this;
     }
 
-    public MutableVec3 divide(MutableVec3 other) {
-        this.x = this.x / other.x;
-        this.y = this.y / other.y;
-        this.z = this.z / other.z;
+    public MutableVec3 divide(Vector3 other) {
+        this.x = this.x / other.getX();
+        this.y = this.y / other.getY();
+        this.z = this.z / other.getZ();
         return this;
     }
 
@@ -360,19 +360,36 @@ public class MutableVec3 implements Cloneable {
         return this;
     }
 
-    public MutableVec3 crossProduct(MutableVec3 v) {
-        this.x = y * v.z - z * v.y;
-        this.y = z * v.x - x * v.z;
-        this.z = x * v.y - y * v.x;
+    public MutableVec3 crossProduct(Vector3 v) {
+        this.x = y * v.getZ() - z * v.getY();
+        this.y = z * v.getX() - x * v.getZ();
+        this.z = x * v.getY() - y * v.getX();
         return this;
     }
 
-    public double dot(MutableVec3 v) {
-        return x * v.x + y * v.y + z * v.z;
+    public Vector3 getOrtho() {
+        // Find the coordinate axis the vector is LEAST aligned with
+        Vector3 abs = this.abs();
+
+        // Cross product with that axis to get a guaranteed perpendicular vector
+        if (abs.getX() < abs.getY() && abs.getX() < abs.getZ()) return this.crossProduct(new Vec3(1, 0, 0)).normalize();
+        if (abs.getY() < abs.getZ()) return this.crossProduct(new Vec3(0, 1, 0)).normalize();
+        return this.crossProduct(new Vec3(0, 0, 1)).normalize();
+    }
+
+    public double dot(Vector3 v) {
+        return x * v.getX() + y * v.getY() + z * v.getZ();
     }
 
     public double lengthSq() {
         return x * x + y * y + z * z;
+    }
+
+    public MutableVec3 abs() {
+        this.x = Math.abs(x);
+        this.y = Math.abs(y);
+        this.z = Math.abs(z);
+        return this;
     }
 
     @Override

@@ -95,8 +95,8 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 		PacketHandler.register();
 		org.vicky.musicPlayer.MusicPlayer.INSTANCE.toggleLogging();
 
-		EntityFactoryBootstrap.loadFactories(this);
-		ItemsFactoryBootstrap.loadFactories(this);
+		EntityFactoryBootstrap.discoverAndRegisterAll(this);
+		ItemsFactoryBootstrap.discoverAndRegisterAll(this);
 		EffectBootstrap.discoverAndRegisterAll();
 
 		ForgePlatformEffectBridge.EFFECTS.register(FMLJavaModLoadingContext.get().getModEventBus());

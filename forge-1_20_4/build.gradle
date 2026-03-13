@@ -164,8 +164,10 @@ dependencies {
 
     embeddedResources 'io.github.vickye2:vicky-utils-core:0.0.1'
 
+    implementation "io.github.classgraph:classgraph:4.8.154"
     implementation fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}")
 
+    jarJar(group: 'io.github.classgraph', name: 'classgraph', version: '[4.8.154]')
     jarJar(group: 'io.github.vickye2', name: 'vicky-utils-core', version: '[0.0.1]')
     jarJar(group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib', version: '[1.9.10]')
     jarJar(group: 'org.xerial', name: 'sqlite-jdbc', version: '[3.48.0.0]')

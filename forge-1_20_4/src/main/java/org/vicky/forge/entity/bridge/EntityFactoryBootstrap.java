@@ -4,6 +4,8 @@ package org.vicky.forge.entity.bridge;
 import java.lang.reflect.Method;
 import java.util.ServiceLoader;
 
+import net.minecraftforge.forgespi.language.IModFileInfo;
+import net.minecraftforge.forgespi.language.IModInfo;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.vicky.platform.PlatformPlugin;
@@ -23,6 +25,16 @@ public final class EntityFactoryBootstrap {
 		LOGGER.info("Scanning Mob Factories...");
 
 		for (ModFileScanData scanData : ModList.get().getAllScanData()) {
+
+			String modId = scanData.getIModInfoData()
+					.stream()
+					.flatMap(file -> file.getMods().stream())
+					.map(IModInfo::getModId)
+					.findFirst()
+					.orElse("unknown");
+
+			LOGGER.info("Scanning mod: {}", modId);
+
 			for (ModFileScanData.AnnotationData ann : scanData.getAnnotations()) {
 
 				if (!ann.annotationType().equals(REGISTER_MOB_TYPE)) {

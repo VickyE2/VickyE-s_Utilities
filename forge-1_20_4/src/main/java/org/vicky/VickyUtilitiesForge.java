@@ -15,6 +15,7 @@ import org.vicky.forge.entity.ForgePlatformEntityFactory;
 import org.vicky.forge.entity.PlatformBasedLivingEntityRenderer;
 import org.vicky.forge.entity.bridge.EffectBootstrap;
 import org.vicky.forge.entity.bridge.EntityFactoryBootstrap;
+import org.vicky.forge.entity.bridge.ItemsFactoryBootstrap;
 import org.vicky.forge.entity.effects.ForgePlatformEffectBridge;
 import org.vicky.forge.forgeplatform.*;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
@@ -73,10 +74,7 @@ import net.minecraftforge.fml.loading.FMLPaths;
 @Mod(VickyUtilitiesForge.MODID)
 @SuppressWarnings({"deprecation", "removal"})
 public class VickyUtilitiesForge implements PlatformPlugin {
-
-	// Define mod id in a common place for everything to reference
 	public static final String MODID = "v_utls";
-	// Directly reference a slf4j logger
 	public static final Logger LOGGER = LogUtils.getLogger();
 	public static ContextLogger CONTEXT_LOGGER;
 	private static final List<Class<?>> mappingClasses = new ArrayList<>();
@@ -98,6 +96,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 		org.vicky.musicPlayer.MusicPlayer.INSTANCE.toggleLogging();
 
 		EntityFactoryBootstrap.loadFactories(this);
+		ItemsFactoryBootstrap.loadFactories(this);
 		EffectBootstrap.discoverAndRegisterAll();
 
 		ForgePlatformEffectBridge.EFFECTS.register(FMLJavaModLoadingContext.get().getModEventBus());

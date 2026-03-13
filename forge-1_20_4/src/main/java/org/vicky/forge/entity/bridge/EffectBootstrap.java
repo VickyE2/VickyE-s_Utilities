@@ -4,6 +4,8 @@ package org.vicky.forge.entity.bridge;
 import java.lang.reflect.Method;
 import java.util.ServiceLoader;
 
+import net.minecraftforge.forgespi.language.IModFileInfo;
+import net.minecraftforge.forgespi.language.IModInfo;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.vicky.forge.entity.effects.ForgePlatformEffectBridge;
@@ -22,8 +24,18 @@ public final class EffectBootstrap {
 	public static void discoverAndRegisterAll() {
 		LOGGER.info("Scanning Effects...");
 
-		for (ModFileScanData data : ModList.get().getAllScanData()) {
-			for (ModFileScanData.AnnotationData ann : data.getAnnotations()) {
+		for (ModFileScanData scanData : ModList.get().getAllScanData()) {
+
+			String modId = scanData.getIModInfoData()
+					.stream()
+					.flatMap(file -> file.getMods().stream())
+					.map(IModInfo::getModId)
+					.findFirst()
+					.orElse("unknown");
+
+			LOGGER.info("Scanning mod: {}", modId);
+
+			for (ModFileScanData.AnnotationData ann : scanData.getAnnotations()) {
 				if (!ann.annotationType().equals(REGISTER_EFFECT_TYPE)) {
 					// LOGGER.info("Skipping non-type annotation: {}", ann.annotationType());
 					continue;
@@ -32,7 +44,7 @@ public final class EffectBootstrap {
 				String providerClass = ann.clazz().getClassName();
 				try {
 					// Use context classloader helper
-					Class<?> clazz = loadClassFromScan(data, providerClass);
+					Class<?> clazz = loadClassFromScan(scanData, providerClass);
 					String memberName = ann.memberName();
 
 					if (memberName != null && !memberName.isEmpty()) {

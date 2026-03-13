@@ -2,6 +2,7 @@
 package org.vicky.forge.forgeplatform.useables;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Rarity;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.platform.utils.IntVec3;
 import org.vicky.platform.world.PlatformLocation;
@@ -31,4 +32,13 @@ public class ForgeHacks {
 	public static PlatformLocation toVicky(Vec3 vec3, Level level) {
 		return new ForgeVec3(level, vec3.x, vec3.y, vec3.z, 0.0f, 0.0f);
 	}
+
+    public static Rarity fromVicky(org.vicky.platform.items.Rarity rarity) {
+        return switch (rarity) {
+            case UNCOMMON -> Rarity.UNCOMMON;
+			case RARE -> Rarity.RARE;
+			case EPIC -> Rarity.EPIC;
+			default -> Rarity.COMMON;
+		};
+    }
 }

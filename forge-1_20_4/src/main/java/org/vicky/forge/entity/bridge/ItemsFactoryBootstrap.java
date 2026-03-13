@@ -3,6 +3,8 @@ package org.vicky.forge.entity.bridge;
 
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.fml.ModList;
+import net.minecraftforge.forgespi.language.IModFileInfo;
+import net.minecraftforge.forgespi.language.IModInfo;
 import net.minecraftforge.forgespi.language.ModFileScanData;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
@@ -22,8 +24,17 @@ public final class ItemsFactoryBootstrap {
 		LOGGER.info("Scanning Item Descriptors...");
 
 		for (ModFileScanData scanData : ModList.get().getAllScanData()) {
-			for (ModFileScanData.AnnotationData ann : scanData.getAnnotations()) {
 
+			String modId = scanData.getIModInfoData()
+					.stream()
+					.flatMap(file -> file.getMods().stream())
+					.map(IModInfo::getModId)
+					.findFirst()
+					.orElse("unknown");
+
+			LOGGER.info("Scanning mod: {}", modId);
+
+			for (ModFileScanData.AnnotationData ann : scanData.getAnnotations()) {
 				if (!ann.annotationType().equals(REGISTER_ITEM)) {
 					// LOGGER.info("Skipping non-type annotation: {}", annotation.annotationType());
 					continue;

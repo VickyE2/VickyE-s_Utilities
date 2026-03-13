@@ -1,5 +1,6 @@
 package org.vicky.forge.forgeplatform;
 
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -9,6 +10,8 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.vicky.forge.forgeplatform.useables.DescriptorItem;
+import org.vicky.forge.forgeplatform.useables.ForgeHacks;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformItem;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformMaterial;
 import org.vicky.platform.items.ItemDescriptor;
@@ -63,7 +66,7 @@ public class ForgePlatformItemFactory extends PlatformItemFactory {
 	@Override
 	public void registerItem(ResourceLocation id, ItemDescriptor descriptor) {
 		// build a supplier that creates a vanilla Item based on descriptor properties
-		Supplier<Item> supplier = () -> createVanillaItemFromDescriptor(descriptor);
+		Supplier<DescriptorItem> supplier = () -> createVanillaItemFromDescriptor(descriptor);
 
 		// register with DeferredRegister; register() returns a RegistryObject<Item>
 		RegistryObject<Item> ro = itemsRegister.register(id.getPath(), supplier);
@@ -76,40 +79,63 @@ public class ForgePlatformItemFactory extends PlatformItemFactory {
 	}
 
 	// build a vanilla Item using descriptor (Item.Properties derived from descriptor.physicalProps)
-	private Item createVanillaItemFromDescriptor(ItemDescriptor descriptor) {
+	private DescriptorItem createVanillaItemFromDescriptor(ItemDescriptor descriptor) {
 		ItemPhysicalProperties phys = descriptor.getPhysicalProps();
 
 		Item.Properties props = new Item.Properties();
-		props.stacksTo(descriptor.getCanStack() ? 64 : 1);
-		if (descriptor.getPhysicalProps().isEnchanted()) {
-			props.();
+		props.stacksTo(phys.getStackable() ? phys.getMaxStackSize() : 1);
+		if (phys.getFireResistant())
+			props.fireResistant();
+		props.rarity(ForgeHacks.fromVicky(phys.getRarity()));
+		if (phys.getDurability() != null) {
+			props.defaultDurability(phys.getDurability());
+			props.durability(phys.getDurability());
+		}
+		if (descriptor.getFoodProps() != null)
+			props.food(createVanillaFoodProperties(descriptor.getFoodProps()));
+
+		return new DescriptorItem(descriptor, props);
+	}
+
+	private net.minecraft.world.food.FoodProperties createVanillaFoodProperties(org.vicky.platform.items.FoodProperties foodProps) {
+		var props = new net.minecraft.world.food.FoodProperties.Builder()
+				.nutrition(foodProps.getNutrition())
+				.saturationMod(foodProps.getSaturationModifier());
+
+		if (foodProps.isMeat()) props.meat();
+		if (foodProps.getCanAlwaysEat()) props.alwaysEat();
+		if (foodProps.getFastFood()) props.fast();
+
+		for (var effect : foodProps.getEffects()) {
+			var forgeEffect = ForgeRegistries.MOB_EFFECTS.getHolder(ForgeHacks.fromVicky(effect.getEffect()));
+			if (forgeEffect.isEmpty()) {
+				getLogger().severe("Skipping invalid effect: {}", effect.getEffect());
+				continue;
+			}
+			props.effect(
+					() -> new MobEffectInstance(
+							forgeEffect.get().get(),
+							effect.getDuration(),
+							effect.getAmplifier()
+					),
+					effect.getProbability()
+			);
 		}
 
-		return new Item(props);
+		return props.build();
 	}
 
 	@Override
 	protected @NotNull PlatformItemStack buildStackFromDescriptor(@NotNull ItemDescriptor itemDescriptor, @NotNull Map<String, ?> overrides) {
-		// If someone asked to build directly from descriptor (not from registry), we can:
-		// - Check if we already registered a RegistryObject for this descriptor's id (preferred)
-		// - Fallback: create a temporary itemstack from a vanilla item (not recommended for registered items)
-		// Here we'll prefer the registered item if available.
 
-		// try to find a registered RegistryObject by descriptor -> parent keeps descriptors map, so you might convert descriptor->id
-		// simplest: if descriptor was registered, the parent registerItem stored it; try to locate registryObject by comparing descriptors
-		// For simplicity, fallback to creating an ItemStack from a new Item (same logic as createVanillaItemFromDescriptor)
-		Item item = createVanillaItemFromDescriptor(itemDescriptor);
+		DescriptorItem item = createVanillaItemFromDescriptor(itemDescriptor);
 		ItemStack stack = item.getDefaultInstance();
-		// apply display name/lore/nbt as earlier (use your existing code to set NBT/display)
-		// TODO: convert descriptor.displayName and descriptor.lore to NBT display tag (Adventure -> JSON)
+
 		return new ForgePlatformItem(stack);
 	}
 
 	@Override
 	public @NotNull PlatformItemStack fromDescriptor(@NotNull ItemDescriptor itemDescriptor) {
-		// Attempt to find descriptor registration -> create stack from registered item
-		// If you store reverse mapping from descriptor->ResourceLocation you can do a direct lookup.
-		// As a simple approach, try to find registry entry whose descriptor equals the provided descriptor.
 		for (Map.Entry<ResourceLocation, RegistryObject<Item>> e : registryObjects.entrySet()) {
 			ResourceLocation rl = e.getKey();
 			ItemDescriptor regDesc = getDescriptor(rl);

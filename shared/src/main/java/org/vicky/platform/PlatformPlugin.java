@@ -24,12 +24,6 @@ public interface PlatformPlugin {
 	static void set(PlatformPlugin instance) {
 		if (Holder.INSTANCE == null) {
 			Holder.INSTANCE = instance;
-			registerAllAnnotatedThings(
-					instance.getClassProvider(),
-					instance.getPlatformItemFactory(),
-					instance.getPlatformEffectBridge(),
-					instance.getPlatformEntityFactory()
-			);
 		} else {
 			throw new IllegalStateException("Cannot set PlatformPlugin after its already been set.");
 		}

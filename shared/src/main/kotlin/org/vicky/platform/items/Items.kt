@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.TextColor
 import org.vicky.platform.PlatformItemStack
 import org.vicky.platform.PlatformPlayer
 import org.vicky.platform.PlatformPlugin
+import org.vicky.platform.entity.PlatformEffectInstance
 import org.vicky.platform.entity.PlatformLivingEntity
 import org.vicky.platform.entity.minecraft
 import org.vicky.platform.entity.pair
@@ -32,29 +33,79 @@ data class ItemDescriptor(
     val displayName: Component,
     val lore: List<Component> = emptyList(),
     val baseNbt: Map<String, Any> = emptyMap(),
-    val canStack: Boolean = true,
     val handler: ItemEventsHandler = DefaultItemEventsHandler,
-    val physicalProps: ItemPhysicalProperties = ItemPhysicalProperties()
+    val physicalProps: ItemPhysicalProperties = ItemPhysicalProperties(),
+    val foodProps: FoodProperties? = null
+)
+data class FoodProperties(
+    val nutrition: Int = 0,
+    val saturationModifier: Float = 0f,
+    val isMeat: Boolean = false,
+    val canAlwaysEat: Boolean = false,
+    val fastFood: Boolean = false,
+    val effects: List<FoodEffect> = emptyList()
 )
 data class ItemPhysicalProperties(
-    val isEnchanted: Boolean = false,
-    val overrideCustomModelData: Boolean = false,
-    val customModelData: Int = -1,
-    val baseMaterial: ResourceLocation = "paper".minecraft()
+    val glint: Boolean = false,
+    /** This is mostly used on non modded platforms */
+    val customModelData: Int? = null,
+    /** This is mostly used on non modded platforms */
+    val baseMaterial: ResourceLocation = "paper".minecraft(),
+    val fireResistant: Boolean = false,
+    val stackable: Boolean = false,
+    val maxStackSize: Int = 64,
+    val durability: Int? = null,
+    val rarity: Rarity = Rarity.COMMON
 )
+data class FoodEffect(
+    val effect: ResourceLocation,
+    val duration: Int,
+    val amplifier: Int = 0,
+    val probability: Float = 1f
+)
+enum class Rarity {
+    COMMON,
+    UNCOMMON,
+    RARE,
+    EPIC
+}
+
 class ItemPhysicalPropertiesBuilder {
-    private var isEnchanted: Boolean = false
-    private var overrideCustomModelData: Boolean = false
-    private var customModelData: Int = -1
+    private var glint: Boolean = false
+    private var customModelData: Int? = null
     private var baseMaterial: ResourceLocation = "paper".minecraft()
+    private var fireResistant: Boolean = false
+    private var stackable: Boolean = false
+    private var maxStackSize: Int = if (stackable) 1 else 64
+    private var durability: Int? = null
+    private var rarity: Rarity = Rarity.COMMON
 
     fun customModelData(customModelData: Int) {
-        overrideCustomModelData = true
         this.customModelData = customModelData
     }
 
-    fun enchanted() {
-        isEnchanted = true
+    fun rarity(rarity: Rarity) {
+        this.rarity = rarity
+    }
+
+    fun maxStackSize(maxStackSize: Int) {
+        this.maxStackSize = maxStackSize
+    }
+
+    fun durability(durability: Int) {
+        this.durability = durability
+    }
+
+    fun glint() {
+        glint = true
+    }
+
+    fun fireResistant() {
+        fireResistant = true
+    }
+
+    fun stackable() {
+        stackable = true
     }
 
     fun material(string: String) {
@@ -74,7 +125,52 @@ class ItemPhysicalPropertiesBuilder {
     }
 
     fun build(): ItemPhysicalProperties = ItemPhysicalProperties(
-        isEnchanted, overrideCustomModelData, customModelData, baseMaterial
+        glint, customModelData, baseMaterial,
+        fireResistant, stackable, maxStackSize, durability, rarity
+    )
+}
+class FoodPropertiesBuilder {
+    private var nutrition: Int = 0
+    private var saturationModifier: Float = 0f
+    private var isMeat: Boolean = false
+    private var canAlwaysEat: Boolean = false
+    private var fastFood: Boolean = false
+    private var effects: List<FoodEffect> = emptyList()
+
+    fun effects(effects: List<FoodEffect>) {
+        this.effects = effects
+    }
+
+    fun addEffects(effects: List<FoodEffect>) {
+        this.effects += effects
+    }
+
+    fun addEffect(effect: FoodEffect) {
+        this.effects += effect
+    }
+
+    fun fastFood() {
+        this.fastFood = true
+    }
+
+    fun canAlwaysEat() {
+        this.canAlwaysEat = true
+    }
+
+    fun isMeat() {
+        this.isMeat = true
+    }
+
+    fun saturationModifier(saturationModifier: Float) {
+        this.saturationModifier = saturationModifier
+    }
+
+    fun nutrition(nutrition: Int) {
+        this.nutrition = nutrition
+    }
+
+    fun build(): FoodProperties = FoodProperties(
+        nutrition, saturationModifier, isMeat, canAlwaysEat, fastFood, effects
     )
 }
 
@@ -159,9 +255,9 @@ class BuilderBasedItemEventsHandlerBuilder {
 class ItemDescriptorBuilder(private val displayName: Component) {
     private val lore: MutableList<Component> = mutableListOf()
     private val baseNbt: MutableMap<String, Any> = mutableMapOf()
-    var canStack: Boolean = true
     private var handler: ItemEventsHandler = DefaultItemEventsHandler
     private var physicalProps: ItemPhysicalProperties = ItemPhysicalProperties()
+    private var foodProps: FoodProperties? = null
 
     fun lore(component: Component) {
         lore += component
@@ -182,9 +278,13 @@ class ItemDescriptorBuilder(private val displayName: Component) {
         physicalProps = ItemPhysicalPropertiesBuilder().apply(itty).build()
     }
 
+    fun foodProps(itty: FoodPropertiesBuilder.() -> Unit) {
+        foodProps = FoodPropertiesBuilder().apply(itty).build()
+    }
+
     fun build(): ItemDescriptor = ItemDescriptor(
         displayName,
-        lore, baseNbt, canStack, handler, physicalProps
+        lore, baseNbt, handler, physicalProps, foodProps
     )
 }
 
@@ -204,6 +304,11 @@ object Items {
     ) {
         lore(Component.text("This is simply a text item. nothing more or less... or is it...")
             .color(NamedTextColor.DARK_BLUE))
+
+        physicalProps {
+            glint()
+            fireResistant()
+        }
 
         handler {
             onInteract = { self, _, user ->

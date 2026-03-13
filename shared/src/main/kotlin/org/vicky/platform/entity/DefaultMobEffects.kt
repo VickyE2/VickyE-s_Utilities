@@ -3,7 +3,7 @@ package org.vicky.platform.entity
 
 object DefaultMobEffects {
     @JvmStatic
-    @RegisterEffect
+    @field:RegisterEffect
     val marked =  EffectDescriptor(
         "marked".core(),
         MobEffectCategory.NEUTRAL,

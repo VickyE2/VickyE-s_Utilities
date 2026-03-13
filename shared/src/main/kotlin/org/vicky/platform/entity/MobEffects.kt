@@ -7,7 +7,7 @@ import java.util.function.Consumer
 
 /** Mark a class that provides an Effect to be auto-registered.  */
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.FIELD)
+@Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY, AnnotationTarget.FUNCTION)
 annotation class RegisterEffect(
     /** Optional priority (higher -> registered earlier).  */
     val priority: Int = 0

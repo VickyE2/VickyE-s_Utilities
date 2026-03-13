@@ -4,12 +4,15 @@ package org.vicky.forge.entity;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.entity.navigation.ForgePlatformNavigator;
+import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
+import org.vicky.forge.forgeplatform.useables.ForgeHacks;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformItem;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
-import org.vicky.platform.PlatformItem;
+import org.vicky.platform.PlatformItemStack;
 import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.entity.*;
 
@@ -209,23 +212,23 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 	}
 
 	@Override
-	public @Nullable PlatformItem getOffhandItem() {
+	public @Nullable PlatformItemStack getOffhandItem() {
 		return new ForgePlatformItem(ordinal.getOffhandItem());
 	}
 
 	@Override
-	public @Nullable PlatformItem getMainHandItem() {
+	public @Nullable PlatformItemStack getMainHandItem() {
 		return new ForgePlatformItem(ordinal.getMainHandItem());
 	}
 
 	@Override
-	public void setItemSlot(@NotNull EquipmentSlot equipmentSlot, @NotNull PlatformItem platformItem) {
+	public void setItemSlot(@NotNull EquipmentSlot equipmentSlot, @NotNull PlatformItemStack platformItem) {
 		if (platformItem instanceof ForgePlatformItem i)
 			ordinal.setItemSlot(net.minecraft.world.entity.EquipmentSlot.valueOf(equipmentSlot.name()), i.item());
 	}
 
 	@Override
-	public @Nullable PlatformItem getItemBySlot(@NotNull EquipmentSlot equipmentSlot) {
+	public @Nullable PlatformItemStack getItemBySlot(@NotNull EquipmentSlot equipmentSlot) {
 		return new ForgePlatformItem(
 				ordinal.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.valueOf(equipmentSlot.name())));
 	}
@@ -236,7 +239,7 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 	}
 
 	@Override
-	public boolean isHolding(@NotNull PlatformItem platformItem) {
+	public boolean isHolding(@NotNull PlatformItemStack platformItem) {
 		if (platformItem instanceof ForgePlatformItem i)
 			return ordinal.isHolding(i.item().getItem());
 		return false;
@@ -335,5 +338,10 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 			return false;
 		}
 		return e.ordinal == this.ordinal;
+	}
+
+	@Override
+	public void setCustomName(@NotNull Component component) {
+		ordinal.setCustomName(AdventureComponentConverter.toNative(component));
 	}
 }

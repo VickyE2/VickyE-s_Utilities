@@ -333,10 +333,10 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 
 
 	protected void installGoals(MobEntityAIBasedGoals ai) {
-		ai.getGoals().forEach((goal, params) -> {
-			var compiledGoal = goal.produce(asPlatform(), params);
+		ai.getGoals().forEach(goal -> {
+			var compiledGoal = goal.getProducer().produce(asPlatform(), goal.getParams());
 			CompiledTaskRegistry.INSTANCE.register(compiledGoal);
-			EntityTaskManager.INSTANCE.assignTask(asPlatform(), compiledGoal.getId());
+			EntityTaskManager.INSTANCE.assignTask(asPlatform(), compiledGoal.getId(), goal.getParams());
 		});
 	}
 

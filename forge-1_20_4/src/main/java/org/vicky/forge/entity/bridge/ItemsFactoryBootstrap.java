@@ -1,38 +1,38 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity.bridge;
 
-import java.lang.reflect.Method;
-import java.util.ServiceLoader;
-
-import org.objectweb.asm.Type;
-import org.slf4j.Logger;
-import org.vicky.forge.entity.effects.ForgePlatformEffectBridge;
-import org.vicky.platform.entity.EffectDescriptor;
-import org.vicky.platform.entity.RegisterEffect;
-
 import com.mojang.logging.LogUtils;
-
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.forgespi.language.ModFileScanData;
+import org.objectweb.asm.Type;
+import org.slf4j.Logger;
+import org.vicky.platform.PlatformPlugin;
+import org.vicky.platform.entity.MobEntityDescriptor;
+import org.vicky.platform.items.ItemDescriptor;
+import org.vicky.platform.items.RegisterItem;
+import org.vicky.platform.utils.ResourceLocation;
 
-public final class EffectBootstrap {
-	private static final Type REGISTER_EFFECT_TYPE = Type.getType(RegisterEffect.class);
+import java.lang.reflect.Method;
+
+public final class ItemsFactoryBootstrap {
+	private static final Type REGISTER_ITEM = Type.getType(RegisterItem.class);
 	private static final Logger LOGGER = LogUtils.getLogger();
 
-	public static void discoverAndRegisterAll() {
-		LOGGER.info("Scanning Effects...");
+	public static void loadFactories(PlatformPlugin plugin) {
+		LOGGER.info("Scanning Item Descriptors...");
 
-		for (ModFileScanData data : ModList.get().getAllScanData()) {
-			for (ModFileScanData.AnnotationData ann : data.getAnnotations()) {
-				if (!ann.annotationType().equals(REGISTER_EFFECT_TYPE)) {
-					// LOGGER.info("Skipping non-type annotation: {}", ann.annotationType());
+		for (ModFileScanData scanData : ModList.get().getAllScanData()) {
+			for (ModFileScanData.AnnotationData ann : scanData.getAnnotations()) {
+
+				if (!ann.annotationType().equals(REGISTER_ITEM)) {
+					// LOGGER.info("Skipping non-type annotation: {}", annotation.annotationType());
 					continue;
 				}
 
-				String providerClass = ann.clazz().getClassName();
+				String className = ann.clazz().getClassName();
+
 				try {
-					// Use context classloader helper
-					Class<?> clazz = loadClassFromScan(data, providerClass);
+					Class<?> clazz = loadClassFromScan(scanData, className);
 					String memberName = ann.memberName();
 
 					if (memberName != null && !memberName.isEmpty()) {
@@ -50,24 +50,29 @@ public final class EffectBootstrap {
 								try {
 									instance = clazz.getDeclaredConstructor().newInstance();
 								} catch (Exception ex) {
-									LOGGER.error("Could not instantiate class {} to access field {}", providerClass, memberName);
+									LOGGER.error("Could not instantiate class {} to access field {}", className, memberName);
 									continue;
 								}
 							}
 						}
 
 						Object value = field.get(instance);
-						if (value instanceof EffectDescriptor desc) {
-							LOGGER.info("Successfully loaded effect descriptor: {}", desc.getKey());
-							ForgePlatformEffectBridge.INSTANCE.registerEffect(desc);
+						if (value instanceof ItemDescriptor desc) {
+							var data = ann.annotationData();
+							Object raw = data.get("fieldName");
+							Object rawNamespace = data.get("fieldName");
+
+							if (rawNamespace instanceof String namespace && raw instanceof String path) {
+								LOGGER.info("Successfully loaded mob descriptor: {}", desc.getDisplayName());
+								plugin.getPlatformItemFactory().registerItem(ResourceLocation.from(namespace, path), desc);
+							}
 						} else {
-							LOGGER.warn("Field {} annotated with @RegisterEffect is not an EffectDescriptor", memberName);
+							LOGGER.warn("Field {} annotated with @RegisterMob is not a MobEntityDescriptor", memberName);
 						}
 					}
 
 				} catch (Throwable t) {
-					// fail fast — optionally log and continue for resilience
-					throw new RuntimeException("Failed to load effect provider: " + providerClass, t);
+					throw new RuntimeException("Failed to load @RegisterMob field: " + className, t);
 				}
 			}
 		}
@@ -122,4 +127,5 @@ public final class EffectBootstrap {
 		// 3) Fallback: default Class.forName (app/system loader)
 		return Class.forName(className);
 	}
+
 }

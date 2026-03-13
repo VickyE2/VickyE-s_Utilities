@@ -55,7 +55,7 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
 
 	@Override
 	public @NotNull RegisteredMobEntityEventHandler registerHandler(@NotNull ResourceLocation resourceLocation,
-			@NotNull MobEntityEventHandler mobEntityEventHandler) {
+			@NotNull DefaultTriggerMobEventHandler mobEntityEventHandler) {
 		if (!HANDLERS.containsKey(resourceLocation)) {
 			var registeredHandler = new RegisteredMobEntityEventHandler(mobEntityEventHandler);
 			HANDLERS.put(resourceLocation, registeredHandler);

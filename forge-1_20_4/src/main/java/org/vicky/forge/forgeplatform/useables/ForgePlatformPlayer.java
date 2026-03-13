@@ -4,12 +4,17 @@ package org.vicky.forge.forgeplatform.useables;
 import java.util.Locale;
 import java.util.UUID;
 
+import net.minecraft.network.chat.ChatType;
+import net.minecraft.network.chat.OutgoingChatMessage;
+import net.minecraft.network.chat.PlayerChatMessage;
 import org.jetbrains.annotations.NotNull;
+import org.vicky.forge.entity.ForgePlatformEntity;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.platform.PlatformBossBar;
-import org.vicky.platform.PlatformItem;
+import org.vicky.platform.PlatformItemStack;
 import org.vicky.platform.PlatformPlayer;
+import org.vicky.platform.entity.PlatformEntity;
 import org.vicky.platform.world.PlatformLocation;
 
 import net.kyori.adventure.text.Component;
@@ -55,8 +60,23 @@ public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements Pl
 	}
 
 	@Override
-	public void sendComponent(Component component) {
-		player.sendSystemMessage(AdventureComponentConverter.toNative(component));
+	public void sendMessage(PlatformEntity sender, String message) {
+		Component formatted = Component.text("<")
+				.append(sender.getCustomName().orElseGet(() -> Component.text("unknown")))
+				.append(Component.text("> "))
+				.append(Component.text(message));
+
+		player.sendSystemMessage(AdventureComponentConverter.toNative(formatted));
+	}
+
+	@Override
+	public void sendMessage(PlatformEntity sender, Component message) {
+		Component formatted = Component.text("<")
+				.append(sender.getCustomName().orElseGet(() -> Component.text("unknown")))
+				.append(Component.text("> "))
+				.append(message);
+
+		player.sendSystemMessage(AdventureComponentConverter.toNative(formatted));
 	}
 
 	@Override
@@ -77,7 +97,7 @@ public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements Pl
 	}
 
 	@Override
-	public void giveItem(PlatformItem item) {
+	public void giveItem(PlatformItemStack item) {
 		if (item instanceof ForgePlatformItem i) {
 			ItemStack stack = i.item();
 			ordinal.onItemPickup(i.item().getEntityRepresentation().spawnAtLocation(stack));

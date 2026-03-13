@@ -7,8 +7,8 @@ import java.util.ServiceLoader;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.vicky.platform.PlatformPlugin;
-import org.vicky.platform.entity.MobRegisteringClass;
-import org.vicky.platform.entity.RegisterFactory;
+import org.vicky.platform.entity.RegisterMob;
+import org.vicky.platform.entity.MobEntityDescriptor;
 
 import com.mojang.logging.LogUtils;
 
@@ -16,41 +16,60 @@ import net.minecraftforge.fml.ModList;
 import net.minecraftforge.forgespi.language.ModFileScanData;
 
 public final class EntityFactoryBootstrap {
-	private static final Type REGISTER_FACTORY = Type.getType(RegisterFactory.class);
+	private static final Type REGISTER_MOB_TYPE = Type.getType(RegisterMob.class);
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	public static void loadFactories(PlatformPlugin plugin) {
 		LOGGER.info("Scanning Mob Factories...");
-		ServiceLoader.load(MobRegisteringClass.class).forEach(provider -> {
-			provider.register(plugin);
-			LOGGER.info("Successfully loaded mob factory in service loader: {}", provider.getClass());
-		});
-		for (ModFileScanData scanData : ModList.get().getAllScanData()) {
-			scanData.getAnnotations().forEach(annotation -> {
 
-				if (!annotation.annotationType().equals(REGISTER_FACTORY)) {
+		for (ModFileScanData scanData : ModList.get().getAllScanData()) {
+			for (ModFileScanData.AnnotationData ann : scanData.getAnnotations()) {
+
+				if (!ann.annotationType().equals(REGISTER_MOB_TYPE)) {
 					// LOGGER.info("Skipping non-type annotation: {}", annotation.annotationType());
-					return;
+					continue;
 				}
 
-				String className = annotation.clazz().getClassName();
+				String className = ann.clazz().getClassName();
 
 				try {
 					Class<?> clazz = loadClassFromScan(scanData, className);
+					String memberName = ann.memberName();
 
-					if (!MobRegisteringClass.class.isAssignableFrom(clazz)) {
-						throw new IllegalStateException(
-								"@RegisterFactory used on non-MobRegisteringClass: " + className);
+					if (memberName != null && !memberName.isEmpty()) {
+						java.lang.reflect.Field field = clazz.getDeclaredField(memberName);
+						field.setAccessible(true);
+						Object instance = null;
+
+						if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+							try {
+								java.lang.reflect.Field instanceField = clazz.getDeclaredField("INSTANCE");
+								instanceField.setAccessible(true);
+								instance = instanceField.get(null);
+							} catch (NoSuchFieldException e) {
+								// Try standard instantiation if not singleton
+								try {
+									instance = clazz.getDeclaredConstructor().newInstance();
+								} catch (Exception ex) {
+									LOGGER.error("Could not instantiate class {} to access field {}", className, memberName);
+									continue;
+								}
+							}
+						}
+
+						Object value = field.get(instance);
+						if (value instanceof MobEntityDescriptor desc) {
+							LOGGER.info("Successfully loaded mob descriptor: {}", desc.getMobDetails().getMobKey());
+							plugin.registerMobEntityDescriptor(desc);
+						} else {
+							LOGGER.warn("Field {} annotated with @RegisterMob is not a MobEntityDescriptor", memberName);
+						}
 					}
 
-					MobRegisteringClass factory = (MobRegisteringClass) clazz.getDeclaredConstructor().newInstance();
-					LOGGER.info("Successfully loaded mob factory: {}", factory.getClass());
-					factory.register(plugin);
-
 				} catch (Throwable t) {
-					throw new RuntimeException("Failed to load @RegisterFactory class: " + className, t);
+					throw new RuntimeException("Failed to load @RegisterMob field: " + className, t);
 				}
-			});
+			}
 		}
 	}
 

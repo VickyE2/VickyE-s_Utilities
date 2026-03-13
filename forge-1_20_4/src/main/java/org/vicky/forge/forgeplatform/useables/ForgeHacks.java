@@ -1,6 +1,8 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform.useables;
 
+import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.NotNull;
 import org.vicky.platform.utils.IntVec3;
 import org.vicky.platform.world.PlatformLocation;
 

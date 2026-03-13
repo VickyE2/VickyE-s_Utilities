@@ -31,6 +31,7 @@ import org.vicky.platform.entity.MobEntityDescriptor;
 import org.vicky.platform.entity.PlatformEffectBridge;
 import org.vicky.platform.entity.PlatformEntityFactory;
 import org.vicky.platform.events.PlatformEventFactory;
+import org.vicky.platform.items.PlatformItemFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
@@ -70,6 +71,7 @@ import net.minecraftforge.fml.loading.FMLPaths;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(VickyUtilitiesForge.MODID)
+@SuppressWarnings({"deprecation", "removal"})
 public class VickyUtilitiesForge implements PlatformPlugin {
 
 	// Define mod id in a common place for everything to reference
@@ -80,6 +82,8 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 	private static final List<Class<?>> mappingClasses = new ArrayList<>();
 	public static MinecraftServer server;
 	public static SQLManager sqlManager;
+	private static final ForgePlatformItemFactory FACTORY =
+			new ForgePlatformItemFactory(MODID);
 
 	public VickyUtilitiesForge() {
 		PlatformPlugin.set(this);
@@ -99,6 +103,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 		ForgePlatformEffectBridge.EFFECTS.register(FMLJavaModLoadingContext.get().getModEventBus());
 		ForgePlatformEntityFactory.ENTITIES.register(FMLJavaModLoadingContext.get().getModEventBus());
 		ForgePlatformEntityFactory.INSTANCE.attachListeners(FMLJavaModLoadingContext.get().getModEventBus());
+		FACTORY.attachToEventBus(FMLJavaModLoadingContext.get().getModEventBus());
 	}
 
 	public static void addTemplateClass(Class<? extends DatabaseTemplate> clazz) {
@@ -257,7 +262,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
 	@Override
 	public PlatformItemFactory getPlatformItemFactory() {
-		return new ForgePlatformItemFactory();
+		return FACTORY;
 	}
 
 	@Override
@@ -305,6 +310,11 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 	@Override
 	public PlatformEffectBridge<?> getPlatformEffectBridge() {
 		return ForgePlatformEffectBridge.INSTANCE;
+	}
+
+	@Override
+	public PlatformClassProvider getClassProvider() {
+		return null;
 	}
 
 	@Override

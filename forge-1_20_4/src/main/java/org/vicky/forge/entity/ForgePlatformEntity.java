@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.forgeplatform.ForgePlatformAnimationController;
 import org.vicky.forge.forgeplatform.ForgePlatformLocationAdapter;
+import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
 import org.vicky.forge.forgeplatform.useables.ForgeVec3;
@@ -146,14 +147,14 @@ public class ForgePlatformEntity implements PlatformEntity {
 	}
 
 	@Override
-	public void setCustomName(@NotNull String s) {
-		ordinal.setCustomName(Component.literal(s));
+	public void setCustomName(@NotNull net.kyori.adventure.text.Component s) {
+		ordinal.setCustomName(AdventureComponentConverter.toNative(s));
 	}
 
 	@Override
-	public @NotNull Optional<String> getCustomName() {
+	public Optional<net.kyori.adventure.text.Component> getCustomName() {
 		if (ordinal.getCustomName() != null)
-			return Optional.of(ordinal.getCustomName().getString());
+			return Optional.of(AdventureComponentConverter.fromNative(ordinal.getCustomName()));
 		return Optional.empty();
 	}
 

@@ -7,6 +7,7 @@ import net.minecraftforge.fml.loading.moddiscovery.BackgroundScanHandler;
 import net.minecraftforge.forgespi.locating.IModFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.vicky.platform.items.Items;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -210,13 +211,19 @@ public final class AnnotationScanner {
                 .enableFieldInfo()
                 .enableAnnotationInfo()
                 .ignoreClassVisibility()
+                .ignoreFieldVisibility()
                 .removeTemporaryFilesAfterScan()
                 .verbose()
                 .scan()) {
 
-            for (io.github.classgraph.ClassInfo ci : sr.getClassesWithAnnotation(targetAnnName)) {
-                LOGGER.info("Found class {}", ci.getName());
+            for (io.github.classgraph.ClassInfo ci : sr.getAllClasses()) {
+                if (Objects.equals(ci.getName(), Items.class.getName())) {
+                    LOGGER.info("Found Items class");
+                    LOGGER.info("annotationsA: {}", ci.getAnnotationInfo());
+                    LOGGER.info("annotationsB: {}", ci.getAnnotations());
+                }
             }
+
             for (io.github.classgraph.ClassInfo ci : sr.getClassesWithAnnotation(targetAnnName)) {
                 String className = ci.getName();
                 LOGGER.info("Found ClassInfo for {}: {}", className, ci);

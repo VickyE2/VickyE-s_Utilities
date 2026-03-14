@@ -7,6 +7,7 @@ import net.minecraftforge.fml.loading.FMLLoader;
 import org.slf4j.Logger;
 import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.items.ItemDescriptor;
+import org.vicky.platform.items.Items;
 import org.vicky.platform.items.RegisterItem;
 import org.vicky.platform.utils.ResourceLocation;
 
@@ -17,7 +18,7 @@ public final class ItemsFactoryBootstrap {
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	public static void discoverAndRegisterAll(PlatformPlugin plugin) {
-		LOGGER.info("Scanning Item Descriptors...");
+		LOGGER.info("Scanning Item Descriptors... ");
 
 		List<AnnotationScanner.ScanResult> found =
 				AnnotationScanner.scanFor(FMLLoader.backgroundScanHandler,

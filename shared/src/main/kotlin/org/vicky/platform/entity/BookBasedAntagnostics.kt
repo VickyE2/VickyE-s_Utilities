@@ -856,10 +856,8 @@ open class EntityTimedActionSpec<T: PlatformLivingEntity>(
 }
 
 // --------------------- Block selectors ---------------------
-
-class BlockInSightSelector(
+class BlockInRadiusSelector(
     range: Double,
-    private val step: Double = 0.5,
     filters: List<BlockFilterSpec>
 ) : SelectorSpec<PlatformBlock<*>, BlockFilterSpec>(
     id = rl("core", "block_in_sight"),
@@ -868,36 +866,15 @@ class BlockInSightSelector(
     filters = filters
 ) {
     override fun findCandidates(ctx: SelectorContext): List<PlatformBlock<*>> {
-        val self = ctx.self ?: return emptyList()
         val world = ctx.world
+        val blocks = mutableListOf<PlatformBlock<*>>()
         // prefer engine raycast
-        val hit = try {
-            world.raycastBlock(self.getEyeLocation(), self.lookDirection.dir, range.toFloat())
-        } catch (ex: Throwable) {
-            sampleAlongLook(self, world, range, step)
-        }
-        return if (hit != null) listOf(hit) else emptyList()
-    }
+        for (x in (ctx.originX - range).toInt()..(ctx.originX + range).toInt())
+            for (z in (ctx.originZ - range).toInt()..(ctx.originZ + range).toInt())
+                for (y in world.getMaxMinimumY()..world.getHighestBlockYAt(x, z))
+                    blocks += world.getBlockAt(x, y, z)
 
-    private fun sampleAlongLook(self: PlatformEntity, world: PlatformWorld<*, *>, range: Double, step: Double): PlatformBlock<*>? {
-        val origin = self.getEyeLocation()
-        val dir = self.lookDirection.dir.normalize()
-        val steps = 1.coerceAtLeast((range / step).toInt())
-        var i = 1
-        while (i <= steps) {
-            val dist = i * step
-            val x = origin.x + dir.x * dist
-            val y = origin.y + dir.y * dist
-            val z = origin.z + dir.z * dist
-            val block = try { world.getBlockAt(x, y, z) } catch (e: Throwable) { null }
-            if (block != null && block.isSolid) {
-                val ctx = SelectorContext(world, origin.x, origin.y, origin.z, self)
-                val passes = filters.all { it.isValid(block, ctx) }
-                if (passes) return block
-            }
-            i++
-        }
-        return null
+        return blocks
     }
 }
 
@@ -1328,8 +1305,8 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
 
         override fun compile(): CompiledBlockSelector {
             val selFn: (SelectorContext) -> AmountableResult<PlatformBlock<*>> = { ctx ->
-                val selector = BlockInSightSelector(
-                    range, 0.5,
+                val selector = BlockInRadiusSelector(
+                    range,
                     filtersRef.map { ref ->
                         val compiled = GlobalSpecRegistry.compileFilter(ref)
                         BlockFilterSpec(ref.id) { block, ctx -> compiled.test(block, ctx) }

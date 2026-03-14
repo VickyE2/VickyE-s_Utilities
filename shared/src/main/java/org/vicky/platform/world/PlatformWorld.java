@@ -15,10 +15,17 @@ public interface PlatformWorld<T, N> {
     N getNative();
 
     int getHighestBlockYAt(double x, double z);
+    default int getHighestBlockYAt(int x, int z) {
+        return getHighestBlockYAt(x * 1.0, z * 1.0);
+    }
 
     PlatformBlock<T> getHighestBlockAt(double x, double z);
+    default PlatformBlock<T> getHighestBlockAt(int x, int z) {
+        return getHighestBlockAt(x * 1.0, z * 1.0);
+    }
 
     int getMaxWorldHeight();
+    int getMaxMinimumY();
 
     @NotNull List<? extends @NotNull PlatformEntity> getEntities();
 
@@ -29,6 +36,9 @@ public interface PlatformWorld<T, N> {
     List<PlatformPlayer> getPlayers();
 
     PlatformBlock<T> getBlockAt(double x, double y, double z);
+    default PlatformBlock<T> getBlockAt(int x, int y, int z) {
+        return getBlockAt(x * 1.0, y * 1.0, z * 1.0);
+    }
 
     PlatformBlock<T> getBlockAt(Vec3 pos);
 

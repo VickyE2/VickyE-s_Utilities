@@ -12,6 +12,7 @@ import org.vicky.platform.entity.minecraft
 import org.vicky.platform.entity.pair
 import org.vicky.platform.entity.rli
 import org.vicky.platform.utils.ResourceLocation
+import org.vicky.platform.world.PlatformBlock
 import org.vicky.platform.world.PlatformMaterial
 import org.vicky.utilities.ContextLogger.ContextLogger
 import java.lang.reflect.Modifier
@@ -180,15 +181,29 @@ enum class InteractionHand {
 }
 
 interface ItemEventsHandler {
-    fun onInteract(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity)
+    fun onInteractLiving(self: PlatformItemStack, hand: InteractionHand, user: PlatformPlayer, usedOn: PlatformLivingEntity) : InteractionResult
+    fun onUseOn(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity, block: PlatformBlock<*>) : InteractionResult
+    fun onUse(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity) : InteractionResult
     fun whileInHand(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity)
     fun whenInInventory(self: PlatformItemStack, user: PlatformLivingEntity)
-    fun whenInHotBar(self: PlatformItemStack, user: PlatformLivingEntity)
-    fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity)
-    fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity)
-    fun onPickedUpByPlayer(self: PlatformItemStack, user: PlatformPlayer) {
-        onPickedUp(self, user)
-    }
+    fun whenInHotBar(self: PlatformItemStack, user: PlatformPlayer)
+    fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity) : EventResult
+    fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity) : EventResult
+    fun onPickedUpByPlayer(self: PlatformItemStack, user: PlatformPlayer)  : EventResult = onPickedUp(self, user)
+}
+
+enum class InteractionResult {
+    SUCCESS,
+    CONSUME,
+    PASS,
+    FAIL,
+    CONSUME_PARTIAL
+}
+
+enum class EventResult {
+    ALLOW,
+    DENY,
+    DEFAULT
 }
 
 @Retention(AnnotationRetention.RUNTIME)
@@ -199,56 +214,100 @@ annotation class RegisterItem(
 )
 
 object DefaultItemEventsHandler : ItemEventsHandler {
-    override fun onInteract(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity) {}
+    override fun onInteractLiving(self: PlatformItemStack, hand: InteractionHand, user: PlatformPlayer, usedOn: PlatformLivingEntity) : InteractionResult
+        = InteractionResult.PASS
+
+    override fun onUseOn(
+        self: PlatformItemStack,
+        hand: InteractionHand,
+        user: PlatformLivingEntity,
+        block: PlatformBlock<*>
+    ): InteractionResult = InteractionResult.PASS
+
+    override fun onUse(
+        self: PlatformItemStack,
+        hand: InteractionHand,
+        user: PlatformLivingEntity
+    ): InteractionResult = InteractionResult.PASS
+
     override fun whileInHand(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity) {}
     override fun whenInInventory(self: PlatformItemStack, user: PlatformLivingEntity) {}
-    override fun whenInHotBar(self: PlatformItemStack, user: PlatformLivingEntity) {}
-    override fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity) {}
-    override fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity) {}
+    override fun whenInHotBar(self: PlatformItemStack, user: PlatformPlayer) {}
+    override fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity) : EventResult
+        = EventResult.DEFAULT
+    override fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity) : EventResult
+       = EventResult.DEFAULT
 }
 class BuilderBasedItemEventsHandler(
-    private val onInteract: (PlatformItemStack, InteractionHand, PlatformLivingEntity) -> Unit = { _, _, _ -> },
+    private val onInteractLiving: (PlatformItemStack, InteractionHand, PlatformPlayer, PlatformLivingEntity) -> InteractionResult = { _, _, _, _ -> InteractionResult.PASS },
+    private val onUseOn: (PlatformItemStack, InteractionHand, PlatformLivingEntity, PlatformBlock<*>) -> InteractionResult = { _, _, _, _ -> InteractionResult.PASS },
+    private val onUse: (PlatformItemStack, InteractionHand, PlatformLivingEntity) -> InteractionResult = { _, _, _ -> InteractionResult.PASS },
     private val whileInHand: (PlatformItemStack, InteractionHand, PlatformLivingEntity) -> Unit = { _, _, _ -> },
     private val whenInInventory: (PlatformItemStack, PlatformLivingEntity) -> Unit = { _, _ -> },
     private val whenInHotBar: (PlatformItemStack, PlatformLivingEntity) -> Unit = { _, _ -> },
-    private val onDropped: (PlatformItemStack, PlatformLivingEntity) -> Unit = { _, _ -> },
-    private val onPickedUp: (PlatformItemStack, PlatformLivingEntity) -> Unit = { _, _ -> },
-    private val onPickedUpByPlayer: (PlatformItemStack, PlatformPlayer) -> Unit = { _, _ -> }
+    private val onDropped: (PlatformItemStack, PlatformLivingEntity) -> EventResult = { _, _ -> EventResult.DEFAULT },
+    private val onPickedUp: (PlatformItemStack, PlatformLivingEntity) -> EventResult = { _, _ -> EventResult.DEFAULT },
+    private val onPickedUpByPlayer: (PlatformItemStack, PlatformPlayer) -> EventResult = { _, _ -> EventResult.DEFAULT }
 ) : ItemEventsHandler {
-    override fun onInteract(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity) {
-        onInteract.invoke(self, hand, user)
-    }
+    override fun onInteractLiving(
+        self: PlatformItemStack,
+        hand: InteractionHand,
+        user: PlatformPlayer,
+        usedOn: PlatformLivingEntity
+    ): InteractionResult = onInteractLiving.invoke(self, hand, user, usedOn)
+
+    override fun onUseOn(
+        self: PlatformItemStack,
+        hand: InteractionHand,
+        user: PlatformLivingEntity,
+        block: PlatformBlock<*>
+    ): InteractionResult = onUseOn.invoke(self, hand, user, block)
+
+    override fun onUse(
+        self: PlatformItemStack,
+        hand: InteractionHand,
+        user: PlatformLivingEntity
+    ): InteractionResult = onUse.invoke(self, hand, user)
+
     override fun whileInHand(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity) {
         whileInHand.invoke(self, hand, user)
     }
     override fun whenInInventory(self: PlatformItemStack, user: PlatformLivingEntity) {
         whenInInventory.invoke(self, user)
     }
-    override fun whenInHotBar(self: PlatformItemStack, user: PlatformLivingEntity) {
+    override fun whenInHotBar(self: PlatformItemStack, user: PlatformPlayer) {
         whenInHotBar.invoke(self, user)
     }
-    override fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity) {
-        onDropped.invoke(self, dropper)
-    }
-    override fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity) {
-        onPickedUp.invoke(self, user)
-    }
-    override fun onPickedUpByPlayer(self: PlatformItemStack, user: PlatformPlayer) {
-        onPickedUpByPlayer.invoke(self, user)
-    }
+    override fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity) : EventResult
+        = onDropped.invoke(self, dropper)
+    override fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity) : EventResult
+        = onPickedUp.invoke(self, user)
+    override fun onPickedUpByPlayer(self: PlatformItemStack, user: PlatformPlayer) : EventResult
+        = onPickedUpByPlayer.invoke(self, user)
 }
 class BuilderBasedItemEventsHandlerBuilder {
-    var onInteract: (PlatformItemStack, InteractionHand, PlatformLivingEntity) -> Unit = { _, _, _ -> }
+    var onInteractLiving: (PlatformItemStack, InteractionHand, PlatformPlayer, PlatformLivingEntity) -> InteractionResult = { _, _, _, _ -> InteractionResult.PASS }
+    var onUseOn: (PlatformItemStack, InteractionHand, PlatformLivingEntity, PlatformBlock<*>) -> InteractionResult = { _, _, _, _ -> InteractionResult.PASS }
+    var onUse: (PlatformItemStack, InteractionHand, PlatformLivingEntity) -> InteractionResult = { _, _, _ -> InteractionResult.PASS }
     var whileInHand: (PlatformItemStack, InteractionHand, PlatformLivingEntity) -> Unit = { _, _, _ -> }
     var whenInInventory: (PlatformItemStack, PlatformLivingEntity) -> Unit = { _, _ -> }
     var whenInHotBar: (PlatformItemStack, PlatformLivingEntity) -> Unit = { _, _ -> }
-    var onDropped: (PlatformItemStack, PlatformLivingEntity) -> Unit = { _, _ -> }
-    var onPickedUp: (PlatformItemStack, PlatformLivingEntity) -> Unit = { _, _ -> }
-    var onPickedUpByPlayer: (PlatformItemStack, PlatformPlayer) -> Unit = { _, _ -> }
+    var onDropped: (PlatformItemStack, PlatformLivingEntity) -> EventResult = { _, _ -> EventResult.DEFAULT }
+    val onPickedUp: (PlatformItemStack, PlatformLivingEntity) -> EventResult = { _, _ -> EventResult.DEFAULT }
+    val onPickedUpByPlayer: (PlatformItemStack, PlatformPlayer) -> EventResult = { _, _ -> EventResult.DEFAULT }
+
 
     fun build(): BuilderBasedItemEventsHandler {
         return BuilderBasedItemEventsHandler(
-            onInteract, whileInHand, whenInInventory, whenInHotBar, onDropped, onPickedUp, onPickedUpByPlayer
+            onInteractLiving = onInteractLiving,
+            onUseOn = onUseOn,
+            onUse = onUse,
+            whileInHand = whileInHand,
+            whenInInventory = whenInInventory,
+            whenInHotBar = whenInHotBar,
+            onDropped = onDropped,
+            onPickedUp = onPickedUp,
+            onPickedUpByPlayer = onPickedUpByPlayer
         )
     }
 }
@@ -311,12 +370,14 @@ object Items {
         }
 
         handler {
-            onInteract = { self, _, user ->
+            onUse = { self, _, user ->
                 if (user.isPlayer && !self.hasNbt("has_used")) {
                     user as PlatformPlayer
                     user.sendMessage("This is a simple text and if you see this... it works lmao. it should only work on the first click")
                     self.applyNbt("has_used" pair true)
+                    InteractionResult.SUCCESS
                 }
+                InteractionResult.FAIL
             }
         }
     }

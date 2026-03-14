@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity;
 
+import com.mojang.logging.LogUtils;
 import kotlin.ranges.IntRange;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -8,6 +9,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
+import org.slf4j.Logger;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
 import org.vicky.platform.utils.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -47,8 +49,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntity {
 	private final MobEntityDescriptor descriptor;
 	private final PlatformEntityFactory.RegisteredMobEntityEventHandler handler;
-
+	private final Logger LOGGER = LogUtils.getLogger();
 	private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
+	private final ForgePlatformLivingEntity PLATFORM = ForgePlatformLivingEntity.from(this);
 
 	public PlatformBasedLivingEntity(MobEntityDescriptor descriptor, EntityType<? extends PathfinderMob> type,
 			Level level) {
@@ -67,8 +70,13 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		return descriptor;
 	}
 
-	public ForgePlatformLivingEntity asPlatform() {
-		return ForgePlatformLivingEntity.from(this);
+	public ForgePlatformLivingEntity getPlatform() {
+		return PLATFORM;
+	}
+
+	@Override
+	public boolean isDeadOrDying() {
+		return super.isDeadOrDying();
 	}
 
 	@Override
@@ -76,28 +84,28 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		super.tick();
 
 		if (handler != null) {
-			EventResult res = handler.getHandler().onTick(asPlatform());
+			EventResult res = handler.getHandler().onTick(getPlatform());
 			if (res == EventResult.CONSUME)
 				return;
 		}
 
 		if (!level().isClientSide) {
 			long gameTime = level().getGameTime();
-			EntityTaskManager.INSTANCE.tickEntity(asPlatform(), gameTime);
+			EntityTaskManager.INSTANCE.tickEntity(getPlatform(), gameTime);
 		}
 	}
 
 	@Override
 	public void onEnterCombat() {
 		if (handler != null) {
-			handler.getHandler().onEnterCombat(asPlatform());
+			handler.getHandler().onEnterCombat(getPlatform());
 		}
 	}
 
 	@Override
 	public void onLeaveCombat() {
 		if (handler != null) {
-			handler.getHandler().onLeaveCombat(asPlatform());
+			handler.getHandler().onLeaveCombat(getPlatform());
 		}
 	}
 
@@ -105,7 +113,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 	public boolean hurt(@NotNull DamageSource source, float amount) {
 		AntagonisticDamageSource wrap = convert(source);
 		if (handler != null) {
-			EventResult r = handler.getHandler().onHurt(asPlatform(), wrap, amount);
+			EventResult r = handler.getHandler().onHurt(getPlatform(), wrap, amount);
 			if (r == EventResult.CONSUME)
 				return true;
 			if (r == EventResult.CANCEL)
@@ -117,10 +125,11 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 	@Override
 	public void die(@NotNull DamageSource cause) {
 		if (handler != null) {
-			EventResult r = handler.getHandler().onDeath(asPlatform(), convert(cause));
+			EventResult r = handler.getHandler().onDeath(getPlatform(), convert(cause));
 			if (r == EventResult.CONSUME || r == EventResult.PASS) {
 				super.die(cause);
 			}
+			EntityTaskManager.INSTANCE.removeEntity(getPlatform());
 		}
 	}
 
@@ -129,7 +138,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		if (player instanceof ServerPlayer pp) {
 			PlatformPlayer p = ForgePlatformPlayer.adapt(pp);
 			if (handler != null) {
-				EventResult r = handler.getHandler().onInteract(asPlatform(), p);
+				EventResult r = handler.getHandler().onInteract(getPlatform(), p);
 				if (r == EventResult.CONSUME)
 					return InteractionResult.SUCCESS;
 				if (r == EventResult.CANCEL)
@@ -145,7 +154,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 			@NotNull MobSpawnType reason, @Nullable SpawnGroupData spawnData, @Nullable CompoundTag dataTag) {
 		onLoadOrReload();
 		if (handler != null)
-			handler.getHandler().onSpawn(asPlatform());
+			handler.getHandler().onSpawn(getPlatform());
 
 		return super.finalizeSpawn(world, difficulty, reason, spawnData, dataTag);
 	}
@@ -212,7 +221,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 
 		// 7) Modifiers could be used to tweak spawn (e.g., chance), but typically don't block:
 		for (SpawnModifier mod : settings.getModifiers()) {
-			mod.apply(asPlatform(),
+			mod.apply(getPlatform(),
 					new SpawnContext(
 							pos.getX(), pos.getY(), pos.getZ(),
 							biomeId, light, world.dayTime(),
@@ -333,10 +342,12 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 
 
 	protected void installGoals(MobEntityAIBasedGoals ai) {
+		LOGGER.info("Installing goals");
 		ai.getGoals().forEach(goal -> {
-			var compiledGoal = goal.getProducer().produce(asPlatform(), goal.getParams());
+			var compiledGoal = goal.getProducer().produce(getPlatform(), goal.getParams());
+			LOGGER.info("  - Installing task: {}", compiledGoal.getId());
 			CompiledTaskRegistry.INSTANCE.register(compiledGoal);
-			EntityTaskManager.INSTANCE.assignTask(asPlatform(), compiledGoal.getId(), goal.getParams());
+			EntityTaskManager.INSTANCE.assignTask(getPlatform(), compiledGoal.getId(), goal.getParams());
 		});
 	}
 
@@ -482,7 +493,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		RawAnimation raw = loop
 				? RawAnimation.begin().thenLoop(animationLocation)
 				: RawAnimation.begin().thenPlay(animationLocation);
-		// If it's non-looping we should clear the forced flag so it doesn't replay
+		// If it's non-looping, we should clear the forced flag so it doesn't replay
 		// every tick.
 		if (!loop) {
 			clearForcedAnimationForThisInstance();

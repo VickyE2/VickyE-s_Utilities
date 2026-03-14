@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.*;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.vicky.forge.client.audio.MidiSynthManager;
 import org.vicky.forge.entity.ForgePlatformEntityFactory;
 import org.vicky.forge.entity.PlatformBasedLivingEntityRenderer;
@@ -75,17 +76,17 @@ import net.minecraftforge.fml.loading.FMLPaths;
 @SuppressWarnings({"deprecation", "removal"})
 public class VickyUtilitiesForge implements PlatformPlugin {
 	public static final String MODID = "v_utls";
-	public static final Logger LOGGER = LogUtils.getLogger();
+	public static final Logger LOGGER = LoggerFactory.getLogger("vutls-platform");
 	public static ContextLogger CONTEXT_LOGGER;
 	private static final List<Class<?>> mappingClasses = new ArrayList<>();
 	public static MinecraftServer server;
 	public static SQLManager sqlManager;
-	private static final ForgePlatformItemFactory FACTORY =
-			new ForgePlatformItemFactory(MODID);
+	private static ForgePlatformItemFactory FACTORY;
 
 	public VickyUtilitiesForge() {
 		PlatformPlugin.set(this);
 		CONTEXT_LOGGER = new ContextLogger(ContextLogger.ContextType.SYSTEM, "V-UTLS");
+		FACTORY = new ForgePlatformItemFactory(MODID);
 		new MusicRegistry();
 		IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 		modEventBus.addListener(this::commonSetup);
@@ -298,7 +299,8 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
 	@Override
 	public int getLogLevel() {
-		return -1;
+		System.out.println("Requested log level...");
+		return -100;
 	}
 
 	@Override

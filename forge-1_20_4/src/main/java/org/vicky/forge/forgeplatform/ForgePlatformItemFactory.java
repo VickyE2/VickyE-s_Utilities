@@ -3,7 +3,6 @@ package org.vicky.forge.forgeplatform;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -64,7 +63,7 @@ public class ForgePlatformItemFactory extends PlatformItemFactory {
 	 * This does NOT call itemsRegister.register(modEventBus) — you must attach that separately.
 	 */
 	@Override
-	public void registerItem(ResourceLocation id, ItemDescriptor descriptor) {
+	public void registerItem(ResourceLocation id, @NotNull ItemDescriptor descriptor) {
 		// build a supplier that creates a vanilla Item based on descriptor properties
 		Supplier<DescriptorItem> supplier = () -> createVanillaItemFromDescriptor(descriptor);
 

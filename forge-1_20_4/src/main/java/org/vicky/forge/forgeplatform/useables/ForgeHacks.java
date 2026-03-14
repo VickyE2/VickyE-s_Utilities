@@ -4,6 +4,7 @@ package org.vicky.forge.forgeplatform.useables;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Rarity;
 import org.jetbrains.annotations.NotNull;
+import org.vicky.platform.items.InteractionHand;
 import org.vicky.platform.utils.IntVec3;
 import org.vicky.platform.world.PlatformLocation;
 
@@ -40,5 +41,12 @@ public class ForgeHacks {
 			case EPIC -> Rarity.EPIC;
 			default -> Rarity.COMMON;
 		};
+    }
+
+    public static InteractionHand toVicky(net.minecraft.world.InteractionHand hand) {
+        return switch (hand) {
+            case MAIN_HAND -> InteractionHand.MAIN_HAND;
+            case OFF_HAND -> InteractionHand.OFF_HAND;
+        };
     }
 }

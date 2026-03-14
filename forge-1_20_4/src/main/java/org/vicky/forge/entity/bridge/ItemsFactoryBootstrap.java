@@ -35,7 +35,7 @@ public final class ItemsFactoryBootstrap {
 					if (value instanceof ItemDescriptor desc) {
 						if (ns.getValue() instanceof String namespace &&
 								path.getValue() instanceof String path1) {
-							LOGGER.info("Successfully loaded mob descriptor: {}", desc.getDisplayName());
+							LOGGER.info("Successfully loaded item descriptor: {}:{}", ns, path1);
 							plugin.getPlatformItemFactory().registerItem(ResourceLocation.from(namespace, path1), desc);
 						}
 						else {

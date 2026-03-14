@@ -91,7 +91,8 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
 
 		REGISTERED_ENTITIES.put(ResourceLocation.from(MODID, key), registeredObject);
 		ATTR_SUPPLIERS.put(registeredObject,
-				() -> AttributeSupplier.builder().add(Attributes.MAX_HEALTH, descriptor.getMobDetails().getMaxHealth())
+				() -> AttributeSupplier.builder()
+						.add(Attributes.MAX_HEALTH, descriptor.getMobDetails().getMaxHealth())
 						.add(Attributes.ATTACK_DAMAGE, descriptor.getMobDetails().getAttackDamage())
 						.add(Attributes.MOVEMENT_SPEED, descriptor.getMobDetails().getMovementSpeed())
 						.add(Attributes.FOLLOW_RANGE, descriptor.getMobDetails().getFollowRange())

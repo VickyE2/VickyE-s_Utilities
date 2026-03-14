@@ -62,7 +62,7 @@ public final class AnnotationScanner {
         public String toString() {
             return "ScanResult{" + annotationClassName + " on " + ownerClassName +
                     (memberName == null ? "" : ("#" + memberName)) +
-                    " in " + (jarPath == null ? "unknown-jar" : jarPath.getFileName()) + "}";
+                    " in " + (jarPath == null ? "unknown-jar" : jarPath.getFileName() == null ? "unknown-jar" : jarPath.getFileName()) + "}";
         }
     }
 
@@ -216,17 +216,8 @@ public final class AnnotationScanner {
                 .verbose()
                 .scan()) {
 
-            for (io.github.classgraph.ClassInfo ci : sr.getAllClasses()) {
-                if (Objects.equals(ci.getName(), Items.class.getName())) {
-                    LOGGER.info("Found Items class");
-                    LOGGER.info("annotationsA: {}", ci.getAnnotationInfo());
-                    LOGGER.info("annotationsB: {}", ci.getAnnotations());
-                }
-            }
-
             sr.getClassesWithAnnotation(targetAnnName).forEach(ci -> {
                 String className = ci.getName();
-                LOGGER.info("Found Class ClassInfo for {}: {}", className, ci);
                 Map<String, AnnotationParameterValue> attrs = Collections.emptyMap();
                 try {
                     io.github.classgraph.AnnotationInfo ainfo = ci.getAnnotationInfo(targetAnnName);
@@ -243,7 +234,6 @@ public final class AnnotationScanner {
             // Field-level annotations (use ClassGraph metadata to inspect fields)
             sr.getClassesWithFieldAnnotation(targetAnnName).forEach(ci -> {
                 String className = ci.getName();
-                LOGGER.info("Found Field ClassInfo for {}: {}", className, ci);
                 try {
                     for (io.github.classgraph.FieldInfo fInfo : ci.getDeclaredFieldInfo()) {
                         io.github.classgraph.AnnotationInfo afi = fInfo.getAnnotationInfo(targetAnnName);

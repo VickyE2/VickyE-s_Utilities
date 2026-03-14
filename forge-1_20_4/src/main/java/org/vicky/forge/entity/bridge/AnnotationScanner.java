@@ -224,9 +224,9 @@ public final class AnnotationScanner {
                 }
             }
 
-            for (io.github.classgraph.ClassInfo ci : sr.getClassesWithAnnotation(targetAnnName)) {
+            sr.getClassesWithAnnotation(targetAnnName).forEach(ci -> {
                 String className = ci.getName();
-                LOGGER.info("Found ClassInfo for {}: {}", className, ci);
+                LOGGER.info("Found Class ClassInfo for {}: {}", className, ci);
                 Map<String, AnnotationParameterValue> attrs = Collections.emptyMap();
                 try {
                     io.github.classgraph.AnnotationInfo ainfo = ci.getAnnotationInfo(targetAnnName);
@@ -238,11 +238,12 @@ public final class AnnotationScanner {
                 }
                 out.add(new ScanResult(targetAnnName, className, MemberKind.CLASS, null, attrs, jarPath, mf, sj));
                 LOGGER.info("Found class-level annotation {} in {}", targetAnnName, className);
-            }
+            });
 
             // Field-level annotations (use ClassGraph metadata to inspect fields)
-            for (io.github.classgraph.ClassInfo ci : sr.getClassesWithFieldAnnotation(targetAnnName)) {
+            sr.getClassesWithFieldAnnotation(targetAnnName).forEach(ci -> {
                 String className = ci.getName();
+                LOGGER.info("Found Field ClassInfo for {}: {}", className, ci);
                 try {
                     for (io.github.classgraph.FieldInfo fInfo : ci.getDeclaredFieldInfo()) {
                         io.github.classgraph.AnnotationInfo afi = fInfo.getAnnotationInfo(targetAnnName);
@@ -254,7 +255,7 @@ public final class AnnotationScanner {
                 } catch (Throwable t) {
                     LOGGER.info("Failed to inspect fields metadata of {}: {}", className, t.toString());
                 }
-            }
+            });
 
         } catch (Throwable t) {
             LOGGER.info("ClassGraph fallback scan failed for {}: {}", outerName, t.toString());

@@ -2,7 +2,7 @@
 package org.vicky.platform.entity
 
 object DefaultMobEffects {
-    @JvmStatic
+    @JvmField
     @field:RegisterEffect
     val marked =  EffectDescriptor(
         "marked".core(),

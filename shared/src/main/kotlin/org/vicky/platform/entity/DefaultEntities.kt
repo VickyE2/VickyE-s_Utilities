@@ -5,13 +5,13 @@ import org.vicky.platform.PlatformPlugin
 import org.vicky.platform.entity.distpacher.Trigger
 
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.FIELD, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY)
+@Target(AnnotationTarget.FIELD)
 annotation class RegisterMob
 
 object DefaultEntities {
-    @JvmStatic
+    @JvmField
     @field:RegisterMob
-    private val testDummy = mob(
+    val testDummy = mob(
         key = "test_dummy_mob".core(),
         handler = DefaultHandlers.MobDefaultHandler,
         "test_dummy".core(),

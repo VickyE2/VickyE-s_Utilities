@@ -192,7 +192,7 @@ interface ItemEventsHandler {
 }
 
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY, AnnotationTarget.FUNCTION)
+@Target(AnnotationTarget.FIELD)
 annotation class RegisterItem(
     val namespace: String = "core",
     val path: String,
@@ -297,7 +297,7 @@ fun String.textComponent(): Component = Component.text(this)
 fun String.colorComponent(color: TextColor): Component = Component.text(this).color(color)
 
 object Items {
-    @JvmStatic
+    @JvmField
     @field:RegisterItem(path = "test_item")
     val testItem = item(
         "A test Item".colorComponent(NamedTextColor.GOLD)

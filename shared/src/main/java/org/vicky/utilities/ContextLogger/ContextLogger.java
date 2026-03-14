@@ -34,13 +34,16 @@ public class ContextLogger {
   public ContextLogger(ContextType context, String contextName, PlatformLogger logger) {
     this.context = context;
     this.contextName = contextName.toUpperCase();
-    this.logger = logger;
+    if (logger instanceof DefaultPlatformLogger) {
+      this.logger = PlatformPlugin.logger() != null ? PlatformPlugin.logger() : new DefaultPlatformLogger(contextName);
+    }
+    else this.logger = logger;
   }
 
   public ContextLogger(ContextType context, String contextName) {
     this.context = context;
     this.contextName = contextName.toUpperCase();
-    this.logger = new DefaultPlatformLogger(contextName);
+    this.logger = PlatformPlugin.logger() != null ? PlatformPlugin.logger() : new DefaultPlatformLogger(contextName);
   }
 
   public static String replacePlaceholders(String input, List<Integer> indices, List<String> replacements) {
@@ -92,8 +95,7 @@ public class ContextLogger {
    */
   public void debug(String message) {
     if (requiredLogLevel > LogType.DEBUG.level) return;
-    String contextTag =
-        "[" + ANSIColor.colorize("pink[" + context + "-" + contextName + "]") + "] ";
+    String contextTag = createTag(LogType.DEBUG);
     String finalContext = contextTag + message;
     logger.info(finalContext);
   }
@@ -106,8 +108,7 @@ public class ContextLogger {
   @Deprecated
   public void print(String message) {
     if (requiredLogLevel > LogType.BASIC.level) return;
-    String contextTag =
-        "[" + ANSIColor.colorize("cyan[" + context + "-" + contextName + "]") + "] ";
+    String contextTag = createTag(LogType.BASIC);
     String finalContext = contextTag + message;
     logger.info(finalContext);
   }
@@ -122,11 +123,7 @@ public class ContextLogger {
   @Deprecated
   public void print(String message, boolean isError) {
     if (requiredLogLevel > (isError ? LogType.ERROR.level : LogType.BASIC.level)) return;
-    String contextTag =
-        "["
-            + ANSIColor.colorize(
-                (isError ? "red" : "cyan") + "[" + context + "-" + contextName + "]")
-            + "] ";
+    String contextTag = createTag(isError ? LogType.ERROR : LogType.BASIC);
     String finalContext =
         contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
     if (isError) logger.error(finalContext);
@@ -147,11 +144,7 @@ public class ContextLogger {
     for (var arg : args) {
       finalised.add(arg.toString());
     }
-    String contextTag =
-            "["
-                    + ANSIColor.colorize(
-                    (isError ? "red" : "cyan") + "[" + context + "-" + contextName + "]")
-                    + "] ";
+    String contextTag = createTag(isError ? LogType.ERROR : LogType.BASIC);
     message = replaceAllOrdered(message, finalised);
     String finalContext =
             contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
@@ -174,8 +167,7 @@ public class ContextLogger {
       finalised.add(arg.toString());
     }
 
-    String contextTag =
-            "[" + ANSIColor.colorize("cyan[" + context + "-" + contextName + "]") + "] ";
+    String contextTag = createTag(LogType.BASIC);
     String finalContext = contextTag + replaceAllOrdered(message, finalised);
     logger.info(finalContext);
   }
@@ -194,8 +186,7 @@ public class ContextLogger {
       finalised.add(arg.toString());
     }
 
-    String contextTag =
-            "[" + ANSIColor.colorize("pink[" + context + "-" + contextName + "]") + "] ";
+    String contextTag = createTag(LogType.DEBUG);
     String finalContext = contextTag + replaceAllOrdered(message, finalised);
     logger.info(finalContext);
   }
@@ -210,8 +201,7 @@ public class ContextLogger {
   @Deprecated
   public void print(String message, LogType type) {
     if (requiredLogLevel > type.level) return;
-    String contextTag =
-        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+    String contextTag = createTag(type);
     String finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
     if (type.equals(LogType.WARNING)) logger.warn(finalContext);
     else if (type.equals(LogType.ERROR)) logger.error(finalContext);
@@ -248,8 +238,7 @@ public class ContextLogger {
   @Deprecated
   public void print(String message, LogType type, LogPostType effect) {
     if (requiredLogLevel > type.level) return;
-    String contextTag =
-        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+    String contextTag = createTag(type);
     String finalContext =
         contextTag
             + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
@@ -288,8 +277,7 @@ public class ContextLogger {
   @Deprecated
   public void print(String message, LogType type, boolean shouldAffectMessage) {
     if (requiredLogLevel > type.level) return;
-    String contextTag =
-        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+    String contextTag = createTag(type);
     String finalContext;
     if (shouldAffectMessage) {
       finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
@@ -301,6 +289,10 @@ public class ContextLogger {
     else if (type.equals(LogType.AMBIENCE)) logger.debug(finalContext);
     else logger.info(finalContext);
   }
+
+    private String createTag(LogType type) {
+        return "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + " / " + type.name().toLowerCase() + "]") + "/] ";
+    }
 
   /**
    * Logs a message to the plugin logger using the default cyan context formatting.

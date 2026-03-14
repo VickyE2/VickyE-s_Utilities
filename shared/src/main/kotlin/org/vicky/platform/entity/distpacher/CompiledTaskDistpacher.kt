@@ -147,9 +147,9 @@ object EntityTaskManager {
             for (sig in compiled.waitForSignals) {
                 SignalManager.subscribe(entity.uuid, sig, taskId, params)
             }
-            LOGGER.print("Task $taskId for ${entity.uuid} will wait for signals=${compiled.waitForSignals}", ContextLogger.LogType.BASIC)
+            LOGGER.debug("Task $taskId for ${entity.uuid} will wait for signals=${compiled.waitForSignals}", ContextLogger.LogType.BASIC)
         } else {
-            LOGGER.print("Assigned task $taskId to ${entity.uuid} with params=$params", ContextLogger.LogType.BASIC)
+            LOGGER.debug("Assigned task $taskId to ${entity.uuid} with params=$params", ContextLogger.LogType.BASIC)
         }
     }
 

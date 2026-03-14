@@ -2,7 +2,7 @@ package org.vicky.platform.defaults;
 
 import org.vicky.platform.PlatformLogger;
 
-public class DefaultPlatformLogger implements PlatformLogger {
+public final class DefaultPlatformLogger implements PlatformLogger {
     private final String prefix;
 
     public DefaultPlatformLogger(String prefix) {

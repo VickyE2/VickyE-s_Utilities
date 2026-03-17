@@ -9,6 +9,7 @@ import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
 import org.vicky.forge.entity.PlatformBasedLivingEntity;
 import org.vicky.forge.forgeplatform.useables.DescriptorItem;
+import org.vicky.forge.forgeplatform.useables.ForgeHacks;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformItem;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.platform.PlatformPlugin;
@@ -37,29 +38,37 @@ public final class ForgeMobEventBridge {
 	public static void onItemPickup(EntityItemPickupEvent event) {
 		if (event.getItem().getItem().getItem() instanceof DescriptorItem descriptorItem) {
 			if (event.getEntity() instanceof ServerPlayer player) {
-				descriptorItem.getDescriptor().getHandler()
+				event.setResult(ForgeHacks.fromVicky(descriptorItem.getDescriptor().getHandler()
 						.onPickedUpByPlayer(
 								new ForgePlatformItem(event.getItem().getItem()),
 								ForgePlatformPlayer.adapt(player)
-						); // should return allow or deny event.setResult(Resul);
+						))); // should return allow or deny event.setResult(Resul);
 				return;
 			}
-			descriptorItem.getDescriptor().getHandler()
+			event.setResult(ForgeHacks.fromVicky(descriptorItem.getDescriptor().getHandler()
 					.onPickedUp(
 							new ForgePlatformItem(event.getItem().getItem()),
 							ForgePlatformLivingEntity.from(event.getEntity())
-					);
+					)
+			));
 		}
 	}
 
 	@SubscribeEvent
 	public static void onItemDropped(ItemTossEvent event) {
 		if (event.getEntity().getItem().getItem() instanceof DescriptorItem descriptorItem) {
-			descriptorItem.getDescriptor().getHandler()
+			var result = descriptorItem.getDescriptor().getHandler()
 					.onDropped(
 							new ForgePlatformItem(event.getEntity().getItem()),
 							ForgePlatformLivingEntity.from(event.getPlayer())
 					);
+			if (event.hasResult())
+				event.setResult(ForgeHacks.fromVicky(result));
+			if (event.isCancelable())
+				switch (result) {
+                    case ALLOW -> event.setCanceled(false);
+                    case DENY -> event.setCanceled(true);
+                };
 		}
 	}
 

@@ -75,6 +75,11 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 	}
 
 	@Override
+	public int getMaxMinimumY() {
+		return world.getMinBuildHeight();
+	}
+
+	@Override
 	public @NotNull List<? extends @NotNull PlatformEntity> getEntities() {
 		if (world instanceof ServerLevel serverLevel) {
 			var list = new ArrayList<PlatformEntity>();

@@ -2,8 +2,11 @@
 package org.vicky.forge.forgeplatform.useables;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Rarity;
+import net.minecraftforge.eventbus.api.Event;
 import org.jetbrains.annotations.NotNull;
+import org.vicky.platform.items.EventResult;
 import org.vicky.platform.items.InteractionHand;
 import org.vicky.platform.utils.IntVec3;
 import org.vicky.platform.world.PlatformLocation;
@@ -48,5 +51,23 @@ public class ForgeHacks {
             case MAIN_HAND -> InteractionHand.MAIN_HAND;
             case OFF_HAND -> InteractionHand.OFF_HAND;
         };
+    }
+
+    public static @NotNull InteractionResult fromVicky(org.vicky.platform.items.InteractionResult interactionResult) {
+        return switch (interactionResult) {
+			case SUCCESS -> InteractionResult.SUCCESS;
+			case CONSUME -> InteractionResult.CONSUME;
+			case CONSUME_PARTIAL -> InteractionResult.CONSUME_PARTIAL;
+			case PASS -> InteractionResult.PASS;
+			case FAIL -> InteractionResult.FAIL;
+		};
+    }
+
+    public static Event.Result fromVicky(EventResult eventResult) {
+        return switch (eventResult) {
+			case ALLOW -> Event.Result.ALLOW;
+			case DENY -> Event.Result.DENY;
+			case DEFAULT -> Event.Result.DEFAULT;
+		};
     }
 }

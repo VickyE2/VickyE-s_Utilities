@@ -18,6 +18,7 @@ public class ForgePlatformPath implements AbstractPath {
 	}
 
 	public static ForgePlatformPath from(Path nav) {
+		if (nav == null) return null;
 		return new ForgePlatformPath(nav);
 	}
 
@@ -51,5 +52,10 @@ public class ForgePlatformPath implements AbstractPath {
 	@Override
 	public @NotNull IntVec3 target() {
 		return ForgeHacks.toVicky(ordinal.getTarget());
+	}
+
+	@Override
+	public String toString() {
+		return "ForgePlatformed-" + ordinal;
 	}
 }

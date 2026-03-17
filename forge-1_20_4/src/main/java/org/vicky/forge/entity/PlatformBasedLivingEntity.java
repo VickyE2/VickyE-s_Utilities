@@ -6,10 +6,12 @@ import kotlin.ranges.IntRange;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.ai.navigation.*;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import org.slf4j.Logger;
+import org.vicky.forge.entity.navigation.ForgeAdaptablePathNavigator;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
 import org.vicky.platform.utils.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -22,7 +24,6 @@ import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.entity.*;
-import org.vicky.platform.entity.distpacher.CompiledTaskRegistry;
 import org.vicky.platform.entity.distpacher.EntityTaskManager;
 
 import net.minecraft.nbt.CompoundTag;
@@ -53,6 +54,8 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 	private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 	private final ForgePlatformLivingEntity PLATFORM = ForgePlatformLivingEntity.from(this);
 
+	protected int mobCount = 0;
+
 	public PlatformBasedLivingEntity(MobEntityDescriptor descriptor, EntityType<? extends PathfinderMob> type,
 			Level level) {
 		super(type, level);
@@ -75,7 +78,22 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 	}
 
 	@Override
+	protected @NotNull PathNavigation createNavigation(@NotNull Level level) {
+		return new ForgeAdaptablePathNavigator(
+				this,
+				level,
+                GroundPathNavigation::new,
+                FlyingPathNavigation::new,
+				WaterBoundPathNavigation::new,
+				AmphibiousPathNavigation::new,
+				WallClimberNavigation::new,
+				MovementMode.GROUND
+		);
+	}
+
+	@Override
 	public boolean isDeadOrDying() {
+		mobCount--;
 		return super.isDeadOrDying();
 	}
 
@@ -129,6 +147,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 			if (r == EventResult.CONSUME || r == EventResult.PASS) {
 				super.die(cause);
 			}
+			EntityTaskManager.INSTANCE.clearTasks(getPlatform());
 			EntityTaskManager.INSTANCE.removeEntity(getPlatform());
 		}
 	}
@@ -215,7 +234,7 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		if (settings.getMaxPerChunk() > 0 && countSameMobInChunk(world, pos, settings.getMobId()) >= settings.getMaxPerChunk()) {
 			return false;
 		}
-		if (settings.getMaxGlobal() > 0 && countSameMobGlobally(world, settings.getMobId()) >= settings.getMaxGlobal()) {
+		if (settings.getMaxGlobal() > 0 && mobCount >= settings.getMaxGlobal()) {
 			return false;
 		}
 
@@ -242,11 +261,9 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		// ensure spawn position is not colliding with blocks
 		return world.noCollision(this);
 	}
-
 	protected boolean isInWaterSpawn(LevelAccessor world, BlockPos pos) {
 		return world.getFluidState(pos).is(FluidTags.WATER);
 	}
-
 	protected boolean isUndergroundSpawn(LevelAccessor world, BlockPos pos) {
 		// Must be air where entity spawns
 		if (!world.getBlockState(pos).isAir()) return false;
@@ -266,7 +283,6 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		// Collision safety
 		return world.noCollision(this);
 	}
-
 	protected boolean isInAirSpawn(LevelAccessor world, BlockPos pos) {
 		// Must be air
 		if (!world.getBlockState(pos).isAir()) return false;
@@ -285,7 +301,6 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 
 		return world.noCollision(this);
 	}
-
 	private int getBlockLightLevel(LevelAccessor world, BlockPos pos) {
 		try {
 			Method m = world.getClass().getMethod("getMaxLocalRawBrightness", BlockPos.class);
@@ -298,7 +313,6 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		// safest fallback
 		return world.getMaxLocalRawBrightness(pos); // if available, else might throw — adapt accordingly
 	}
-
 	private String getBiomeId(LevelAccessor world, BlockPos pos) {
 		try {
 			Holder<Biome> holder = world.getBiome(pos);
@@ -330,25 +344,9 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		return count.get();
 	}
 
-	private int countSameMobGlobally(LevelAccessor world, ResourceLocation mobId) {
-		// expensive on server - try to keep this conservative or cache counts periodically.
-		if (!(world instanceof ServerLevel serverWorld)) return 0;
-        int count = 0;
-		for (Entity e : serverWorld.getEntities().getAll()) {
-			if (e.getType().builtInRegistryHolder().key().location().equals(mobId)) count++;
-		}
-		return count;
-	}
-
-
 	protected void installGoals(MobEntityAIBasedGoals ai) {
 		LOGGER.info("Installing goals");
-		ai.getGoals().forEach(goal -> {
-			var compiledGoal = goal.getProducer().produce(getPlatform(), goal.getParams());
-			LOGGER.info("  - Installing task: {}", compiledGoal.getId());
-			CompiledTaskRegistry.INSTANCE.register(compiledGoal);
-			EntityTaskManager.INSTANCE.assignTask(getPlatform(), compiledGoal.getId(), goal.getParams());
-		});
+		ai.applyToEntity(getPlatform());
 	}
 
 	private AntagonisticDamageSource convert(DamageSource s) {
@@ -529,13 +527,28 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 
 		if (!initialized) {
 			initialized = true;
+
+			MovementMode mode = descriptor.getMobDetails().getMovementModes().iterator().next();
+			if (getNavigation() instanceof ForgeAdaptablePathNavigator nav) {
+				nav.setMovementMode(mode);
+			}
+
 			onLoadOrReload();
 		}
 	}
 
 	private void onLoadOrReload() {
 		if (!level().isClientSide) {
+			mobCount++;
 			installGoals(descriptor.getAi());
 		}
 	}
+
+	public MobEntityDescriptor descriptor() {
+		return descriptor;
+	}
+
+    public void setNavigation(@NotNull PathNavigation navigation) {
+        this.navigation = navigation;
+    }
 }

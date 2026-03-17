@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.vicky.forge.client.audio.MidiSynthManager;
 import org.vicky.forge.entity.ForgePlatformEntityFactory;
 import org.vicky.forge.entity.PlatformBasedLivingEntityRenderer;
+import org.vicky.forge.entity.bridge.AnnotationScanner;
 import org.vicky.forge.entity.bridge.EffectBootstrap;
 import org.vicky.forge.entity.bridge.EntityFactoryBootstrap;
 import org.vicky.forge.entity.bridge.ItemsFactoryBootstrap;

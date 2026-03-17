@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vicky.platform.items.Items;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
@@ -66,6 +67,26 @@ public final class AnnotationScanner {
         }
     }
 
+    private static List<Path> tempJars;
+
+    private static void startTemporaryFile() {
+        tempJars = new ArrayList<>();
+        LOGGER.info("Starting temporary file list");
+    }
+
+    private static void stopTemporaryFile() {
+        if (tempJars != null) {
+            tempJars.forEach(p -> {
+                try {
+                    Files.deleteIfExists(p);
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to delete temporary file: {}", p, e);
+                }
+            });
+            tempJars = null;
+        }
+    }
+
     /**
      * Main entry — scan all ModFile entries provided by BackgroundScanHandler
      */
@@ -78,6 +99,7 @@ public final class AnnotationScanner {
         LOGGER.info("Scanning for annotation: {}", targetAnnName);
 
         List<ModFile> modFiles;
+
         try {
             modFiles = handler.getModFiles(); // BackgroundScanHandler.getModFiles() or .modFiles() depending on version
         } catch (Throwable t) {
@@ -146,60 +168,33 @@ public final class AnnotationScanner {
 
         LOGGER.info("  Path: {}", outerJar.toUri());
 
-        // gather classpath entries: outer jar + the target jarPath + any extracted nested jars
-        List<String> classpathEntries = new ArrayList<>();
-        classpathEntries.add(outerJar.toUri().toString());
-
-        // IMPORTANT: include the requested jarPath (the library we want to scan)
-        if (jarPath != null) {
-            try {
-                if (Files.isDirectory(jarPath)) {
-                    // if a folder was passed, add all jars in that folder
-                    try (DirectoryStream<Path> ds = Files.newDirectoryStream(jarPath, "*.jar")) {
-                        for (Path p : ds) {
-                            classpathEntries.add(p.toUri().toString());
-                            LOGGER.debug("Adding jar from dir to classpath entries: {}", p);
-                        }
-                    } catch (IOException e) {
-                        LOGGER.debug("Failed to list jars in {}: {}", jarPath, e.toString());
-                    }
-                } else {
-                    classpathEntries.add(jarPath.toUri().toString());
-                }
-            } catch (Throwable t) {
-                LOGGER.warn("Failed to include jarPath {} in classpath entries: {}", jarPath, t.toString());
-            }
-        }
-
-        // keep temporary files so we can delete them later
-        List<Path> tempJars = new ArrayList<>();
-
         // Extract nested jars from common locations (META-INF/jarjar/, BOOT-INF/lib/, lib/)
+        // inside scanLibraryJarFor(...) instead of extracting nested jars to disk:
+        List<String> classpathEntries = new ArrayList<>();
+        classpathEntries.add(outerJar.toUri().toString()); // outer jar as normal path
+
         try (JarFile jarFile = new JarFile(outerJar.toFile())) {
             Enumeration<JarEntry> entries = jarFile.entries();
+
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 String name = entry.getName();
-                // Only extract nested jars from known locations.
-                if ((name.startsWith("META-INF/jarjar/") || name.startsWith("BOOT-INF/lib/") || name.startsWith("lib/"))
+
+                if ((name.startsWith("META-INF/jarjar/") ||
+                        name.startsWith("BOOT-INF/lib/") ||
+                        name.startsWith("lib/"))
                         && name.endsWith(".jar")) {
 
-                    LOGGER.debug("Found nested jar entry: {} in {}", name, outerName);
+                    String nestedJarPath =
+                            "jar:" + outerJar.toUri() + "!/" + name;
 
-                    try (InputStream in = jarFile.getInputStream(entry)) {
-                        Path tempJar = Files.createTempFile("cg-nested-", ".jar");
-                        Files.copy(in, tempJar, StandardCopyOption.REPLACE_EXISTING);
-                        tempJars.add(tempJar);
-                        classpathEntries.add(tempJar.toUri().toString());
-                        LOGGER.debug("Extracted nested jar to {}", tempJar);
-                    } catch (Throwable t) {
-                        LOGGER.warn("Failed to extract nested entry {} from {}: {}", name, outerName, t.toString());
-                    }
+                    classpathEntries.add(nestedJarPath);
+
+                    LOGGER.debug("Added nested jar: {}", nestedJarPath);
                 }
             }
-        } catch (Throwable t) {
-            LOGGER.warn("Failed to read outer jar {} for nested jars: {}", outerJar, t.toString());
-            // Fall through: we'll still attempt to scan the outer jar below.
+        } catch (IOException e) {
+            LOGGER.debug("Failed to open parent jar file");
         }
 
         LOGGER.debug("Classpath entries for ClassGraph scan: {}", classpathEntries);
@@ -212,8 +207,6 @@ public final class AnnotationScanner {
                 .enableAnnotationInfo()
                 .ignoreClassVisibility()
                 .ignoreFieldVisibility()
-                .removeTemporaryFilesAfterScan()
-                .verbose()
                 .scan()) {
 
             sr.getClassesWithAnnotation(targetAnnName).forEach(ci -> {
@@ -249,14 +242,6 @@ public final class AnnotationScanner {
 
         } catch (Throwable t) {
             LOGGER.info("ClassGraph fallback scan failed for {}: {}", outerName, t.toString());
-        } finally {
-            // cleanup temporary nested jars
-            for (Path p : tempJars) {
-                try {
-                    Files.deleteIfExists(p);
-                    LOGGER.debug("Deleted temp nested jar {}", p);
-                } catch (Throwable ignored) {}
-            }
         }
 
         return out;

@@ -2,13 +2,13 @@
 package org.vicky.forge.forgeplatform.useables;
 
 import net.minecraft.world.level.CommonLevelAccessor;
+import org.jetbrains.annotations.NotNull;
 import org.vicky.platform.world.PlatformBlock;
 import org.vicky.platform.world.PlatformBlockState;
 import org.vicky.platform.world.PlatformLocation;
 import org.vicky.platform.world.PlatformMaterial;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 public record ForgePlatformBlockAdapter(BlockPos pos, BlockState state,
@@ -19,12 +19,12 @@ public record ForgePlatformBlockAdapter(BlockPos pos, BlockState state,
 	}
 
 	@Override
-	public PlatformMaterial getMaterial() {
+	public @NotNull PlatformMaterial getMaterial() {
 		return new ForgePlatformMaterial(state.getBlock());
 	}
 
 	@Override
-	public PlatformLocation getLocation() {
+	public @NotNull PlatformLocation getLocation() {
 		return new ForgeVec3(world, pos, 0, 0);
 	}
 

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.CommonLevelAccessor;
 import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -48,7 +49,7 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 	public String getName() {
 		if (world instanceof Level level)
 			return level.dimension().location().toString();
-		return "NAMELESS";
+		return "NAMELESS_WORLD";
 	}
 
 	@Override
@@ -57,10 +58,9 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 	}
 
 	public int getHighestBlockYAt(double x, double z) {
-		// Forge/vanilla equivalent of Bukkit#getHighestBlockYAt
-		BlockPos pos = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, // blocks movement (like solid or leaves)
-				new BlockPos((int) x, 0, (int) z));
-		return pos.getY();
+		BlockPos pos = world.getHeightmapPos(Heightmap.Types.WORLD_SURFACE, // blocks movement (like solid or leaves)
+				new BlockPos(Mth.floor(x), 0, Mth.floor(z)));
+		return pos.getY() - 1;
 	}
 
 	@Override
@@ -140,7 +140,7 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 
 	@Override
 	public PlatformBlock<BlockState> getBlockAt(double x, double y, double z) {
-		BlockPos pos = new BlockPos((int) x, (int) y, (int) z);
+		BlockPos pos = new BlockPos(Mth.floor(x), Mth.floor(y), Mth.floor(z));
 		BlockState state = world.getBlockState(pos);
 		return new ForgePlatformBlockAdapter(pos, state, world);
 	}
@@ -162,13 +162,13 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 
 	@Override
 	public void setPlatformBlockState(Vec3 position, PlatformBlockState<BlockState> state) {
-		BlockPos pos = new BlockPos((int) position.x, (int) position.y, (int) position.z);
+		BlockPos pos = new BlockPos(Mth.floor(position.x), Mth.floor(position.y), Mth.floor(position.z));
 		world.setBlock(pos, state.getNative(), 3); // 3 = update clients + block updates
 	}
 
 	@Override
 	public void setPlatformBlockState(Vec3 position, PlatformBlockState<BlockState> state, ICompoundTag nbt) {
-		BlockPos pos = new BlockPos((int) position.x, (int) position.y, (int) position.z);
+		BlockPos pos = new BlockPos(Mth.floor(position.x), Mth.floor(position.y), Mth.floor(position.z));
 		world.setBlock(pos, state.getNative(), 3); // 3 = update clients + block updates
 	}
 
@@ -228,7 +228,7 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 
 	@Override
 	public PlatformBlock<BlockState> raycastBlock(Vec3 eyeLocation, Vec3 lookDirection, Float range) {
-		BlockPos start = new BlockPos((int) eyeLocation.x, (int) eyeLocation.y, (int) eyeLocation.z);
+		BlockPos start = new BlockPos(Mth.floor(eyeLocation.x), Mth.floor(eyeLocation.y), Mth.floor(eyeLocation.z));
 		net.minecraft.world.phys.Vec3 endVec = new net.minecraft.world.phys.Vec3(
 				eyeLocation.x + lookDirection.x * range, eyeLocation.y + lookDirection.y * range,
 				eyeLocation.z + lookDirection.z * range);

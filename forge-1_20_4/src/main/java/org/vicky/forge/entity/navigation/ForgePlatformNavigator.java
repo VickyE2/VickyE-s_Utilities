@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.entity.ForgePlatformEntity;
 import org.vicky.forge.forgeplatform.useables.ForgeHacks;
 import org.vicky.platform.entity.AbstractPath;
+import org.vicky.platform.entity.MovementMode;
 import org.vicky.platform.entity.PathNavigator;
 import org.vicky.platform.entity.PlatformEntity;
 import org.vicky.platform.utils.IntVec3;
@@ -30,13 +31,18 @@ public class ForgePlatformNavigator implements PathNavigator {
 	}
 
 	@Override
+	public void setMovementMode(@NotNull MovementMode mode) {
+		if (ordinal instanceof ForgeAdaptablePathNavigator nav)
+			nav.setMovementMode(mode);
+	}
+
+	@Override
 	public boolean getCanFloat() {
 		return ordinal.canFloat();
 	}
 
 	@Override
 	public boolean canUpdatePath() {
-		// no op...
 		return false;
 	}
 

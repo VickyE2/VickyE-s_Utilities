@@ -46,4 +46,9 @@ public class ForgePlatformNode implements AbstractPathNode {
 	public @NotNull IntVec3 asVec() {
 		return ForgeHacks.toVicky(ordinal.asBlockPos());
 	}
+
+	@Override
+	public String toString() {
+		return "ForgePlatformed-" +  ordinal.toString();
+	}
 }

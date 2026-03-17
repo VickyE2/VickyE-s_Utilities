@@ -15,14 +15,14 @@ import java.util.List;
  * <p>
  * This logger allows messages to be formatted with a context tag,
  * which includes a context type and a context name, as well as
- * additional formatting such as color and post effects (e.g., bold, italic).
+ * additional formatting such as color- and post-effects (e.g., bold, italic).
  * </p>
  */
 public class ContextLogger {
   protected final ContextType context;
   protected final String contextName;
   protected final PlatformLogger logger;
-  private int requiredLogLevel = PlatformPlugin.isInitialised() ? PlatformPlugin.logLevel() : 0;
+  private int requiredLogLevel = PlatformPlugin.isInitialised() ? PlatformPlugin.logLevel() : -2;
 
   /**
    * Constructs a ContextLogger with the specified context type and context name.

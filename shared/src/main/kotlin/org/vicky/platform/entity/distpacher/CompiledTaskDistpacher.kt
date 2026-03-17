@@ -27,6 +27,8 @@ class EntityTaskState {
     val assignedTasks = LinkedHashMap<ResourceLocation, Map<String, Any>>(4) // list of task IDs assigned to this entity
     // NEW: tasks currently blocked waiting for signals:
     // map: taskId -> remainingSignalsSet
+
+    val lastSelectorResult: MutableMap<ResourceLocation, Any?> = HashMap()
     val waitingTasks = LinkedHashMap<ResourceLocation, MutableSet<String>>(4)
 }
 
@@ -161,8 +163,6 @@ object EntityTaskManager {
     /** Called every server tick (or from per-entity tick) */
     fun tickEntity(entity: PlatformLivingEntity, worldTick: Long) {
         val st = states[entity.uuid] ?: return
-        LOGGER.debug("tickEntity: ${entity.uuid} assigned=${st.assignedTasks.size} " +
-                "cooldown=${st.cooldownTicksRemaining}")
 
         tickActiveTimed(entity, st)
 
@@ -177,7 +177,8 @@ object EntityTaskManager {
 
         val candidates = st.assignedTasks
             .mapNotNull { CompiledTaskRegistry.get(it.key) }
-            .sortedWith(compareByDescending<CompiledTask> { it.priority }.thenBy { Random.nextFloat() })
+            .sortedWith(compareByDescending<CompiledTask> { it.priority }
+                .thenBy { Random.nextFloat() })
 
         val tasksToRemove = mutableListOf<ResourceLocation>()
 
@@ -233,15 +234,22 @@ object EntityTaskManager {
         for (step in task.steps) {
             when (step) {
                 is CompiledStep.EntitySelectorStep -> {
-                    val last = st.lastSelectorTick[step.selector.id] ?: -Long.MAX_VALUE
-                    if (worldTick - last < selectorThrottleTicks) {
-                        if (working == null) {
-                            LOGGER.debug("Task ${task.id} entity selector ${step.selector.id} returned no targets — skipping")
-                            return TaskRunOutcome.NOT_RUN
-                        }
-                    } else {
+                    val last = st.lastSelectorTick[step.selector.id] ?: Long.MIN_VALUE
+                    var result = st.lastSelectorResult[step.selector.id]
+
+                    if (worldTick - last >= selectorThrottleTicks || result == null) {
+                        result = step.selector.select(ctx)
+
                         st.lastSelectorTick[step.selector.id] = worldTick
-                        working = step.selector.select(ctx)
+                        st.lastSelectorResult[step.selector.id] = result
+                        LOGGER.debug("Task ${task.id} entity selector has gathered targets: $result")
+                    }
+
+                    working = result as AmountableResult<PlatformLivingEntity>?
+
+                    if (working == null) {
+                        LOGGER.debug("Task ${task.id} entity selector ${step.selector.id} returned no targets — skipping")
+                        return TaskRunOutcome.NOT_RUN
                     }
                 }
                 is CompiledStep.EntityConditionStep -> {
@@ -313,16 +321,22 @@ object EntityTaskManager {
                     }
                 }
                 is CompiledStep.BlockSelectorStep -> {
-                    // Throttle selectors: per-entity per-selector last-run time
-                    val last = st.lastSelectorTick[step.selector.id] ?: -Long.MAX_VALUE
-                    if (worldTick - last < selectorThrottleTicks) {
-                        if (workingBlock == null) {
-                            LOGGER.debug("Task ${task.id} block selector ${step.selector.id} returned no targets — skipping")
-                            return TaskRunOutcome.NOT_RUN
-                        }
-                    } else {
+                    val last = st.lastSelectorTick[step.selector.id] ?: Long.MIN_VALUE
+                    var result = st.lastSelectorResult[step.selector.id]
+
+                    if (worldTick - last >= selectorThrottleTicks || result == null) {
+                        result = step.selector.select(ctx)
+
                         st.lastSelectorTick[step.selector.id] = worldTick
-                        workingBlock = step.selector.select(ctx)
+                        st.lastSelectorResult[step.selector.id] = result
+                        LOGGER.debug("Task ${task.id} block selector has gathered targets: $result")
+                    }
+
+                    workingBlock = result as AmountableResult<PlatformBlock<*>>?
+
+                    if (workingBlock == null) {
+                        LOGGER.debug("Task ${task.id} selector ${step.selector.id} returned no targets — skipping")
+                        return TaskRunOutcome.NOT_RUN
                     }
                 }
                 is CompiledStep.BlockConditionStep -> {
@@ -353,7 +367,10 @@ object EntityTaskManager {
 
                     // Instant actions
                     if (isOnTarget) {
-                        if (workingBlock == null) return TaskRunOutcome.NOT_RUN
+                        if (workingBlock == null) {
+                            LOGGER.debug("Working block was null, cannot run intant.")
+                            return TaskRunOutcome.NOT_RUN
+                        }
                         when (workingBlock.resultType) {
                             ResultType.SINGLE, ResultType.RANDOM_SINGLE -> workingBlock.getSingleResult()?.let { t ->
                                 step.compiledBlockAction.forEach { it.run(entity, t) }
@@ -362,7 +379,8 @@ object EntityTaskManager {
                                 step.compiledBlockAction.forEach { it.run(entity, t) }
                             }
                         }
-                    } else {
+                    }
+                    else {
 
                     }
 
@@ -371,10 +389,14 @@ object EntityTaskManager {
                     }
 
                     if (isOnTarget) {
-                        if (workingBlock == null) continue
+                        if (workingBlock == null) {
+                            LOGGER.debug("Working block was null, cannot schedule.")
+                            continue
+                        }
                         when (workingBlock.resultType) {
                             ResultType.SINGLE, ResultType.RANDOM_SINGLE -> {
                                 workingBlock.getSingleResult()?.let { t ->
+                                    LOGGER.debug("Scheduled task single for $t")
                                     scheduleTimedList(st, entity, listOf(t), task, step)
                                 }
                             }
@@ -382,7 +404,8 @@ object EntityTaskManager {
                                 scheduleTimedList(st, entity, workingBlock.getResults(), task, step)
                             }
                         }
-                    } else {
+                    }
+                    else {
                         scheduleTimedList(st, entity, listOf(null), task, step)
                     }
                 }
@@ -443,32 +466,40 @@ object EntityTaskManager {
         task: CompiledTask,
         step: CompiledStep.BlockActionStep
     ) {
-        // step.dto.timedRefs aligns to compiledTimedAction list by index (we kept them matched on compile)
+        LOGGER.debug("Scheduling timed list for task ${task.id} with owner ${owner.typeId} on ${targets.size} targets.")
+
+        // step.dto.timedRefs aligns to compiledTimedAction list by index
         val dtoTimedRefs = step.dto.blockTimedActionRefs
 
-        // for each target schedule each timedRef
         targets.forEach { target ->
+            if (target == null) {
+                LOGGER.warn("Target is null, skipping.")
+                return@forEach
+            }
+
             step.compiledTimedAction.forEachIndexed { idx, compiledTimed ->
                 val ref = dtoTimedRefs.getOrNull(idx) ?: TimedRef(compiledTimed.id) // fallback
-                // slot & runBlocking handling
                 val slot = ref.slot
+
                 if (slot != null && st.activeEntityTimed.any { it.slot == slot }) {
-                    // slot busy -> skip or refresh; choose policy: skip
+                    LOGGER.debug("Slot $slot already active, skipping timed action ${compiledTimed.id} for target ${target.location}.")
                     return@forEachIndexed
                 }
 
-                // compute resolved duration and interval
                 val ticksLeft = ref.duration ?: compiledTimed.defaultDuration
                 val interval = ref.interval ?: compiledTimed.defaultInterval
 
-                // call onStart on main thread
+                LOGGER.debug("Scheduling timed action ${compiledTimed.id} for target ${target.location} with duration $ticksLeft and interval $interval.")
+
                 if (compiledTimed.onStart(owner, target)) {
-                    // create active timed
                     val active = ActiveTimedBlockAction(
                         compiledTimed, owner, target,
                         ticksLeft, interval, 0, slot, task.id, compiledTimed.id
                     )
                     st.activeBlockTimed.add(active)
+                    LOGGER.debug("Added ActiveTimedBlockAction ${compiledTimed.id} for target ${target.location}, task ${task.id}, slot $slot.")
+                } else {
+                    LOGGER.warn("onStart returned false for timed action ${compiledTimed.id} on target ${target.location}. Skipping creation.")
                 }
             }
         }
@@ -484,110 +515,55 @@ object EntityTaskManager {
     }
 
     private fun tickActiveTimed(entity: PlatformLivingEntity, st: EntityTaskState) {
-        run {
-            val it = st.activeEntityTimed.listIterator()
-            while (it.hasNext()) {
-                val a = it.next()
-                if (a.intervalTicksLeft > 0) {
-                    a.intervalTicksLeft -= 1
-                } else {
-                    a.intervalTicksLeft = a.interval - 1
-                    val keep = a.compiled.onTick(a.self, a.targetEntity)
-                    if (!keep) {
-                        a.compiled.onEnd(a.self, a.targetEntity)
-                        val finishedTaskId = a.taskId
-                        it.remove()
-                        if (!hasActiveTimersForTask(st, finishedTaskId)) {
-                            // no more active timers for this task
-                            val task = CompiledTaskRegistry.get(finishedTaskId)
-                            if (task != null && task.lifecycle == TaskLifecycle.ONE_SHOT) {
-                                st.assignedTasks.remove(finishedTaskId)
-                            }
-                            if (task != null && task.lifecycle == TaskLifecycle.UNTIL_CONDITION
-                                && task.completionPredicate.invoke(entity, st)) {
-                                st.assignedTasks.remove(task.id)
-                                st.activeEntityTimed.removeIf { it.taskId == task.id }
-                            }
+        val all = mutableListOf<ActiveTimedBaseAction<out BaseCompiledTimedAction<*>, *>>()
+        all.addAll(st.activeEntityTimed)
+        all.addAll(st.activeBlockTimed)
+        performOnIterator(st, entity, all.listIterator())
+    }
 
-                        }
-
-                        continue
-                    }
+    private fun performOnIterator(st: EntityTaskState, entity: PlatformLivingEntity, it: MutableListIterator<ActiveTimedBaseAction<out BaseCompiledTimedAction<*>, *>>) {
+        val toRemove = mutableSetOf<ResourceLocation>()
+        while (it.hasNext()) {
+            val a = it.next()
+            val task = CompiledTaskRegistry.get(a.taskId)
+            if (a.intervalTicksLeft > 0) {
+                a.intervalTicksLeft -= 1
+            }
+            else {
+                a.intervalTicksLeft = a.interval - 1
+                val keep = a.tick()
+                if (!keep) {
+                    doEndTheme(a, st, entity, it, task, toRemove)
+                    continue
                 }
-                if (a.ticksLeft > 0) {
-                    a.ticksLeft -= 1
-                    if (a.ticksLeft == 0) {
-                        a.compiled.onEnd(a.self, a.targetEntity)
-                        val finishedTaskId = a.taskId
-                        it.remove()
-                        if (!hasActiveTimersForTask(st, finishedTaskId)) {
-                            // no more active timers for this task
-                            val task = CompiledTaskRegistry.get(finishedTaskId)
-                            if (task != null && task.lifecycle == TaskLifecycle.ONE_SHOT) {
-                                st.assignedTasks.remove(finishedTaskId)
-                            }
-                            if (task != null && task.lifecycle == TaskLifecycle.UNTIL_CONDITION
-                                && task.completionPredicate.invoke(entity, st)) {
-                                st.assignedTasks.remove(task.id)
-                                st.activeEntityTimed.removeIf { it.taskId == task.id }
-                            }
-                        }
+            }
+            if (a.ticksLeft != -10) {
+                a.ticksLeft--
 
-                    }
+                if (a.ticksLeft <= 0) {
+                    a.end()
+                    doEndTheme(a, st, entity, it, task, toRemove)
                 }
             }
         }
-        run {
-            val it = st.activeBlockTimed.listIterator()
-            while (it.hasNext()) {
-                val a = it.next()
-                if (a.intervalTicksLeft > 0) {
-                    a.intervalTicksLeft -= 1
-                } else {
-                    a.intervalTicksLeft = a.interval - 1
-                    val keep = a.compiled.onTick(a.self, a.targetBlock)
-                    if (!keep) {
-                        a.compiled.onEnd(a.self, a.targetBlock)
-                        val finishedTaskId = a.taskId
-                        it.remove()
-                        if (!hasActiveTimersForTask(st, finishedTaskId)) {
-                            // no more active timers for this task
-                            val task = CompiledTaskRegistry.get(finishedTaskId)
-                            if (task != null && task.lifecycle == TaskLifecycle.ONE_SHOT) {
-                                st.assignedTasks.remove(finishedTaskId)
-                            }
-                            if (task != null && task.lifecycle == TaskLifecycle.UNTIL_CONDITION
-                                && task.completionPredicate.invoke(entity, st)) {
-                                st.assignedTasks.remove(task.id)
-                                st.activeEntityTimed.removeIf { it.taskId == task.id }
-                            }
-                        }
-
-                        continue
-                    }
-                }
-                if (a.ticksLeft > 0) {
-                    a.ticksLeft -= 1
-                    if (a.ticksLeft == 0) {
-                        a.compiled.onEnd(a.self, a.targetBlock)
-                        val finishedTaskId = a.taskId
-                        it.remove()
-                        if (!hasActiveTimersForTask(st, finishedTaskId)) {
-                            // no more active timers for this task
-                            val task = CompiledTaskRegistry.get(finishedTaskId)
-                            if (task != null && task.lifecycle == TaskLifecycle.ONE_SHOT) {
-                                st.assignedTasks.remove(finishedTaskId)
-                            }
-                            if (task != null && task.lifecycle == TaskLifecycle.UNTIL_CONDITION
-                                && task.completionPredicate.invoke(entity, st)) {
-                                st.assignedTasks.remove(task.id)
-                                st.activeEntityTimed.removeIf { it.taskId == task.id }
-                            }
-                        }
-
-                    }
-                }
+        st.activeEntityTimed.removeIf { it.taskId in toRemove }
+        st.activeBlockTimed.removeIf { it.taskId in toRemove }
+    }
+    private fun doEndTheme(a: ActiveTimedBaseAction<out BaseCompiledTimedAction<*>, *>, st: EntityTaskState,
+                           entity: PlatformLivingEntity, it: MutableListIterator<out ActiveTimedBaseAction<out BaseCompiledTimedAction<*>, *>>, task: CompiledTask?,
+                           toRemove: MutableSet<ResourceLocation>) {
+        a.end()
+        it.remove()
+        if (!hasActiveTimersForTask(st, a.taskId)) {
+            if (task != null && task.lifecycle == TaskLifecycle.ONE_SHOT) {
+                st.assignedTasks.remove(task.id)
             }
+            if (task != null && task.lifecycle == TaskLifecycle.UNTIL_CONDITION
+                && task.completionPredicate.invoke(entity, st)) {
+                st.assignedTasks.remove(task.id)
+                toRemove.add(task.id)
+            }
+
         }
     }
 }
@@ -601,8 +577,11 @@ sealed class Trigger(val key: ResourceLocation) {
     data object Spawn : Trigger("on_spawn".core())
     data object DeSpawn : Trigger("on_despawn".core())
     data object Death : Trigger("on_death".core())
+    /** Platform-specific trigger fire */
     data object Loaded : Trigger("on_loaded".core())
+    /** Platform-specific trigger fire */
     data object SpawnOrLoaded : Trigger("on_spawn_or_loaded".core())
+    /** Platform-specific server trigger fire */
     data object Tick : Trigger("on_tick".core())
     data object Attack : Trigger("on_attack".core())
     data object ApplyPotion : Trigger("on_potion_received".core())
@@ -610,22 +589,38 @@ sealed class Trigger(val key: ResourceLocation) {
     data object Attacked : Trigger("on_attacked".core())
     data object EnterCombat : Trigger("on_enter_combat".core())
     data object DropCombat : Trigger("on_drop_combat".core())
+    /** Platform-specific trigger fire */
     data object TargetChanged : Trigger("on_target_changed".core())
     data object Interact : Trigger("on_interacted_with".core())
+    /** Platform-specific trigger fire */
     data object PlayerKill : Trigger("on_killed_player".core())
+    /** Platform-specific trigger fire */
     data object Teleport : Trigger("on_teleported".core())
+    /** Platform-specific trigger fire */
     data object Shoot : Trigger("on_shoot".core())
+    /** Platform-specific trigger fire */
     data object ProjectileHit : Trigger("on_projectile_hit_entity".core())
+    /** Platform-specific trigger fire */
     data object ProjectileHitBlock : Trigger("on_projectile_hit_block".core())
+    /** Platform-specific trigger fire */
     data object Tame : Trigger("on_tame".core())
+    /** Platform-specific trigger fire */
     data object Breed : Trigger("on_breed".core())
+    /** Platform-specific trigger fire */
     data object Trade : Trigger("on_trade".core())
+    /** Platform-specific trigger fire */
     data object Bucketed : Trigger("on_milked_or_bucketed".core())
+    /** Platform-specific trigger fire */
     data object HearSound : Trigger("on_hear_sound".core())
+    /** Platform-specific trigger fire */
     data object Dismounted : Trigger("on_dismounted".core())
+    /** Platform-specific trigger fire */
     data class WorldChanged(val worldName: String) : Trigger("on_change_world/$worldName".core())
+    /** Platform-specific trigger fire */
     data class Signal(val signal: String) : Trigger("on_receive_signal/$signal".core())
+    /** Platform-specific trigger fire */
     data class HurtBy(val sourceId: String) : Trigger("on_hurt_by/$sourceId".core())
+    /** Platform-specific trigger such that platform can fire platform only triggers */
     data class Custom(val name: String, val data: Map<String, Any> = emptyMap()) : Trigger("custom/$name".core())
 }
 const val TRIGGER_ALL_KEY = "all"

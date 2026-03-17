@@ -8,6 +8,8 @@ import org.vicky.platform.PlatformPlayer
 import org.vicky.platform.defaults.AABB
 import org.vicky.platform.entity.distpacher.CompiledTaskRegistry
 import org.vicky.platform.entity.distpacher.EntityTaskManager
+import org.vicky.platform.entity.distpacher.SignalManager
+import org.vicky.platform.entity.distpacher.Signals
 import org.vicky.platform.entity.distpacher.Trigger
 import org.vicky.platform.entity.distpacher.TriggerManager
 import org.vicky.platform.utils.*
@@ -235,6 +237,9 @@ class MobDefaults(
     val displayName: String,                   // name shown to players
     val category: MobCategory = MobCategory.MISC,
 
+    val movementModes: Set<MovementMode> = setOf(MovementMode.GROUND),
+    var movementPriority: Set<MovementMode> = setOf(MovementMode.GROUND),
+
     // --- Model / Appearance ---
     val modelId: ResourceLocation,
     val texture: ResourceLocation,
@@ -318,30 +323,6 @@ data class MobSpawnSettings(
     val maxGlobal: Int = 200,
 )
 
-fun interface SpawnCondition {
-    fun canSpawn(ctx: SpawnContext): Boolean
-}
-
-fun interface SpawnModifier {
-    fun apply(entity: PlatformLivingEntity, ctx: SpawnContext)
-}
-
-data class SpawnContext(
-    val x: Double,
-    val y: Double,
-    val z: Double,
-    val biome: String,
-    val lightLevel: Int,
-    val worldTime: Long,
-    val platformWorld: PlatformWorld<*, *>,   // raw handle if needed
-)
-
-
-data class DropEntry(
-    val weight: Int,
-    val items: List<PlatformItemStack>
-)
-
 data class MobEntityPhysicalProperties(
     val hitBox: AABB,
     val eggColors: Pair<Int, Int>,
@@ -377,6 +358,32 @@ data class MobEntityAIBasedGoals(
     }
 }
 
+
+
+fun interface SpawnCondition {
+    fun canSpawn(ctx: SpawnContext): Boolean
+}
+
+fun interface SpawnModifier {
+    fun apply(entity: PlatformLivingEntity, ctx: SpawnContext)
+}
+
+data class SpawnContext(
+    val x: Double,
+    val y: Double,
+    val z: Double,
+    val biome: String,
+    val lightLevel: Int,
+    val worldTime: Long,
+    val platformWorld: PlatformWorld<*, *>,   // raw handle if needed
+)
+
+
+data class DropEntry(
+    val weight: Int,
+    val items: List<PlatformItemStack>
+)
+
 enum class EventResult {
     PASS,      // let other handlers + default behavior proceed
     CONSUME,   // stop further handlers and stop default behavior
@@ -404,6 +411,9 @@ interface AbstractPathNode {
 interface PathNavigator {
     // Returns true if there's a path to follow
     fun canUpdatePath(): Boolean
+
+    // set the adptable movement mode eg running - flying
+    fun setMovementMode(mode: MovementMode)
 
     // Sets the speed at which the entity moves along the path
     fun setSpeed(speed: Double)
@@ -467,9 +477,11 @@ internal interface MobEntityEventHandler {
 open class DefaultTriggerMobEventHandler : MobEntityEventHandler {
     override fun onEnterCombat(self: PlatformLivingEntity) {
         TriggerManager.fire(self, Trigger.EnterCombat)
+        SignalManager.fire(self, Signals.ENTER_COMBAT)
     }
     override fun onLeaveCombat(self: PlatformLivingEntity) {
         TriggerManager.fire(self, Trigger.DropCombat)
+        SignalManager.fire(self, Signals.OUT_OF_COMBAT)
     }
     override fun onTick(self: PlatformLivingEntity): EventResult {
         TriggerManager.fire(self, Trigger.DropCombat)
@@ -588,6 +600,14 @@ class PhysicalBuilder {
         MobEntityPhysicalProperties(hitBox, eggColors, eyeHeight, isFireImmune, isPushable, noGravity)
 }
 
+enum class MovementMode {
+    GROUND,
+    FLYING,
+    SWIMMING,
+    AMPHIBIOUS,
+    CLIMBING
+}
+
 class MobAttributeBuilder {
     var maxHealth: Double = 20.0
     var maxAbsorption: Double = 0.0
@@ -616,6 +636,8 @@ class MobDefaultsBuilder(
     val animationsFile: ResourceLocation
 ) {
     var category: MobCategory = MobCategory.MISC
+    var movementModes: Set<MovementMode> = setOf(MovementMode.GROUND)
+    var movementPriority: Set<MovementMode> = setOf(MovementMode.GROUND)
 
     var scale: Double = 1.0
     var baby: Boolean = false
@@ -665,6 +687,8 @@ class MobDefaultsBuilder(
             mobKey = mobKey,
             displayName = displayName,
             category = category,
+            movementModes = movementModes,
+            movementPriority = movementPriority,
             modelId = modelId,
             texture = texture,
             animationsFile = animationsFile,

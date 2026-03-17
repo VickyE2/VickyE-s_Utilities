@@ -10,33 +10,82 @@ import org.vicky.platform.world.PlatformWorld
 import org.vicky.utilities.ContextLogger.AsyncContextLogger
 import org.vicky.utilities.ContextLogger.ContextLogger
 import java.lang.Math.toRadians
+import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.random.Random
 
 // ---------------------- runtime data / timed actions -----------------------
-
+abstract class ActiveTimedBaseAction<C, T>(
+    val compiled: C,
+    val self: PlatformLivingEntity,
+    val target: T?,
+    var ticksLeft: Int,                // -1 = infinite
+    val interval: Int = 1,
+    var intervalTicksLeft: Int = 0,
+    val slot: String? = null,
+    val taskId: ResourceLocation,
+    val timedId: ResourceLocation
+) {
+    abstract fun tick(): Boolean
+    abstract fun end()
+}
 data class ActiveTimedAction(
-    val compiled: CompiledTimedAction,
-    val self: PlatformLivingEntity,
+    val compiledAction: CompiledTimedAction,
+    val selfEntity: PlatformLivingEntity,
     val targetEntity: PlatformLivingEntity? = null,
-    var ticksLeft: Int,                // -1 = infinite
-    val interval: Int = 1,
-    var intervalTicksLeft: Int = 0,
-    val slot: String? = null,
-    val taskId: ResourceLocation,
-    val timedId: ResourceLocation
-)
+    var ticks: Int,
+    val actionInterval: Int = 1,
+    var intervalTicks: Int = 0,
+    val actionSlot: String? = null,
+    val actionTaskId: ResourceLocation,
+    val actionTimedId: ResourceLocation
+) : ActiveTimedBaseAction<CompiledTimedAction, PlatformLivingEntity>(
+    compiledAction,
+    selfEntity,
+    targetEntity,
+    ticks,
+    actionInterval,
+    intervalTicks,
+    actionSlot,
+    actionTaskId,
+    actionTimedId
+) {
+    override fun tick(): Boolean {
+        return compiled.onTick(self, target)
+    }
+    override fun end() {
+        compiled.onEnd(self, target)
+    }
+}
 data class ActiveTimedBlockAction(
-    val compiled: CompiledBlockTimedAction,
-    val self: PlatformLivingEntity,
+    val compiledAction: CompiledBlockTimedAction,
+    val selfEntity: PlatformLivingEntity,
     val targetBlock: PlatformBlock<*>? = null,
-    var ticksLeft: Int,                // -1 = infinite
-    val interval: Int = 1,
-    var intervalTicksLeft: Int = 0,
-    val slot: String? = null,
-    val taskId: ResourceLocation,
-    val timedId: ResourceLocation
-)
+    var ticks: Int,
+    val actionInterval: Int = 1,
+    var intervalTicks: Int = 0,
+    val actionSlot: String? = null,
+    val actionTaskId: ResourceLocation,
+    val actionTimedId: ResourceLocation
+) : ActiveTimedBaseAction<CompiledBlockTimedAction, PlatformBlock<*>>(
+    compiledAction,
+    selfEntity,
+    targetBlock,
+    ticks,
+    actionInterval,
+    intervalTicks,
+    actionSlot,
+    actionTaskId,
+    actionTimedId
+) {
+    override fun tick(): Boolean {
+        return compiled.onTick(self, target)
+    }
+    override fun end() {
+        compiled.onEnd(self, target)
+    }
+}
 
 /**
  * Generic-ish compiled runtime types. Entity and block variants kept separate
@@ -51,22 +100,33 @@ data class CompiledBlockCondition(val id: ResourceLocation, val test: (PlatformB
 data class CompiledEntitySelector(val id: ResourceLocation, val select: (SelectorContext) -> AmountableResult<PlatformLivingEntity>)
 data class CompiledBlockSelector(val id: ResourceLocation, val select: (SelectorContext) -> AmountableResult<PlatformBlock<*>>)
 
-data class CompiledBlockTimedAction(
+abstract class BaseCompiledTimedAction<I>(
     val id: ResourceLocation,
     val defaultDuration: Int,
     val defaultInterval: Int,
-    val onStart: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
-    val onTick: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
-    val onEnd: (PlatformLivingEntity, PlatformBlock<*>?) -> Unit
+    val onStart: (PlatformLivingEntity, I?) -> Boolean,
+    val onTick: (PlatformLivingEntity, I?) -> Boolean,
+    val onEnd: (PlatformLivingEntity, I?) -> Unit
 )
-
+data class CompiledBlockTimedAction(
+    private val timedId: ResourceLocation,
+    private val timedDefaultDuration: Int,
+    private val timedDefaultInterval: Int,
+    private val timedOnStart: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
+    private val timedOnTick: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
+    private val timedOnEnd: (PlatformLivingEntity, PlatformBlock<*>?) -> Unit
+) : BaseCompiledTimedAction<PlatformBlock<*>>(
+    timedId, timedDefaultDuration, timedDefaultInterval, timedOnStart, timedOnTick, timedOnEnd
+)
 data class CompiledTimedAction(
-    val id: ResourceLocation,
-    val defaultDuration: Int,
-    val defaultInterval: Int,
-    val onStart: (PlatformLivingEntity, PlatformLivingEntity?) -> Boolean,
-    val onTick: (PlatformLivingEntity, PlatformLivingEntity?) -> Boolean,
-    val onEnd: (PlatformLivingEntity, PlatformLivingEntity?) -> Unit
+    private val timedId: ResourceLocation,
+    private val timedDefaultDuration: Int,
+    private val timedDefaultInterval: Int,
+    private val timedOnStart: (PlatformLivingEntity, PlatformLivingEntity?) -> Boolean,
+    private val timedOnTick: (PlatformLivingEntity, PlatformLivingEntity?) -> Boolean,
+    private val timedOnEnd: (PlatformLivingEntity, PlatformLivingEntity?) -> Unit
+) : BaseCompiledTimedAction<PlatformLivingEntity>(
+    timedId, timedDefaultDuration, timedDefaultInterval, timedOnStart, timedOnTick, timedOnEnd
 )
 
 data class CompiledVoidTaskStep(
@@ -340,6 +400,7 @@ object BookBasedAntagnosticCompiler {
                             when (rtype) {
                                 ResultType.SINGLE -> AmountableResult(ResultType.SINGLE, filtered.take(1))
                                 ResultType.MULTIPLE -> AmountableResult(ResultType.MULTIPLE, filtered)
+                                ResultType.RANDOM_MULTIPLE -> AmountableResult(ResultType.MULTIPLE, filtered.shuffled())
                                 ResultType.RANDOM_SINGLE -> if (filtered.isEmpty()) AmountableResult(ResultType.RANDOM_SINGLE, emptyList()) else AmountableResult(ResultType.RANDOM_SINGLE, listOf(filtered[Random.nextInt(filtered.size)]))
                                 ResultType.RANDOM_AMOUNTED_MULTIPLE -> AmountableResult(ResultType.RANDOM_AMOUNTED_MULTIPLE, filtered.shuffled().take(maxOf(0, amount)))
                                 ResultType.AMOUNTED_MULTIPLE -> AmountableResult(ResultType.AMOUNTED_MULTIPLE, filtered.sortedBy { e ->
@@ -412,9 +473,7 @@ object InlineIdGen {
 fun registerInlineFilter(possibleId: ResourceLocation, lambda: (PlatformEntity, SelectorContext) -> Boolean): FilterRef<PlatformEntity> {
     if (!GlobalSpecRegistry.hasFilterFactory(possibleId)) {
         val id = InlineIdGen.next("filter_entity")
-        GlobalSpecRegistry.registerFilter(id, object : FilterFactory<PlatformEntity> {
-            override fun compile(ref: FilterRef<PlatformEntity>): CompiledFilter<PlatformEntity> = CompiledFilter(id) { e, ctx -> lambda(e, ctx) }
-        })
+        GlobalSpecRegistry.registerFilter(id) { CompiledFilter(id) { e, ctx -> lambda(e, ctx) } }
         return FilterRef(id)
     }
     return FilterRef(possibleId)
@@ -423,9 +482,7 @@ fun registerInlineFilter(possibleId: ResourceLocation, lambda: (PlatformEntity, 
 fun registerInlineFilter(possibleId: ResourceLocation, lambda: (PlatformBlock<*>, SelectorContext) -> Boolean, internal_marker: Int = -225): FilterRef<PlatformBlock<*>> {
     if (!GlobalSpecRegistry.hasFilterFactory(possibleId)) {
         val id = InlineIdGen.next("filter_block")
-        GlobalSpecRegistry.registerFilter(id, object : FilterFactory<PlatformBlock<*>> {
-            override fun compile(ref: FilterRef<PlatformBlock<*>>): CompiledFilter<PlatformBlock<*>> = CompiledFilter(id) { b, ctx -> lambda(b, ctx) }
-        })
+        GlobalSpecRegistry.registerFilter(id) { CompiledFilter(id) { b, ctx -> lambda(b, ctx) } }
         return FilterRef(id)
     }
     return FilterRef(possibleId)
@@ -434,7 +491,7 @@ fun registerInlineFilter(possibleId: ResourceLocation, lambda: (PlatformBlock<*>
 fun registerInlineAction(possibleId: ResourceLocation, lambda: (PlatformLivingEntity, PlatformLivingEntity?) -> Boolean): ActionRef {
     if (!GlobalSpecRegistry.hasActionFactory(possibleId)) {
         val id = InlineIdGen.next("action_entity")
-        GlobalSpecRegistry.registerAction(id) { ref -> CompiledEntityAction(id, lambda) }
+        GlobalSpecRegistry.registerAction(id) { _ -> CompiledEntityAction(id, lambda) }
         return ActionRef(id)
     }
     return ActionRef(possibleId)
@@ -443,7 +500,7 @@ fun registerInlineAction(possibleId: ResourceLocation, lambda: (PlatformLivingEn
 fun registerInlineBlockAction(possibleId: ResourceLocation, lambda: (PlatformLivingEntity, PlatformBlock<*>) -> Boolean, internal_marker: Int = -225): BlockActionRef {
     if (!GlobalSpecRegistry.hasBlockActionFactory(possibleId)) {
         val id = InlineIdGen.next("action_block")
-        GlobalSpecRegistry.registerBlockAction(id, { ref -> CompiledBlockAction(id, lambda) })
+        GlobalSpecRegistry.registerBlockAction(id, { _ -> CompiledBlockAction(id, lambda) })
         return BlockActionRef(id)
     }
     return BlockActionRef(possibleId)
@@ -452,7 +509,7 @@ fun registerInlineBlockAction(possibleId: ResourceLocation, lambda: (PlatformLiv
 fun registerInlineCondition(possibleId: ResourceLocation, lambda: (PlatformLivingEntity) -> Boolean, mustBeTrue: Boolean = true): ConditionRef {
     if (!GlobalSpecRegistry.hasConditionFactory(possibleId)) {
         val id = InlineIdGen.next("condition_entity")
-        GlobalSpecRegistry.registerCondition(id, { ref -> CompiledCondition(id, { ent -> lambda(ent) }, mustBeTrue) })
+        GlobalSpecRegistry.registerCondition(id, { _ -> CompiledCondition(id, { ent -> lambda(ent) }, mustBeTrue) })
         return ConditionRef(id, emptyMap(), mustBeTrue)
     }
     return ConditionRef(possibleId, emptyMap(), mustBeTrue)
@@ -461,7 +518,7 @@ fun registerInlineCondition(possibleId: ResourceLocation, lambda: (PlatformLivin
 fun registerInlineBlockCondition(possibleId: ResourceLocation, lambda: (PlatformBlock<*>) -> Boolean, mustBeTrue: Boolean = true, internal_marker: Int = -225): BlockConditionRef {
     if (!GlobalSpecRegistry.hasBlockConditionFactory(possibleId)) {
         val id = InlineIdGen.next("condition_block")
-        GlobalSpecRegistry.registerBlockCondition(id, { ref -> CompiledBlockCondition(id, { b -> lambda(b) }, mustBeTrue) })
+        GlobalSpecRegistry.registerBlockCondition(id, { _ -> CompiledBlockCondition(id, { b -> lambda(b) }, mustBeTrue) })
         return BlockConditionRef(id, emptyMap(), mustBeTrue)
     }
     return BlockConditionRef(possibleId, emptyMap(), mustBeTrue)
@@ -506,7 +563,7 @@ fun registerInlineTimedAction(
 // --------------------- helper + types: ResultType, SelectorContext, Spec interfaces ---------------------
 
 enum class ResultType {
-    SINGLE, MULTIPLE, RANDOM_SINGLE, RANDOM_AMOUNTED_MULTIPLE, AMOUNTED_MULTIPLE
+    SINGLE, MULTIPLE, RANDOM_SINGLE, RANDOM_MULTIPLE,  RANDOM_AMOUNTED_MULTIPLE, AMOUNTED_MULTIPLE
 }
 
 interface Spec {
@@ -566,7 +623,9 @@ object SetTargetToLookAt : EntityTimedActionSpec<PlatformLivingEntity>(
 
                 val distXZ = kotlin.math.sqrt(dx * dx + dz * dz)
 
-                val yaw = Math.toDegrees(kotlin.math.atan2(-dx, dz)).toFloat()
+                // Correct yaw: positive X is -90, positive Z is 0
+                val yaw = Math.toDegrees(kotlin.math.atan2(dz, dx)).toFloat() - 90f
+                // Correct pitch: negative when looking up
                 val pitch = Math.toDegrees(-kotlin.math.atan2(dy, distXZ)).toFloat()
 
                 self.setRotation(yaw, pitch)
@@ -629,7 +688,9 @@ object LookAtAttacker : EntityTimedActionSpec<PlatformLivingEntity>(
 
                 val distXZ = kotlin.math.sqrt(dx * dx + dz * dz)
 
-                val yaw = Math.toDegrees(kotlin.math.atan2(-dx, dz)).toFloat()
+                // Correct yaw: positive X is -90, positive Z is 0
+                val yaw = Math.toDegrees(kotlin.math.atan2(dz, dx)).toFloat() - 90f
+                // Correct pitch: negative when looking up
                 val pitch = Math.toDegrees(-kotlin.math.atan2(dy, distXZ)).toFloat()
 
                 self.setRotation(yaw, pitch)
@@ -675,39 +736,53 @@ object LivingEntitiesOnly : EntityFilterSpec(
 // typed spec for timed block actions (registers factory on construction)
 open class BlockTimedActionSpec(
     val id: ResourceLocation,
-    val onStart: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
-    val onTick: (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean,
-    val onEnd: (PlatformLivingEntity, PlatformBlock<*>?) -> Unit
+    private val onStart: (PlatformLivingEntity, PlatformBlock<*>?, ContextLogger) -> Boolean,
+    private val onTick: (PlatformLivingEntity, PlatformBlock<*>?, ContextLogger) -> Boolean,
+    private val onEnd: (PlatformLivingEntity, PlatformBlock<*>?, ContextLogger) -> Unit
 ) {
+    companion object val LOGGER = ContextLogger(ContextLogger.ContextType.MINI_FEATURE, "BLOCK-TIMED-DEBUGGER")
     init {
         if (!GlobalSpecRegistry.hasBlockTimedActionFactory(id)) {
             GlobalSpecRegistry.registerBlockTimedAction(id, { ref ->
                 // ref.duration / ref.interval will be applied by compiled action (same pattern as entity version)
-                CompiledBlockTimedAction(id, ref.duration ?: 40, ref.interval ?: 1, onStart, onTick, onEnd)
+                CompiledBlockTimedAction(id, ref.duration ?: 40, ref.interval ?: 1, { s, b -> onStart.invoke(s, b, LOGGER) }, { s, b -> onTick.invoke(s, b, LOGGER) }, { s, b -> onEnd.invoke(s, b, LOGGER) })
             })
         }
     }
+
+    fun onStart(): (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean = { s, b -> onStart.invoke(s, b, LOGGER) }
+    fun onTick(): (PlatformLivingEntity, PlatformBlock<*>?) -> Boolean = { s, b -> onTick.invoke(s, b, LOGGER) }
+    fun onEnd(): (PlatformLivingEntity, PlatformBlock<*>?) -> Unit = { s, b -> onEnd.invoke(s, b, LOGGER) }
 
     fun id(): ResourceLocation = id
 }
 
 object WalkToBlock : BlockTimedActionSpec(
     rl("core", "walk_to_block"),
-    onStart = start@{ self, block ->
+    onStart = start@{ self, block, logger ->
         if (block == null) return@start false
         self.getNavigator()?.let {
-            val path = it.createPath(block.blockPos, self.lookDistance.toInt()) ?: return@start false
+            val path = it.createPath(block.blockPos, self.lookDistance.toInt())
+            logger.debug("start - Path created: $path")
+            logger.debug("start - Path is null: ${path == null}")
+            logger.debug("start - Navigator target: ${it.getTargetPos()}")
+            if (path == null) return@start false
             it.moveTo(path, self.getSpeed().toDouble())
             return@start true
         }
+        logger.warn("start - Entity ${self.typeId} is not a path based entity and cannot walk-to-block")
         false
     },
-    onTick = onTick@{ self, _ ->
+    onTick = onTick@{ self, _, logger ->
         val nav = self.getNavigator() ?: return@onTick false
-        nav.tick()
+        logger.debug("tick - isDone: ${nav.isDone()}")
+        logger.debug("tick - isInProgress: ${nav.isInProgress()}")
+        logger.debug("tick - isStuck: ${nav.isStuck()}")
+        logger.debug("tick - Entity ${self.typeId} is navigating to block ${nav.getPath()}")
         !nav.isDone()
     },
-    onEnd = { self, _ ->
+    onEnd = { self, _, logger ->
+        logger.debug("end - Entity ${self.typeId} has finished navigating or has been terminated.")
         self.getNavigator()?.stop()
     }
 )
@@ -803,16 +878,17 @@ open class EntityFilterSpec(val id: ResourceLocation, private val validator: (Pl
     override fun validator(): (PlatformEntity, SelectorContext) -> Boolean = validator
 }
 
-open class BlockFilterSpec(val id: ResourceLocation, private val validator: (PlatformBlock<*>, SelectorContext) -> Boolean)
+open class BlockFilterSpec(val id: ResourceLocation, private val validator: (PlatformBlock<*>, SelectorContext, ContextLogger) -> Boolean)
     : EntityObjectableFilterSpec<PlatformBlock<*>> {
+    companion object val LOGGER = ContextLogger(ContextLogger.ContextType.MINI_FEATURE, "SELECTION-DEBUG")
     init {
         if (!GlobalSpecRegistry.hasFilterFactory(id))
-            GlobalSpecRegistry.registerFilter(id,
-                FilterFactory<PlatformBlock<*>> { ref -> CompiledFilter(ref.id) { b, ctx -> validator(b, ctx) } })
+            GlobalSpecRegistry.registerFilter(id
+            ) { ref -> CompiledFilter(ref.id) { b, ctx -> validator(b, ctx, LOGGER) } }
     }
     override fun id(): ResourceLocation = id
-    override fun isValid(obj: PlatformBlock<*>, ctx: SelectorContext): Boolean = validator(obj, ctx)
-    override fun validator(): (PlatformBlock<*>, SelectorContext) -> Boolean = validator
+    override fun isValid(obj: PlatformBlock<*>, ctx: SelectorContext): Boolean = validator(obj, ctx, LOGGER)
+    override fun validator(): (PlatformBlock<*>, SelectorContext) -> Boolean = { p, s -> validator.invoke(p, s, LOGGER) }
 }
 
 open class EntityActionSpec<T : PlatformEntity>(val id: ResourceLocation, val runner: (PlatformEntity, PlatformEntity?) -> Boolean) : ActionSpec<T, T?> {
@@ -865,14 +941,19 @@ class BlockInRadiusSelector(
     range = range,
     filters = filters
 ) {
+    companion object val LOGGER = ContextLogger(ContextLogger.ContextType.MINI_FEATURE, "SELECTION-DEBUG")
     override fun findCandidates(ctx: SelectorContext): List<PlatformBlock<*>> {
         val world = ctx.world
         val blocks = mutableListOf<PlatformBlock<*>>()
-        // prefer engine raycast
+
+        var index = 0
         for (x in (ctx.originX - range).toInt()..(ctx.originX + range).toInt())
             for (z in (ctx.originZ - range).toInt()..(ctx.originZ + range).toInt())
-                for (y in world.getMaxMinimumY()..world.getHighestBlockYAt(x, z))
-                    blocks += world.getBlockAt(x, y, z)
+                for (y in world.getMaxMinimumY()..world.getHighestBlockYAt(x, z)) {
+                    val block = world.getBlockAt(x, y, z)
+                    blocks += block
+                    index++
+                }
 
         return blocks
     }
@@ -881,11 +962,19 @@ class BlockInRadiusSelector(
 // --------------------- Block Filters ------------------------
 object BlockIsWalkableFilter : BlockFilterSpec(
     rl("core", "block_is_walkable_filter"),
-    { block, ctx -> block.material.isSolid && !block.material.isAir }
+    { block, _, LOGGER ->
+        block.material.isSolid && !block.material.isAir
+    }
 )
 object BlockIsHighest : BlockFilterSpec(
     rl("core", "block_is_walkable_filter"),
-    { block, ctx -> ctx.world.getHighestBlockYAt(block.location.x, block.location.z) == block.location.y.toInt() }
+    { block, ctx, LOGGER ->
+        val range = 0.5
+        val result =
+            abs(ctx.world.getHighestBlockYAt(block.location.x, block.location.z) -
+                    floor(block.location.y).toInt()) < range
+        result
+    }
 )
 
 // --------------------- Amountable result ---------------------
@@ -893,15 +982,28 @@ object BlockIsHighest : BlockFilterSpec(
 data class AmountableResult<T>(val resultType: ResultType, private val result: List<T>) {
     fun getSingleResult(): T? {
         return when (resultType) {
-            ResultType.SINGLE, ResultType.RANDOM_SINGLE -> result.firstOrNull()
+            ResultType.SINGLE -> result.firstOrNull()
+            ResultType.RANDOM_SINGLE -> result.randomOrNull()
             else -> throw IllegalStateException("Trying to access single result from multiple-result container.")
         }
     }
     fun getResults(): List<T> {
         return when (resultType) {
-            ResultType.MULTIPLE, ResultType.AMOUNTED_MULTIPLE, ResultType.RANDOM_AMOUNTED_MULTIPLE -> result
+            ResultType.MULTIPLE -> result
+            ResultType.RANDOM_MULTIPLE -> result.shuffled()
             else -> throw IllegalStateException("Trying to access multiple results from single-result container.")
         }
+    }
+    fun getAmountedResults(amount: Int): List<T> {
+        return when (resultType) {
+            ResultType.AMOUNTED_MULTIPLE -> result.take(amount)
+            ResultType.RANDOM_AMOUNTED_MULTIPLE -> result.shuffled().take(amount)
+            else -> throw IllegalStateException("Trying to access multiple results from single-result container.")
+        }
+    }
+
+    override fun toString(): String {
+        return "AmountableResult(resultType=$resultType, result=$result)"
     }
 }
 
@@ -1186,9 +1288,9 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
                             runBlocking: Boolean = true, slot: String? = null): BlockActionTaskStep {
             val ref = registerInlineBlockTimedAction(
                 possibleId = action.id(),
-                start = { s, b -> action.onStart(s, b) },
-                tick  = { s, b -> action.onTick(s, b) },
-                end   = { s, b -> action.onEnd(s, b) },
+                start = { s, b -> action.onStart().invoke(s, b) },
+                tick  = { s, b -> action.onTick().invoke(s, b) },
+                end   = { s, b -> action.onEnd().invoke(s, b) },
                 defaultDuration = 40,
                 defaultInterval = 1,
                 runBlocking = runBlocking
@@ -1240,8 +1342,10 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
     // entity selection step
     class EntitySelectionTaskStep(private val id: ResourceLocation, private val range: Double, private val parent: TaskBuilder): ReturningTaskStep<PlatformLivingEntity> {
         internal val filtersRef: MutableList<FilterRef<PlatformEntity>> = mutableListOf()
+        companion object val LOGGER = ContextLogger(ContextLogger.ContextType.MINI_FEATURE, "ENTITY-SELECTION-DEBUG")
+
         var resultType: ResultType = ResultType.SINGLE
-        var resultAmount: Int = -1
+        var resultAmount: Int = 1
 
         fun filter(filter: EntityObjectableFilterSpec<PlatformEntity>): EntitySelectionTaskStep {
             val ref = registerInlineFilter(filter.id(), filter.validator())
@@ -1253,7 +1357,9 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
         fun withSingleResult(): TaskBuilder { this.resultType = ResultType.SINGLE; return end() }
         fun withRandomSingleResult(): TaskBuilder { this.resultType = ResultType.RANDOM_SINGLE; return end() }
         fun withMultipleResult(): TaskBuilder { this.resultType = ResultType.MULTIPLE; return end() }
-        fun withRandomMultipleResult(maxAmount: Int): TaskBuilder { this.resultType = ResultType.RANDOM_AMOUNTED_MULTIPLE; this.resultAmount = maxAmount; return end() }
+        fun withRandomMultipleResult(): TaskBuilder { this.resultType = ResultType.RANDOM_MULTIPLE; return end() }
+        fun withAmountedMultipleResult(maxAmount: Int): TaskBuilder { this.resultType = ResultType.AMOUNTED_MULTIPLE; this.resultAmount = maxAmount; return end() }
+        fun withAmountedRandomMultipleResult(maxAmount: Int): TaskBuilder { this.resultType = ResultType.RANDOM_AMOUNTED_MULTIPLE; this.resultAmount = maxAmount; return end() }
 
         override fun type(): SpecType = SpecType.SELECT
         override fun end(): TaskBuilder { this.parent.addInLine(this); return parent }
@@ -1263,16 +1369,19 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
             val compiledFilters = filtersRef.map { GlobalSpecRegistry.compileFilter(it) }
             val selFn: (SelectorContext) -> AmountableResult<PlatformLivingEntity> = { ctx ->
                 val base = ctx.world.getLivingEntitiesWithin(ctx.originX, ctx.originY, ctx.originZ, range.toFloat())
+                LOGGER.debug("the entities retuned were of size: ${base.size}")
                 val filtered = base.filter { candidate -> compiledFilters.all { it.test(candidate, ctx) } }
+                LOGGER.debug("the entities retuned after filtering were of size: ${base.size}")
                 when (resultType) {
                     ResultType.SINGLE -> AmountableResult(ResultType.SINGLE, filtered.take(1))
+                    ResultType.RANDOM_MULTIPLE -> AmountableResult(ResultType.MULTIPLE, filtered.shuffled())
                     ResultType.MULTIPLE -> AmountableResult(ResultType.MULTIPLE, filtered)
                     ResultType.RANDOM_SINGLE -> if (filtered.isEmpty()) AmountableResult(ResultType.RANDOM_SINGLE, emptyList()) else AmountableResult(ResultType.RANDOM_SINGLE, listOf(filtered[Random.nextInt(filtered.size)]))
-                    ResultType.RANDOM_AMOUNTED_MULTIPLE -> AmountableResult(ResultType.RANDOM_AMOUNTED_MULTIPLE, filtered.shuffled().take(maxOf(0, resultAmount)))
+                    ResultType.RANDOM_AMOUNTED_MULTIPLE -> AmountableResult(ResultType.RANDOM_AMOUNTED_MULTIPLE, filtered.shuffled().take(maxOf(1, resultAmount)))
                     ResultType.AMOUNTED_MULTIPLE -> AmountableResult(ResultType.AMOUNTED_MULTIPLE, filtered.sortedBy { e ->
                         val dx = e.location.x - ctx.originX; val dy = e.location.y - ctx.originY; val dz = e.location.z - ctx.originZ
                         dx * dx + dy * dy + dz * dz
-                    }.take(maxOf(0, resultAmount)))
+                    }.take(maxOf(1, resultAmount)))
                 }
             }
             return CompiledEntitySelector(id, selFn)
@@ -1294,10 +1403,10 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
         }
         fun filterRef(ref: FilterRef<PlatformBlock<*>>): BlockSelectionTaskStep { filtersRef += ref; return this }
 
-        fun withSingleResult(): TaskBuilder { this.resultType = ResultType.SINGLE; return end() }
+        fun withFirstSingleResult(): TaskBuilder { this.resultType = ResultType.SINGLE; return end() }
         fun withRandomSingleResult(): TaskBuilder { this.resultType = ResultType.RANDOM_SINGLE; return end() }
         fun withMultipleResult(): TaskBuilder { this.resultType = ResultType.MULTIPLE; return end() }
-        fun withRandomMultipleResult(maxAmount: Int): TaskBuilder { this.resultType = ResultType.RANDOM_AMOUNTED_MULTIPLE; this.resultAmount = maxAmount; return end() }
+        fun withShuffledMultipleResult(maxAmount: Int): TaskBuilder { this.resultType = ResultType.RANDOM_AMOUNTED_MULTIPLE; this.resultAmount = maxAmount; return end() }
 
         override fun type(): SpecType = SpecType.SELECT
         override fun end(): TaskBuilder { this.parent.addInLine(this); return parent }
@@ -1309,7 +1418,7 @@ class TaskBuilder private constructor(val ordinal: PlatformLivingEntity, val id:
                     range,
                     filtersRef.map { ref ->
                         val compiled = GlobalSpecRegistry.compileFilter(ref)
-                        BlockFilterSpec(ref.id) { block, ctx -> compiled.test(block, ctx) }
+                        BlockFilterSpec(ref.id) { block, ctx, _ -> compiled.test(block, ctx) }
                     }
                 )
                 val result = selector.get(ctx)

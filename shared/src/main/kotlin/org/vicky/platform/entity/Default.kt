@@ -125,7 +125,7 @@ object DefaultTasks {
 
     /**
      * A task to make the entity involved move around randomly
-     * The params specifiable are: [[cooldown]], [[range]] [[priority]]
+     * The params specifiable are: [params.cooldown], [params.range] [params.priority]
      */
     object PassiveWander : ProducerIntendedTask {
         override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.random(
@@ -142,7 +142,7 @@ object DefaultTasks {
                 .filter(BlockIsHighest)
                 .withRandomSingleResult()
             .performOnBlockTarget(ResourceLocation.from("core", "walk_to_block_${self.uuid.toString().replace("-", "_")}"))
-                .doingTimedBlock(WalkToBlock, runBlocking = false)
+                .doingTimedBlock(WalkToBlock, runBlocking = false, durationOverride = -10)
                 .end()
             .build()
     }

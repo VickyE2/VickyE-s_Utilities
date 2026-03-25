@@ -12,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.forgeplatform.ForgePlatformAnimationController;
 import org.vicky.forge.forgeplatform.ForgePlatformLocationAdapter;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
+import org.vicky.forge.forgeplatform.useables.ForgeHacks;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
 import org.vicky.forge.forgeplatform.useables.ForgeVec3;
@@ -161,32 +162,14 @@ public class ForgePlatformEntity implements PlatformEntity {
 	// Make use de.pauleff.core.Tag<?>
 	@Override
 	public <T> void setPersistentData(@NotNull String s, @NotNull de.pauleff.core.Tag<T> o) {
-		if (o.getData() instanceof String)
-			ordinal.getPersistentData().putString(s, (String) o.getData());
-		else if (o.getData() instanceof Integer)
-			ordinal.getPersistentData().putInt(s, (Integer) o.getData());
-		else if (o.getData() instanceof Float)
-			ordinal.getPersistentData().putFloat(s, (Float) o.getData());
-		else if (o.getData() instanceof Byte)
-			ordinal.getPersistentData().putBoolean(s, (Boolean) o.getData());
-		else if (o.getData() instanceof UUID)
-			ordinal.getPersistentData().putUUID(s, (UUID) o.getData());
+		ordinal.getPersistentData().put(s, ForgeHacks.toNBT(o.getData()));
 	}
 
 	// Make use de.pauleff.core.Tag<?>
 	@Override
 	public @Nullable de.pauleff.core.Tag<?> getPersistentData(@NotNull String s) {
 		if (ordinal.getPersistentData().get(s) != null) {
-			if (ordinal.getPersistentData().get(s).getType() instanceof StringTag)
-				return new Tag_String(s, ordinal.getPersistentData().getString(s));
-			else if (ordinal.getPersistentData().get(s).getType() instanceof IntTag)
-				return new Tag_Int(s, ordinal.getPersistentData().getInt(s));
-			else if (ordinal.getPersistentData().get(s).getType() instanceof FloatTag)
-				return new Tag_Float(s, ordinal.getPersistentData().getFloat(s));
-			else if (ordinal.getPersistentData().get(s).getType() instanceof ByteTag)
-				return new Tag_Byte(s, ordinal.getPersistentData().getByte(s));
-			else if (ordinal.getPersistentData().get(s).getType() instanceof IntArrayTag)
-				return new Tag_Int_Array(s, ordinal.getPersistentData().getIntArray(s));
+			return ForgeHacks.toVicky(s, ordinal.getPersistentData().get(s));
 		}
 		return null;
 	}
@@ -237,5 +220,15 @@ public class ForgePlatformEntity implements PlatformEntity {
 			return false;
 		}
 		return e.ordinal == this.ordinal;
+	}
+
+	@Override
+	public @NotNull Tag_Compound serializeAdditionalData() {
+		return ForgeHacks.toVicky("", ordinal.serializeNBT());
+	}
+
+	@Override
+	public void deserializeAdditionalData(@NotNull Tag_Compound nbt) {
+		ordinal.deserializeNBT(ForgeHacks.fromVicky(nbt));
 	}
 }

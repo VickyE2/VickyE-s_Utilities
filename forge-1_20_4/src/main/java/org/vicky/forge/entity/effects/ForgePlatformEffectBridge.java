@@ -9,6 +9,7 @@ import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import net.minecraft.core.registries.Registries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
@@ -57,8 +58,7 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
 	 */
 	private final Map<UUID, Map<ResourceLocation, PlatformEffectInstance>> active = new ConcurrentHashMap<>();
 
-	public static final DeferredRegister<MobEffect> EFFECTS = DeferredRegister.create(ForgeRegistries.MOB_EFFECTS,
-			MODID);
+	public static final Map<String, DeferredRegister<MobEffect>> EFFECTS = new HashMap<>();
 	private final Map<ResourceLocation, RegistryObject<MobEffect>> registeredEffects = new ConcurrentHashMap<>();
 
 	@Override
@@ -73,7 +73,9 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
 		String name = id.getPath();
 
 		if (!registeredEffects.containsKey(id)) {
-			RegistryObject<MobEffect> ro = EFFECTS.register(name,
+			var register = EFFECTS.computeIfAbsent(id.getNamespace(),
+					namespace -> DeferredRegister.create(Registries.MOB_EFFECT, namespace));
+			RegistryObject<MobEffect> ro = register.register(name,
 					() -> PlatformInstanceMobEffect.from(effectDescriptor));
 			registeredEffects.put(id, ro);
 		} else {

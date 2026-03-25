@@ -157,20 +157,7 @@ public class DescriptorItem extends Item {
             CompoundTag tag = stack.getOrCreateTag();
 
             descriptor.getBaseNbt().forEach((key, value) -> {
-                if (value instanceof String s)
-                    tag.putString(key, s);
-                else if (value instanceof Integer i)
-                    tag.putInt(key, i);
-                else if (value instanceof Double i)
-                    tag.putDouble(key, i);
-                else if (value instanceof Byte i)
-                    tag.putByte(key, i);
-                else if (value instanceof Long i)
-                    tag.putLong(key, i);
-                else if (value instanceof Float i)
-                    tag.putFloat(key, i);
-                else if (value instanceof Boolean b)
-                    tag.putBoolean(key, b);
+                tag.put(key, ForgeHacks.toNBT(value));
             });
         }
 

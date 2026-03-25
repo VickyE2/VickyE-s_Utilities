@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.vicky.forge.client.audio.MidiSynthManager;
 import org.vicky.forge.entity.ForgePlatformEntityFactory;
 import org.vicky.forge.entity.PlatformBasedLivingEntityRenderer;
-import org.vicky.forge.entity.bridge.AnnotationScanner;
 import org.vicky.forge.entity.bridge.EffectBootstrap;
 import org.vicky.forge.entity.bridge.EntityFactoryBootstrap;
 import org.vicky.forge.entity.bridge.ItemsFactoryBootstrap;
@@ -38,7 +37,6 @@ import org.vicky.platform.items.PlatformItemFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
-import org.vicky.utilities.DatabaseManager.HibernateUtil;
 import org.vicky.utilities.DatabaseManager.SQLManager;
 import org.vicky.utilities.DatabaseManager.SQLManagerBuilder;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
@@ -47,8 +45,6 @@ import org.vicky.utilities.DatabaseManager.templates.MusicPlayer;
 import org.vicky.utilities.DatabaseManager.templates.MusicPlaylist;
 import org.vicky.utilities.DatabaseManager.utils.Hbm2DdlAutoType;
 import org.vicky.utilities.DatabaseTemplate;
-
-import com.mojang.logging.LogUtils;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.EntityRenderers;
@@ -87,7 +83,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 	public VickyUtilitiesForge() {
 		PlatformPlugin.set(this);
 		CONTEXT_LOGGER = new ContextLogger(ContextLogger.ContextType.SYSTEM, "V-UTLS");
-		FACTORY = new ForgePlatformItemFactory(MODID);
+		FACTORY = new ForgePlatformItemFactory();
 		new MusicRegistry();
 		IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 		modEventBus.addListener(this::commonSetup);
@@ -101,8 +97,10 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 		ItemsFactoryBootstrap.discoverAndRegisterAll(this);
 		EffectBootstrap.discoverAndRegisterAll();
 
-		ForgePlatformEffectBridge.EFFECTS.register(FMLJavaModLoadingContext.get().getModEventBus());
-		ForgePlatformEntityFactory.ENTITIES.register(FMLJavaModLoadingContext.get().getModEventBus());
+		ForgePlatformEffectBridge.EFFECTS.forEach((ignored, effect) ->
+				effect.register(FMLJavaModLoadingContext.get().getModEventBus()));
+		ForgePlatformEntityFactory.ENTITIES.forEach((ignored, entity) ->
+				entity.register(FMLJavaModLoadingContext.get().getModEventBus()));
 		ForgePlatformEntityFactory.INSTANCE.attachListeners(FMLJavaModLoadingContext.get().getModEventBus());
 		FACTORY.attachToEventBus(FMLJavaModLoadingContext.get().getModEventBus());
 	}

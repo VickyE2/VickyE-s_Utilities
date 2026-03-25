@@ -1,5 +1,6 @@
 package org.vicky.forge.forgeplatform;
 
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -19,26 +20,25 @@ import org.vicky.platform.items.PlatformItemFactory;
 import org.vicky.platform.PlatformItemStack;
 import org.vicky.platform.utils.ResourceLocation;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * Forge implementation that registers Items as RegistryObject<Item>.
+ * Forge implementation that registers Items as a list of RegistryObject[Item] to respect namespacing.
  */
 public class ForgePlatformItemFactory extends PlatformItemFactory {
 
-	private final String modId;
-	private final DeferredRegister<Item> itemsRegister;
+	private final Map<String, DeferredRegister<Item>> itemsRegisters;
 	private final Map<ResourceLocation, RegistryObject<Item>> registryObjects = new ConcurrentHashMap<>();
 
 	/**
-	 * Create factory. Call {@link #attachToEventBus(IEventBus)} after you finish
+	 * Create a factory. Call {@link #attachToEventBus(IEventBus)} after you finish
 	 * registering all descriptors so Forge will actually register them.
 	 */
-	public ForgePlatformItemFactory(String modId) {
-		this.modId = modId;
-		this.itemsRegister = DeferredRegister.create(ForgeRegistries.ITEMS, modId);
+	public ForgePlatformItemFactory() {
+		this.itemsRegisters = new HashMap<>();
 	}
 
 	/**
@@ -47,7 +47,7 @@ public class ForgePlatformItemFactory extends PlatformItemFactory {
 	 * are registered before registries are frozen).
 	 */
 	public void attachToEventBus(IEventBus modEventBus) {
-		itemsRegister.register(modEventBus);
+		itemsRegisters.forEach((ignored, it) -> it.register(modEventBus));
 	}
 
 	@Override
@@ -59,7 +59,7 @@ public class ForgePlatformItemFactory extends PlatformItemFactory {
 	}
 
 	/**
-	 * Register descriptor -> create RegistryObject<Item> using the descriptor as the supplier seed.
+	 * Register descriptor -> create RegistryObject[Item] using the descriptor as the supplier seed.
 	 * This does NOT call itemsRegister.register(modEventBus) — you must attach that separately.
 	 */
 	@Override
@@ -68,7 +68,9 @@ public class ForgePlatformItemFactory extends PlatformItemFactory {
 		Supplier<DescriptorItem> supplier = () -> createVanillaItemFromDescriptor(descriptor);
 
 		// register with DeferredRegister; register() returns a RegistryObject<Item>
-		RegistryObject<Item> ro = itemsRegister.register(id.getPath(), supplier);
+		var register = itemsRegisters.computeIfAbsent(id.getNamespace(),
+				namespace -> DeferredRegister.create(Registries.ITEM, namespace));
+		RegistryObject<Item> ro = register.register(id.getPath(), supplier);
 
 		// store mapping
 		registryObjects.put(id, ro);

@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity;
 
+import com.google.gson.GsonBuilder;
 import com.mojang.logging.LogUtils;
 import kotlin.ranges.IntRange;
 import net.minecraft.core.BlockPos;
@@ -12,9 +13,8 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import org.slf4j.Logger;
 import org.vicky.forge.entity.navigation.ForgeAdaptablePathNavigator;
+import org.vicky.forge.forgeplatform.useables.ForgeHacks;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
-import org.vicky.platform.utils.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.state.BlockState;
@@ -56,8 +56,8 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 
 	protected int mobCount = 0;
 
-	public PlatformBasedLivingEntity(MobEntityDescriptor descriptor, EntityType<? extends PathfinderMob> type,
-			Level level) {
+	public PlatformBasedLivingEntity(@NotNull MobEntityDescriptor descriptor, EntityType<? extends PathfinderMob> type,
+	                                 Level level) {
 		super(type, level);
 		this.descriptor = descriptor;
 		this.handler = descriptor.getEventHandler();
@@ -91,6 +91,15 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		);
 	}
 
+
+	@Override
+	public void addAdditionalSaveData(@NotNull CompoundTag nbt) {
+		super.addAdditionalSaveData(nbt);
+		descriptor.getMobDetails().getMetadata().forEach((key, value) -> {
+			nbt.put(key, ForgeHacks.toNBT(value));
+		});
+	}
+
 	@Override
 	public boolean isDeadOrDying() {
 		mobCount--;
@@ -99,18 +108,19 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 
 	@Override
 	public void tick() {
-		super.tick();
-
 		if (handler != null) {
 			EventResult res = handler.getHandler().onTick(getPlatform());
-			if (res == EventResult.CONSUME)
+			if (res == EventResult.CANCEL)
 				return;
 		}
 
-		if (!level().isClientSide) {
-			long gameTime = level().getGameTime();
-			EntityTaskManager.INSTANCE.tickEntity(getPlatform(), gameTime);
-		}
+		super.tick();
+	}
+
+	@Override
+	protected void customServerAiStep() {
+		long gameTime = level().getGameTime();
+		EntityTaskManager.INSTANCE.tickEntity(getPlatform(), gameTime);
 	}
 
 	@Override

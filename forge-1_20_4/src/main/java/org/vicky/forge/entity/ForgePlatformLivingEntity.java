@@ -152,7 +152,7 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 
 	@Override
 	public float getSpeed() {
-		return ordinal.getSpeed();
+		return (float) ordinal.getAttributeValue(Attributes.MOVEMENT_SPEED);
 	}
 
 	@Override

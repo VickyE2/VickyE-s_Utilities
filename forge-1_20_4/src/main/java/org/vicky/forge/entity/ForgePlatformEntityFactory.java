@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.ForgeMod;
 import org.jetbrains.annotations.NotNull;
@@ -50,8 +51,7 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
 	}
 
 	// DeferredRegister created on mod init
-	public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES,
-			MODID);
+	public static final Map<String, DeferredRegister<EntityType<?>>> ENTITIES = new HashMap<>();
 
 	@Override
 	public @NotNull RegisteredMobEntityEventHandler registerHandler(@NotNull ResourceLocation resourceLocation,
@@ -80,13 +80,16 @@ public class ForgePlatformEntityFactory implements PlatformEntityFactory {
 		EntityType.Builder<PlatformBasedLivingEntity> builder = EntityType.Builder
 				.<PlatformBasedLivingEntity>of((type, level) -> new PlatformBasedLivingEntity(descriptor, type, level),
 						MobCategory.valueOf(descriptor.getMobDetails().getCategory().name()))
-				.sized((float) descriptor.getMobDetails().getBoundingBox().maxX,
-						(float) descriptor.getMobDetails().getBoundingBox().maxZ);
+				.sized((float) descriptor.getPhysicalProps().getHitBox().maxX,
+						(float) descriptor.getPhysicalProps().getHitBox().maxZ);
 
 		if (descriptor.getMobDetails().isImmuneToFire())
 			builder.fireImmune();
 
-		RegistryObject<EntityType<? extends PlatformBasedLivingEntity>> registeredObject = ENTITIES.register(key,
+		var register = ENTITIES.computeIfAbsent(descriptor.getMobDetails().getMobKey().getNamespace(),
+				namespace -> DeferredRegister.create(Registries.ENTITY_TYPE, namespace));
+
+		RegistryObject<EntityType<? extends PlatformBasedLivingEntity>> registeredObject = register.register(key,
 				() -> builder.build(key));
 
 		REGISTERED_ENTITIES.put(ResourceLocation.from(MODID, key), registeredObject);

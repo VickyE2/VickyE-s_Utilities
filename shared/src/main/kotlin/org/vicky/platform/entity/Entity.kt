@@ -2,6 +2,7 @@
 package org.vicky.platform.entity
 
 import de.pauleff.core.Tag
+import de.pauleff.core.Tag_Compound
 import net.kyori.adventure.text.Component
 import org.vicky.platform.PlatformItemStack
 import org.vicky.platform.PlatformPlayer
@@ -156,6 +157,17 @@ interface PlatformEntity {
 
     fun interact(interacter: PlatformPlayer)
 
+    /**
+     * Called by the platform to write any extra data to persistent storage
+     * (NBT in Forge, PDC in Paper, etc.)
+     */
+    fun serializeAdditionalData(): Tag_Compound
+
+    /**
+     * Called by the platform to load previously saved additional data
+     */
+    fun deserializeAdditionalData(tag: Tag_Compound)
+
     var boundingBox: AABB
     val handle: Any
     val isPlayer: Boolean
@@ -253,7 +265,7 @@ class MobDefaults(
     val baseArmor: Double = 0.0,
     val baseArmorToughness: Double = 0.0,
     val knockbackResistance: Double = 0.0,
-    val movementSpeed: Double = 0.25,
+    val movementSpeed: Double = 1.0,
     val swimSpeed: Double = 1.0,
     val flySpeed: Double = 0.8,
     val jumpStrength: Double = 0.8,
@@ -272,9 +284,6 @@ class MobDefaults(
     val canBurn: Boolean = true,
     val canRespawn: Boolean = false,
     val allowFriendlyFire: Boolean = true,
-
-    // --- Dimensions ---
-    val boundingBox: AABB = AABB(0.6, 0.6, 1.95),
 
     // --- Sounds ---
     val sounds: MobSounds = MobSounds(),
@@ -614,8 +623,8 @@ class MobAttributeBuilder {
     var baseArmor: Double = 0.0
     var baseArmorToughness: Double = 0.0
     var knockbackResistance: Double = 0.0
-    var movementSpeed: Double = 0.25
-    var swimSpeed: Double = 1.0
+    var movementSpeed: Double = 1.0
+    var swimSpeed: Double = 0.8
     var flySpeed: Double = 0.8
     var jumpStrength: Double = 0.8
     var attackDamage: Double = 2.0

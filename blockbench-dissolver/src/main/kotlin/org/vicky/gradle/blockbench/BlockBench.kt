@@ -5,7 +5,6 @@ import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
-import org.vicky.gradle.BlockbenchDissolverPlugin
 import org.vicky.gradle.Utils
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
@@ -530,12 +529,27 @@ data class StringVec3(val x: String, val y: String, val z: String) {
     fun toList(): List<String> = listOf(x, y, z)
     override fun toString(): String = "[$x, $y, $z]"
     fun invert(): StringVec3 = StringVec3(
-        x.isDoubleDo { -it },
-        y.isDoubleDo { -it },
-        z.isDoubleDo { -it }
+        x.isDoubleDoElse({ "-($it)" }) { -it },
+        y.isDoubleDoElse({ "-($it)" }) { -it },
+        z.isDoubleDoElse({ "-($it)" }) { -it }
+    )
+    fun invertYZ(): StringVec3 = StringVec3(
+        x,
+        y.isDoubleDoElse({ "-($it)" }) { -it },
+        z.isDoubleDoElse({ "-($it)" }) { -it }
+    )
+    fun invertXY(): StringVec3 = StringVec3(
+        x.isDoubleDoElse({ "-($it)" }) { -it },
+        y.isDoubleDoElse({ "-($it)" }) { -it },
+        z
+    )
+    fun invertXZ(): StringVec3 = StringVec3(
+        x.isDoubleDoElse({ "-($it)" }) { -it },
+        y,
+        z.isDoubleDoElse({ "-($it)" }) { -it }
     )
 }
-fun String.isDoubleDo(action: (Double) -> Double) : String {
+fun String.isDoubleDoElse(stringAction: (String) -> String, action: (Double) -> Double) : String {
     if (this.toDoubleOrNull() == null) return this
     return action.invoke(this.toDouble()).toString()
 }
@@ -860,9 +874,9 @@ fun BlockBenchModel.geoAnim() : GeoAnimation {
                                     null,
                                     GeoTransformVector(
                                         StringVec3(
-                                            keyframe.dataPoints[0]["x"] ?: "",
-                                            keyframe.dataPoints[0]["y"] ?: "",
-                                            keyframe.dataPoints[0]["z"] ?: ""
+                                            keyframe.dataPoints.getOrNull(0)?.get("x") ?: "0",
+                                            keyframe.dataPoints.getOrNull(0)?.get("y") ?: "0",
+                                            keyframe.dataPoints.getOrNull(0)?.get("z") ?: "0"
                                         )
                                     )
                                 )
@@ -874,10 +888,10 @@ fun BlockBenchModel.geoAnim() : GeoAnimation {
                                     null,
                                     GeoTransformVector(
                                         StringVec3(
-                                            keyframe.dataPoints[0]["x"] ?: "",
-                                            keyframe.dataPoints[0]["y"] ?: "",
-                                            keyframe.dataPoints[0]["z"] ?: ""
-                                        ).invert()
+                                            keyframe.dataPoints.getOrNull(0)?.get("x") ?: "0",
+                                            keyframe.dataPoints.getOrNull(0)?.get("y") ?: "0",
+                                            keyframe.dataPoints.getOrNull(0)?.get("z") ?: "0"
+                                        )
                                     )
                                 )
                         }
@@ -888,9 +902,9 @@ fun BlockBenchModel.geoAnim() : GeoAnimation {
                                     null,
                                     GeoTransformVector(
                                         StringVec3(
-                                            keyframe.dataPoints[0]["x"] ?: "",
-                                            keyframe.dataPoints[0]["y"] ?: "",
-                                            keyframe.dataPoints[0]["z"] ?: ""
+                                            keyframe.dataPoints.getOrNull(0)?.get("x") ?: "0",
+                                            keyframe.dataPoints.getOrNull(0)?.get("y") ?: "0",
+                                            keyframe.dataPoints.getOrNull(0)?.get("z") ?: "0"
                                         )
                                     )
                                 )

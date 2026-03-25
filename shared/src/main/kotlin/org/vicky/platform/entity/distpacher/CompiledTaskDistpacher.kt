@@ -242,7 +242,7 @@ object EntityTaskManager {
 
                         st.lastSelectorTick[step.selector.id] = worldTick
                         st.lastSelectorResult[step.selector.id] = result
-                        LOGGER.debug("Task ${task.id} entity selector has gathered targets: $result")
+                        LOGGER.debug("Task ${task.id} entity selector has gathered targets: ${result.size()}")
                     }
 
                     working = result as AmountableResult<PlatformLivingEntity>?
@@ -329,7 +329,7 @@ object EntityTaskManager {
 
                         st.lastSelectorTick[step.selector.id] = worldTick
                         st.lastSelectorResult[step.selector.id] = result
-                        LOGGER.debug("Task ${task.id} block selector has gathered targets: $result")
+                        LOGGER.debug("Task ${task.id} block selector has gathered targets: ${result.size()}")
                     }
 
                     workingBlock = result as AmountableResult<PlatformBlock<*>>?

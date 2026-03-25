@@ -24,7 +24,8 @@ object DefaultEntities {
             }
             attributes {
                 maxHealth = 40.0
-                movementSpeed = 0.22
+                baseArmor = 0.43
+                baseArmorToughness = 0.12
             }
             animations(
                 "animation.test_dummy.idle",
@@ -33,7 +34,7 @@ object DefaultEntities {
         }
 
         physical {
-            hitBox(width = 0.8, depth = 0.8, height = 2.3)
+            hitBox(width = 1.7, depth = 0.8, height = 2.3)
         }
 
         ai {

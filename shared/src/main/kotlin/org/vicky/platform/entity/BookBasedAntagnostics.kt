@@ -614,8 +614,8 @@ object SetTargetToLookAt : EntityTimedActionSpec<PlatformLivingEntity>(
         if (target != null) {
             if (self !is PlatformLivingEntity) return@lambda false
             else {
-                val from = self.location
-                val to = target.location
+                val from = self.location.add(0.0, self.eyeHeight.toDouble(), 0.0)
+                val to = target.location.add(0.0, target.eyeHeight.toDouble(), 0.0)
 
                 val dx = to.x - from.x
                 val dy = to.y - from.y
@@ -623,9 +623,16 @@ object SetTargetToLookAt : EntityTimedActionSpec<PlatformLivingEntity>(
 
                 val distXZ = kotlin.math.sqrt(dx * dx + dz * dz)
 
-                // Correct yaw: positive X is -90, positive Z is 0
-                val yaw = Math.toDegrees(kotlin.math.atan2(dz, dx)).toFloat() - 90f
-                // Correct pitch: negative when looking up
+                // atan2(dz, dx) returns the angle in radians from the X axis towards the Z axis.
+                // We convert to degrees and adjust for Minecraft's coordinate system.
+                var yaw = Math.toDegrees(kotlin.math.atan2(dz, dx)).toFloat() - 90f
+
+                // Normalize yaw to stay within -180 to 180 (standard for setRotation)
+                while (yaw < -180) yaw += 360f
+                while (yaw > 180) yaw -= 360f
+
+                // Pitch is the angle between the XZ plane and the target.
+                // Minecraft uses negative values for looking UP and positive for DOWN.
                 val pitch = Math.toDegrees(-kotlin.math.atan2(dy, distXZ)).toFloat()
 
                 self.setRotation(yaw, pitch)
@@ -679,8 +686,8 @@ object LookAtAttacker : EntityTimedActionSpec<PlatformLivingEntity>(
         else {
             val target = self.getLastAttacker()
             if (target != null) {
-                val from = self.location
-                val to = target.location
+                val from = self.location.add(0.0, self.eyeHeight.toDouble(), 0.0)
+                val to = target.location.add(0.0, target.eyeHeight.toDouble(), 0.0)
 
                 val dx = to.x - from.x
                 val dy = to.y - from.y
@@ -688,9 +695,16 @@ object LookAtAttacker : EntityTimedActionSpec<PlatformLivingEntity>(
 
                 val distXZ = kotlin.math.sqrt(dx * dx + dz * dz)
 
-                // Correct yaw: positive X is -90, positive Z is 0
-                val yaw = Math.toDegrees(kotlin.math.atan2(dz, dx)).toFloat() - 90f
-                // Correct pitch: negative when looking up
+                // atan2(dz, dx) returns the angle in radians from the X axis towards the Z axis.
+                // We convert to degrees and adjust for Minecraft's coordinate system.
+                var yaw = Math.toDegrees(kotlin.math.atan2(dz, dx)).toFloat() - 90f
+
+                // Normalize yaw to stay within -180 to 180 (standard for setRotation)
+                while (yaw < -180) yaw += 360f
+                while (yaw > 180) yaw -= 360f
+
+                // Pitch is the angle between the XZ plane and the target.
+                // Minecraft uses negative values for looking UP and positive for DOWN.
                 val pitch = Math.toDegrees(-kotlin.math.atan2(dy, distXZ)).toFloat()
 
                 self.setRotation(yaw, pitch)
@@ -762,27 +776,18 @@ object WalkToBlock : BlockTimedActionSpec(
     onStart = start@{ self, block, logger ->
         if (block == null) return@start false
         self.getNavigator()?.let {
-            val path = it.createPath(block.blockPos, self.lookDistance.toInt())
-            logger.debug("start - Path created: $path")
-            logger.debug("start - Path is null: ${path == null}")
-            logger.debug("start - Navigator target: ${it.getTargetPos()}")
-            if (path == null) return@start false
+            val path = it.createPath(block.blockPos, self.lookDistance.toInt()) ?: return@start false
             it.moveTo(path, self.getSpeed().toDouble())
             return@start true
         }
         logger.warn("start - Entity ${self.typeId} is not a path based entity and cannot walk-to-block")
         false
     },
-    onTick = onTick@{ self, _, logger ->
+    onTick = onTick@{ self, _, _ ->
         val nav = self.getNavigator() ?: return@onTick false
-        logger.debug("tick - isDone: ${nav.isDone()}")
-        logger.debug("tick - isInProgress: ${nav.isInProgress()}")
-        logger.debug("tick - isStuck: ${nav.isStuck()}")
-        logger.debug("tick - Entity ${self.typeId} is navigating to block ${nav.getPath()}")
         !nav.isDone()
     },
-    onEnd = { self, _, logger ->
-        logger.debug("end - Entity ${self.typeId} has finished navigating or has been terminated.")
+    onEnd = { self, _, _ ->
         self.getNavigator()?.stop()
     }
 )
@@ -962,13 +967,13 @@ class BlockInRadiusSelector(
 // --------------------- Block Filters ------------------------
 object BlockIsWalkableFilter : BlockFilterSpec(
     rl("core", "block_is_walkable_filter"),
-    { block, _, LOGGER ->
+    { block, _, _ ->
         block.material.isSolid && !block.material.isAir
     }
 )
 object BlockIsHighest : BlockFilterSpec(
     rl("core", "block_is_walkable_filter"),
-    { block, ctx, LOGGER ->
+    { block, ctx, _ ->
         val range = 0.5
         val result =
             abs(ctx.world.getHighestBlockYAt(block.location.x, block.location.z) -
@@ -1004,6 +1009,10 @@ data class AmountableResult<T>(val resultType: ResultType, private val result: L
 
     override fun toString(): String {
         return "AmountableResult(resultType=$resultType, result=$result)"
+    }
+
+    fun size(): Int {
+        return result.size
     }
 }
 

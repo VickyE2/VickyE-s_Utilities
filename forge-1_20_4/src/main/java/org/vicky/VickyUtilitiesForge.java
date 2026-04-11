@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
+import net.minecraftforge.fml.loading.FMLLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vicky.forge.client.audio.MidiSynthManager;
@@ -67,6 +68,8 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.api.distmarker.Dist;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(VickyUtilitiesForge.MODID)
@@ -84,25 +87,27 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 		PlatformPlugin.set(this);
 		CONTEXT_LOGGER = new ContextLogger(ContextLogger.ContextType.SYSTEM, "V-UTLS");
 		FACTORY = new ForgePlatformItemFactory();
-		new MusicRegistry();
-		IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-		modEventBus.addListener(this::commonSetup);
-		modEventBus.addListener(this::clientSetup);
-		MinecraftForge.EVENT_BUS.register(this);
-		ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ForgeModConfig.SPEC);
-		PacketHandler.register();
-		org.vicky.musicPlayer.MusicPlayer.INSTANCE.toggleLogging();
+		if (!FMLLoader.getLaunchHandler().isData()) {
+			new MusicRegistry();
+			IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+			modEventBus.addListener(this::commonSetup);
+			modEventBus.addListener(this::clientSetup);
+			MinecraftForge.EVENT_BUS.register(this);
+			ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ForgeModConfig.SPEC);
+			PacketHandler.register();
+			org.vicky.musicPlayer.MusicPlayer.INSTANCE.toggleLogging();
 
-		EntityFactoryBootstrap.discoverAndRegisterAll(this);
-		ItemsFactoryBootstrap.discoverAndRegisterAll(this);
-		EffectBootstrap.discoverAndRegisterAll();
+			EntityFactoryBootstrap.discoverAndRegisterAll(this);
+			ItemsFactoryBootstrap.discoverAndRegisterAll(this);
+			EffectBootstrap.discoverAndRegisterAll();
 
-		ForgePlatformEffectBridge.EFFECTS.forEach((ignored, effect) ->
-				effect.register(FMLJavaModLoadingContext.get().getModEventBus()));
-		ForgePlatformEntityFactory.ENTITIES.forEach((ignored, entity) ->
-				entity.register(FMLJavaModLoadingContext.get().getModEventBus()));
-		ForgePlatformEntityFactory.INSTANCE.attachListeners(FMLJavaModLoadingContext.get().getModEventBus());
-		FACTORY.attachToEventBus(FMLJavaModLoadingContext.get().getModEventBus());
+			ForgePlatformEffectBridge.EFFECTS.forEach((ignored, effect) ->
+					effect.register(FMLJavaModLoadingContext.get().getModEventBus()));
+			ForgePlatformEntityFactory.ENTITIES.forEach((ignored, entity) ->
+					entity.register(FMLJavaModLoadingContext.get().getModEventBus()));
+			ForgePlatformEntityFactory.INSTANCE.attachListeners(FMLJavaModLoadingContext.get().getModEventBus());
+			FACTORY.attachToEventBus(FMLJavaModLoadingContext.get().getModEventBus());
+		}
 	}
 
 	public static void addTemplateClass(Class<? extends DatabaseTemplate> clazz) {

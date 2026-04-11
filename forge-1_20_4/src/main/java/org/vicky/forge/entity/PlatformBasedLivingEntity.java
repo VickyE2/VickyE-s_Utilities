@@ -1,9 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity;
 
-import com.google.gson.GsonBuilder;
 import com.mojang.logging.LogUtils;
-import kotlin.ranges.IntRange;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
@@ -217,8 +215,8 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 
 		// 3) Light level
 		int light = getBlockLightLevel(world, pos);
-		IntRange range = settings.getLightLevel();
-		if (!range.contains(light)) return false;
+		var range = settings.getLightLevel();
+		if (!(range.key() < light && range.value() > light)) return false;
 
 		// 4) Biome checks (allowed / prohibited)
 		String biomeId = getBiomeId(world, pos);

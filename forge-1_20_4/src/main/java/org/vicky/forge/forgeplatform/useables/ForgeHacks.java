@@ -5,6 +5,9 @@ import de.pauleff.core.*;
 import de.pauleff.util.NBTTags;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraftforge.eventbus.api.Event;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.platform.items.EventResult;
@@ -14,13 +17,11 @@ import org.vicky.platform.world.PlatformLocation;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ForgeHacks {
 	public static ResourceLocation fromVicky(org.vicky.platform.utils.ResourceLocation resourceLocation) {
@@ -384,5 +385,42 @@ public class ForgeHacks {
 
 		// fallback
 		return tag.toString();
+	}
+
+	public static <T extends Comparable<T>> Property<T> fromVicky(
+			org.vicky.platform.utils.Property<T> property
+	) {
+		if (property instanceof org.vicky.platform.utils.defaultproperties.IntegerProperty intP) {
+
+			var values = intP.values();
+			if (values.isEmpty()) {
+				throw new IllegalArgumentException("IntegerProperty has no values: " + property.getIdentifier());
+			}
+
+			int min = Integer.MAX_VALUE;
+			int max = Integer.MIN_VALUE;
+
+			for (int v : values) {
+				if (v < min) min = v;
+				if (v > max) max = v;
+			}
+
+			return cast(IntegerProperty.create(property.getIdentifier(), min, max));
+		}
+
+		if (property instanceof org.vicky.platform.utils.defaultproperties.BooleanProperty) {
+			return cast(BooleanProperty.create(property.getIdentifier()));
+		}
+
+		if (property instanceof org.vicky.platform.utils.defaultproperties.EnumProperty<?> enumP) {
+			return cast(EnumProperty.create(property.getIdentifier(), cast(enumP.getType())));
+		}
+
+		throw new IllegalArgumentException("Unsupported property type: " + property.getClass());
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <T> T cast(Object obj) {
+		return (T) obj;
 	}
 }

@@ -1,6 +1,8 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform.useables;
 
+import net.minecraft.world.level.block.LiquidBlock;
+import org.jetbrains.annotations.NotNull;
 import org.vicky.platform.utils.ResourceLocation;
 import org.vicky.platform.world.PlatformMaterial;
 
@@ -17,6 +19,11 @@ public record ForgePlatformMaterial(ItemLike material) implements PlatformMateri
 	@Override
 	public boolean isSolid() {
 		return material.asItem() instanceof BlockItem;
+	}
+
+	@Override
+	public boolean isLiquid() {
+		return material instanceof LiquidBlock;
 	}
 
 	@Override
@@ -37,7 +44,7 @@ public record ForgePlatformMaterial(ItemLike material) implements PlatformMateri
 	}
 
 	@Override
-	public ResourceLocation getResourceLocation() {
+	public @NotNull ResourceLocation getResourceLocation() {
 		return ResourceLocation.from(ForgeRegistries.ITEMS.getKey(material.asItem()).toString());
 	}
 }

@@ -41,7 +41,7 @@ public class ForgePlatformBlockStateFactory implements PlatformBlockStateFactory
 			var state = parseBlockState(type);
 			return new ForgePlatformBlockStateAdapter(state);
 		} catch (CommandSyntaxException e) {
-			return null;
+			throw new IllegalArgumentException("Invalid block state: " + type, e);
 		}
 	}
 }

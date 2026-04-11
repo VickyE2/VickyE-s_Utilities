@@ -6,6 +6,7 @@ import org.vicky.platform.utils.ResourceLocation
 import org.vicky.platform.world.PlatformBlock
 import org.vicky.utilities.ContextLogger.AsyncContextLogger
 import org.vicky.utilities.ContextLogger.ContextLogger
+import org.vicky.utilities.Pair
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -676,7 +677,8 @@ object SignalManager {
     /** subscribe a task to a signal for a particular entity (used when a CompiledTask requires a signal) */
     fun subscribe(entityUuid: UUID, signal: String, taskId: ResourceLocation, params: Map<String, Any> = emptyMap()) {
         val map = ensureMap(entityUuid)
-        val list = map.computeIfAbsent(signal) { Collections.synchronizedList(mutableListOf()) }
+        val list = map.computeIfAbsent(signal) { Collections.synchronizedList(
+            mutableListOf<Pair<ResourceLocation, Map<String, Any>>>()) }
         list += (taskId to params)
     }
 

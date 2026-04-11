@@ -71,6 +71,9 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
 
     // Exclude dependencies you want to keep external
     dependencies {
+        exclude {
+            it.moduleGroup == "org.jetbrains.kotlinx"
+        }
         exclude("org/eclipse/**")
         // exclude("module-info.class")
         exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib"))

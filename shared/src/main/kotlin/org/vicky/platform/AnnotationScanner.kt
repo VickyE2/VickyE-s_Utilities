@@ -4,6 +4,7 @@ import org.vicky.platform.entity.*
 import org.vicky.platform.items.ItemDescriptor
 import org.vicky.platform.items.PlatformItemFactory
 import org.vicky.platform.items.RegisterItem
+import org.vicky.utilities.Pair
 import java.lang.reflect.Modifier
 
 interface PlatformClassProvider {

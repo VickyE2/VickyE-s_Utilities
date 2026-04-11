@@ -5,6 +5,7 @@ import de.pauleff.core.Tag
 import de.pauleff.core.Tag_Compound
 import net.kyori.adventure.text.Component
 import org.vicky.platform.PlatformItemStack
+import org.vicky.utilities.Pair
 import org.vicky.platform.PlatformPlayer
 import org.vicky.platform.defaults.AABB
 import org.vicky.platform.entity.distpacher.CompiledTaskRegistry
@@ -324,7 +325,7 @@ data class MobSpawnSettings(
     val tags: Set<String> = emptySet(),
 
     val spawnHeight: SpawnHeight = SpawnHeight.ON_GROUND,
-    val lightLevel: IntRange = 0..15,
+    val lightLevel: Pair<Int, Int> = Pair.of(0, 15),
     val allowedBiomes: Set<String> = emptySet(),   // platform-agnostic biome identifiers
     val prohibitedBiomes: Set<String> = emptySet(),
 
@@ -787,9 +788,9 @@ class AnimationBuilder(
 class SpawnSettingsBuilder(private val mobId: ResourceLocation) {
     var category: SpawnCategory = SpawnCategory.CREATURE
     var weight: Int = 10
-    var groupSize: IntRange = 1..4
+    var groupSize: Pair<Int, Int> = 1 to 4
     var height: SpawnHeight = SpawnHeight.ON_GROUND
-    var light: IntRange = 0..15
+    var light: Pair<Int, Int> = 0 to 15
 
     private val conditions = mutableListOf<SpawnCondition>()
     private val modifiers = mutableListOf<SpawnModifier>()
@@ -813,7 +814,7 @@ class SpawnSettingsBuilder(private val mobId: ResourceLocation) {
             category = category,
             weight = weight,
             minGroupSize = groupSize.first,
-            maxGroupSize = groupSize.last,
+            maxGroupSize = groupSize.second,
             spawnHeight = height,
             lightLevel = light,
             conditions = conditions,
@@ -834,4 +835,13 @@ class AIGoalsBuilder {
     }
 
     fun build(): List<GoalEntry> = goals
+}
+
+infix fun <A, B> A.to(that: B): Pair<A, B> = Pair(this, that)
+fun <K, V> mapOf(vararg pairs: Pair<K, V>): Map<K, V> {
+    val map = mutableMapOf<K, V>()
+    for (pair in pairs) {
+        map[pair.first] = pair.second
+    }
+    return map.toMap()
 }

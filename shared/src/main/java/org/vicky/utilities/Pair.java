@@ -13,4 +13,16 @@ public record Pair<T, U>(T key, U value) {
   public U getValue() {
     return value;
   }
+
+  public T getFirst() {
+    return key;
+  }
+
+  public U getSecond() {
+    return value;
+  }
+
+  public T component1() { return key; }
+
+  public U component2() { return value; }
 }

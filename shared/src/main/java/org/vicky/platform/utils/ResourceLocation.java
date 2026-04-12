@@ -1,9 +1,13 @@
 /* Licensed under Apache-2.0 2025. */
 package org.vicky.platform.utils;
 
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ResourceLocation {
+	private static final Map<String, ResourceLocation> CACHE = new ConcurrentHashMap<>();
+
 	private String namespace = "minecraft";
 	private final String path;
 
@@ -50,11 +54,11 @@ public class ResourceLocation {
 	 * @return A ResourceLocator with minecraf as the namespace
 	 */
 	public static ResourceLocation from(String path) {
-		return new ResourceLocation(path);
+		return CACHE.computeIfAbsent(path, ResourceLocation::new);
 	}
 
 	public static ResourceLocation from(String namespace, String path) {
-		return new ResourceLocation(namespace, path);
+		return CACHE.computeIfAbsent(namespace+":"+path, ResourceLocation::new);
 	}
 
 	public String getPath() {
@@ -76,12 +80,17 @@ public class ResourceLocation {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (!(obj instanceof ResourceLocation)) {
-			return false;
-		}
-		if (!Objects.equals(this.namespace, ((ResourceLocation) obj).namespace)) {
-			return false;
-		}
-		return Objects.equals(this.path, ((ResourceLocation) obj).path);
+		if (this == obj) return true;
+		if (!(obj instanceof ResourceLocation other)) return false;
+
+		if (!this.namespace.equals(other.namespace)) return false;
+		return this.path.equals(other.path);
+	}
+
+	@Override
+	public int hashCode() {
+		int result = namespace.hashCode();
+		result = 31 * result + path.hashCode();
+		return result;
 	}
 }

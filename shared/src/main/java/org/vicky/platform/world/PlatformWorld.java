@@ -79,4 +79,7 @@ public interface PlatformWorld<T, N> {
     }
 
     PlatformBlock<T> raycastBlock(Vec3 eyeLocation, Vec3 lookDirection, Float range);
+
+    long getDayTime();
+    long getGameTime();
 }

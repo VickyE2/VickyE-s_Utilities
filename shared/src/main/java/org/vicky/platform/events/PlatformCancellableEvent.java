@@ -4,21 +4,15 @@ public interface PlatformCancellableEvent extends PlatformEvent {
     /**
      * If the event is cancelable.
      */
-    default boolean isCancelable() {
-        return true;
-    }
+    boolean isCancelable();
 
     /**
      * If cancelable, is it currently cancelled.
      */
-    default boolean isCancelled() {
-        return false;
-    }
+    boolean isCancelled();
 
     /**
      * If cancelable, cancel or uncancel.
      */
-    default void setCancelled(boolean cancelled) {
-        // No-op by default
-    }
+    void setCancelled(boolean cancelled);
 }

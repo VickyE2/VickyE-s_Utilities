@@ -6,7 +6,8 @@ import java.util.*;
 
 import org.vicky.musicPlayer.PlatformSoundBackend;
 import org.vicky.platform.entity.*;
-import org.vicky.platform.events.PlatformEventFactory;
+import org.vicky.platform.events.PlatformEventDispatcher;
+import org.vicky.platform.events.PlatformEventRegistry;
 import org.vicky.platform.items.PlatformItemFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 
@@ -86,8 +87,12 @@ public interface PlatformPlugin {
 		return get().getPlatformItemFactory();
 	}
 
-	static PlatformEventFactory eventFactory() {
-		return get().getEventFactory();
+	static PlatformEventDispatcher eventDispatch() {
+		return get().getEventDispatch();
+	}
+
+	static PlatformEventRegistry eventRegitry() {
+		return get().getEventRegistry();
 	}
 
 	static PlatformSoundBackend soundBackend() {
@@ -167,7 +172,8 @@ public interface PlatformPlugin {
 	PlatformItemFactory getPlatformItemFactory();
 	PlatformEntityFactory getPlatformEntityFactory();
 
-	PlatformEventFactory getEventFactory();
+	PlatformEventDispatcher getEventDispatch();
+	PlatformEventRegistry getEventRegistry();
 
 	PlatformSoundBackend getSoundBackend();
 

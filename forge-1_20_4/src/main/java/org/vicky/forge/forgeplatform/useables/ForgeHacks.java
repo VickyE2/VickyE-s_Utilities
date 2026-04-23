@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraftforge.eventbus.api.Event;
 import org.jetbrains.annotations.NotNull;
+import org.vicky.platform.events.EventPriority;
 import org.vicky.platform.items.EventResult;
 import org.vicky.platform.items.InteractionHand;
 import org.vicky.platform.utils.IntVec3;
@@ -24,27 +25,37 @@ import net.minecraft.world.phys.Vec3;
 import java.util.*;
 
 public class ForgeHacks {
-	public static ResourceLocation fromVicky(org.vicky.platform.utils.ResourceLocation resourceLocation) {
+	public static @NotNull ResourceLocation fromVicky(org.vicky.platform.utils.ResourceLocation resourceLocation) {
 		return ResourceLocation.fromNamespaceAndPath(resourceLocation.getNamespace(), resourceLocation.getPath());
 	}
-	public static org.vicky.platform.utils.ResourceLocation toVicky(ResourceLocation resourceLocation) {
+	public static @NotNull org.vicky.platform.utils.ResourceLocation toVicky(ResourceLocation resourceLocation) {
 		return org.vicky.platform.utils.ResourceLocation.from(resourceLocation.getNamespace(),
 				resourceLocation.getPath());
 	}
-	public static IntVec3 toVicky(BlockPos pos) {
+	public static @NotNull IntVec3 toVicky(BlockPos pos) {
 		return IntVec3.of(pos.getX(), pos.getY(), pos.getZ());
 	}
-	public static BlockPos fromVicky(IntVec3 pos) {
+	public static @NotNull BlockPos fromVicky(IntVec3 pos) {
 		return BlockPos.of(BlockPos.asLong(pos.getX(), pos.getY(), pos.getZ()));
 	}
-	public static org.vicky.platform.utils.Vec3 toVicky(Vec3 vec3) {
+	public static @NotNull org.vicky.platform.utils.Vec3 toVicky(Vec3 vec3) {
 		return org.vicky.platform.utils.Vec3.of(vec3.x, vec3.y, vec3.z);
 	}
-	public static PlatformLocation toVicky(Vec3 vec3, Level level) {
+	public static @NotNull PlatformLocation toVicky(Vec3 vec3, Level level) {
 		return new ForgeVec3(level, vec3.x, vec3.y, vec3.z, 0.0f, 0.0f);
 	}
 
-    public static Rarity fromVicky(org.vicky.platform.items.Rarity rarity) {
+	public static @NotNull net.minecraftforge.eventbus.api.EventPriority fromVicky(EventPriority priority) {
+		return switch (priority) {
+			case LOW -> net.minecraftforge.eventbus.api.EventPriority.LOW;
+			case NORMAL -> net.minecraftforge.eventbus.api.EventPriority.NORMAL;
+			case HIGH -> net.minecraftforge.eventbus.api.EventPriority.HIGH;
+			// case HIGHEST -> net.minecraftforge.eventbus.api.EventPriority.HIGHEST;
+			// case LOWEST -> net.minecraftforge.eventbus.api.EventPriority.LOWEST;
+		};
+	}
+
+    public static @NotNull Rarity fromVicky(org.vicky.platform.items.Rarity rarity) {
         return switch (rarity) {
             case UNCOMMON -> Rarity.UNCOMMON;
 			case RARE -> Rarity.RARE;
@@ -53,7 +64,7 @@ public class ForgeHacks {
 		};
     }
 
-    public static InteractionHand toVicky(net.minecraft.world.InteractionHand hand) {
+    public static @NotNull InteractionHand toVicky(net.minecraft.world.InteractionHand hand) {
         return switch (hand) {
             case MAIN_HAND -> InteractionHand.MAIN_HAND;
             case OFF_HAND -> InteractionHand.OFF_HAND;
@@ -70,7 +81,7 @@ public class ForgeHacks {
 		};
     }
 
-    public static Event.Result fromVicky(EventResult eventResult) {
+    public static @NotNull Event.Result fromVicky(EventResult eventResult) {
         return switch (eventResult) {
 			case ALLOW -> Event.Result.ALLOW;
 			case DENY -> Event.Result.DENY;
@@ -78,7 +89,7 @@ public class ForgeHacks {
 		};
     }
 
-	public static Tag_Compound toVicky(String name, net.minecraft.nbt.CompoundTag tag) {
+	public static @NotNull Tag_Compound toVicky(String name, net.minecraft.nbt.CompoundTag tag) {
 		Tag_Compound result = new Tag_Compound(name);
 
 		for (String key : tag.getAllKeys()) {
@@ -121,7 +132,7 @@ public class ForgeHacks {
 
 		return result;
 	}
-	public static Tag<?> toVicky(net.minecraft.nbt.Tag tag) {
+	public static @NotNull Tag<?> toVicky(net.minecraft.nbt.Tag tag) {
 		if (tag instanceof net.minecraft.nbt.StringTag) {
 			return new Tag_String("", tag.getAsString());
 
@@ -158,7 +169,38 @@ public class ForgeHacks {
 
 		return new Tag_String("", tag.toString()); // fallback
 	}
-	public static Tag<?> toVicky(String key, net.minecraft.nbt.Tag tag) {
+	public static @NotNull net.minecraft.nbt.Tag fromVicky(Tag<?> tag) {
+		if (tag instanceof Tag_String value) {
+			return net.minecraft.nbt.StringTag.valueOf(value.getData());
+
+		} else if (tag instanceof Tag_Int value) {
+			return net.minecraft.nbt.IntTag.valueOf(value.getData());
+
+		} else if (tag instanceof Tag_Double value) {
+			return net.minecraft.nbt.DoubleTag.valueOf(value.getData());
+
+		} else if (tag instanceof Tag_Float value) {
+			return net.minecraft.nbt.FloatTag.valueOf(value.getData());
+
+		} else if (tag instanceof Tag_Byte value) {
+			return net.minecraft.nbt.ByteTag.valueOf(value.getData());
+
+		} else if (tag instanceof Tag_Short value) {
+			return net.minecraft.nbt.ShortTag.valueOf(value.getData());
+
+		} else if (tag instanceof Tag_Long value) {
+			return net.minecraft.nbt.LongTag.valueOf(value.getData());
+
+		} else if (tag instanceof Tag_Compound value) {
+			return fromVicky(value);
+
+		} else if (tag instanceof Tag_List mcList) {
+			return convertListFromVicky(mcList);
+		}
+
+		return net.minecraft.nbt.StringTag.valueOf(tag.toString()); // fallback
+	}
+	public static @NotNull Tag<?> toVicky(String key, net.minecraft.nbt.Tag tag) {
 		if (tag instanceof net.minecraft.nbt.StringTag) {
 			return new Tag_String(key, tag.getAsString());
 
@@ -196,7 +238,7 @@ public class ForgeHacks {
 		return new Tag_String(key, tag.toString()); // fallback
 	}
 
-	public static net.minecraft.nbt.CompoundTag fromVicky(Tag_Compound tag) {
+	public static @NotNull net.minecraft.nbt.CompoundTag fromVicky(Tag_Compound tag) {
 		net.minecraft.nbt.CompoundTag result = new net.minecraft.nbt.CompoundTag();
 
 		ArrayList<Tag<?>> data = tag.getData();
@@ -278,7 +320,7 @@ public class ForgeHacks {
 		return net.minecraft.nbt.StringTag.valueOf(tag.getData().toString()); // fallback
 	}
 
-	public static net.minecraft.nbt.Tag toNBT(Object value) {
+	public static @NotNull net.minecraft.nbt.Tag toNBT(Object value) {
 		if (value instanceof Integer i) {
 			return net.minecraft.nbt.IntTag.valueOf(i);
 
@@ -336,24 +378,29 @@ public class ForgeHacks {
 		// LAST RESORT
 		return net.minecraft.nbt.StringTag.valueOf(value.toString());
 	}
-	public static Object fromNBT(net.minecraft.nbt.Tag tag) {
+	public static @NotNull Object fromNBT(net.minecraft.nbt.Tag tag) {
 
 		if (tag instanceof net.minecraft.nbt.IntTag t) {
 			return t.getAsInt();
 
-		} else if (tag instanceof net.minecraft.nbt.DoubleTag t) {
+		}
+		else if (tag instanceof net.minecraft.nbt.DoubleTag t) {
 			return t.getAsDouble();
 
-		} else if (tag instanceof net.minecraft.nbt.LongTag t) {
+		}
+		else if (tag instanceof net.minecraft.nbt.LongTag t) {
 			return t.getAsLong();
 
-		} else if (tag instanceof net.minecraft.nbt.FloatTag t) {
+		}
+		else if (tag instanceof net.minecraft.nbt.FloatTag t) {
 			return t.getAsFloat();
 
-		} else if (tag instanceof net.minecraft.nbt.StringTag t) {
+		}
+		else if (tag instanceof net.minecraft.nbt.StringTag t) {
 			return t.getAsString();
 
-		} else if (tag instanceof net.minecraft.nbt.ByteTag t) {
+		}
+		else if (tag instanceof net.minecraft.nbt.ByteTag t) {
 			byte b = t.getAsByte();
 			// Optional: interpret as boolean if it's 0/1
 			if (b == 0 || b == 1) {
@@ -361,10 +408,12 @@ public class ForgeHacks {
 			}
 			return b;
 
-		} else if (tag instanceof net.minecraft.nbt.ShortTag t) {
+		}
+		else if (tag instanceof net.minecraft.nbt.ShortTag t) {
 			return t.getAsShort();
 
-		} else if (tag instanceof net.minecraft.nbt.CompoundTag compound) {
+		}
+		else if (tag instanceof net.minecraft.nbt.CompoundTag compound) {
 			Map<String, Object> map = new HashMap<>();
 
 			for (String key : compound.getAllKeys()) {
@@ -373,7 +422,8 @@ public class ForgeHacks {
 
 			return map;
 
-		} else if (tag instanceof net.minecraft.nbt.ListTag list) {
+		}
+		else if (tag instanceof net.minecraft.nbt.ListTag list) {
 			List<Object> result = new ArrayList<>();
 
 			for (int i = 0; i < list.size(); i++) {
@@ -387,7 +437,7 @@ public class ForgeHacks {
 		return tag.toString();
 	}
 
-	public static <T extends Comparable<T>> Property<T> fromVicky(
+	public static @NotNull <T extends Comparable<T>> Property<T> fromVicky(
 			org.vicky.platform.utils.Property<T> property
 	) {
 		if (property instanceof org.vicky.platform.utils.defaultproperties.IntegerProperty intP) {

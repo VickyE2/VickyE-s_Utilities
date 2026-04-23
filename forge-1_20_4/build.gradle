@@ -13,7 +13,7 @@ base {
     archivesName = mod_id
 }
 
-int javaVersion = 17
+int javaVersion = 21
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(javaVersion)
 }

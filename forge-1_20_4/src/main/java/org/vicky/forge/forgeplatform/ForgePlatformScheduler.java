@@ -5,18 +5,31 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import net.minecraftforge.fml.common.Mod;
 import org.vicky.platform.PlatformScheduler;
 
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
+import static org.vicky.VickyUtilitiesForge.MODID;
+
+@Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ForgePlatformScheduler implements PlatformScheduler {
 
 	private final Queue<ScheduledTask> taskQueue = new ConcurrentLinkedQueue<>();
 
-	public ForgePlatformScheduler() {
+	private static ForgePlatformScheduler INSTANCE;
+
+	private ForgePlatformScheduler() {
 		MinecraftForge.EVENT_BUS.register(this);
+	}
+
+	public static ForgePlatformScheduler getInstance() {
+		if (INSTANCE == null) {
+			INSTANCE = new ForgePlatformScheduler();
+		}
+		return INSTANCE;
 	}
 
 	@Override

@@ -5,6 +5,19 @@ import org.vicky.VickyUtilitiesForge;
 import org.vicky.platform.PlatformLogger;
 
 public class ForgeLogger implements PlatformLogger {
+
+	private static ForgeLogger INSTANCE;
+
+	private ForgeLogger() {
+	}
+
+	public static ForgeLogger getInstance() {
+		if (INSTANCE == null) {
+			INSTANCE = new ForgeLogger();
+		}
+		return INSTANCE;
+	}
+	
 	@Override
 	public void info(String message) {
 		VickyUtilitiesForge.LOGGER.info(message);

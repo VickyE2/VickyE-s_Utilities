@@ -10,11 +10,22 @@ import org.vicky.platform.world.PlatformLocation;
 import net.minecraft.world.level.Level;
 
 public class ForgePlatformLocationAdapter implements PlatformLocationAdapter<ForgeVec3> {
+
+	private static ForgePlatformLocationAdapter INSTANCE;
+
+	private ForgePlatformLocationAdapter() {
+	}
+
+	public static ForgePlatformLocationAdapter getInstance() {
+		if (INSTANCE == null) {
+			INSTANCE = new ForgePlatformLocationAdapter();
+		}
+		return INSTANCE;
+	}
+	
 	@Override
 	public ForgeVec3 toNative(PlatformLocation location) {
-		ForgePlatformWorldAdapter adapter = (ForgePlatformWorldAdapter) location.getWorld();
-		CommonLevelAccessor world = adapter.world();
-		return new ForgeVec3(world, location.getX(), location.getY(), location.getZ(), location.yaw, location.pitch);
+        return toNativeS(location);
 	}
 
 	@Override

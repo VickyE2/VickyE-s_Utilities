@@ -3,8 +3,21 @@ package org.vicky.forge.forgeplatform;
 
 import org.vicky.forge.forgeplatform.useables.ForgeIColor;
 import org.vicky.platform.PlatformChatFormatter;
+import org.vicky.utilities.JsonConfigManager;
 
 public class ForgeChatFormatter implements PlatformChatFormatter {
+
+	private static ForgeChatFormatter INSTANCE;
+
+	private ForgeChatFormatter() {
+	}
+
+	public static ForgeChatFormatter getInstance() {
+		if (INSTANCE == null) {
+			INSTANCE = new ForgeChatFormatter();
+		}
+		return INSTANCE;
+	}
 
 	@Override
 	public String hex(String hex) {

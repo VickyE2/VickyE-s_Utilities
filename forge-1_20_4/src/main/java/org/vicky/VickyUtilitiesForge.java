@@ -24,6 +24,8 @@ import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.forge.forgeplatform.useables.ForgeVec3;
 import org.vicky.forge.network.PacketHandler;
 import org.vicky.forge.utilities.ForgeModConfig;
+import org.vicky.forge.weather.ForgeWeatherChangeTracker;
+import org.vicky.forge.weather.SimpleLevelWeatherAccess;
 import org.vicky.music.MusicRegistry;
 import org.vicky.music.utils.MusicBuilder;
 import org.vicky.music.utils.MusicPiece;
@@ -33,7 +35,8 @@ import org.vicky.platform.*;
 import org.vicky.platform.entity.MobEntityDescriptor;
 import org.vicky.platform.entity.PlatformEffectBridge;
 import org.vicky.platform.entity.PlatformEntityFactory;
-import org.vicky.platform.events.PlatformEventFactory;
+import org.vicky.platform.events.PlatformEventDispatcher;
+import org.vicky.platform.events.PlatformEventRegistry;
 import org.vicky.platform.items.PlatformItemFactory;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 import org.vicky.utilities.ANSIColor;
@@ -68,10 +71,8 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.fml.loading.FMLEnvironment;
-import net.minecraftforge.api.distmarker.Dist;
 
-// The value here should match an entry in the META-INF/mods.toml file
+
 @Mod(VickyUtilitiesForge.MODID)
 @SuppressWarnings({"deprecation", "removal"})
 public class VickyUtilitiesForge implements PlatformPlugin {
@@ -135,6 +136,9 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 				\\ \\/ / )(( (__  )  (  )  /   \\___ \\  ) \\/ (  )(   )( / (_/\\ )(   )(   )(  ) _) \\___ \\
 				 \\__/ (__)\\___)(__\\_)(__/    (____/  \\____/ (__) (__)\\____/(__) (__) (__)(____)(____/]
 				                                                                         dark_gray[0.0.1-BETA]"""));
+
+		ForgeWeatherChangeTracker.setWeatherAccess(new SimpleLevelWeatherAccess());
+		ForgeWeatherChangeTracker.register(MinecraftForge.EVENT_BUS);
 	}
 
 	private void clientSetup(final FMLClientSetupEvent event) {
@@ -226,12 +230,12 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
 	@Override
 	public PlatformLogger getPlatformLogger() {
-		return new ForgeLogger();
+		return ForgeLogger.getInstance();
 	}
 
 	@Override
 	public PlatformScheduler getPlatformScheduler() {
-		return new ForgePlatformScheduler();
+		return ForgePlatformScheduler.getInstance();
 	}
 
 	@Override
@@ -241,12 +245,12 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
 	@Override
 	public PlatformParticleProvider getParticleProvider() {
-		return new ForgeParticleProvider();
+		return ForgeParticleProvider.getInstance();
 	}
 
 	@Override
 	public PlatformChatFormatter getChatFormatter() {
-		return new ForgeChatFormatter();
+		return ForgeChatFormatter.getInstance();
 	}
 
 	@Override
@@ -256,12 +260,12 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
 	@Override
 	public PlatformBossBarFactory getPlatformBossBarFactory() {
-		return new ForgeBossBarFactory();
+		return ForgeBossBarFactory.getInstance();
 	}
 
 	@Override
 	public PlatformBlockStateFactory getPlatformBlockStateFactory() {
-		return new ForgePlatformBlockStateFactory();
+		return ForgePlatformBlockStateFactory.getInstance();
 	}
 
 	@Override
@@ -270,7 +274,12 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 	}
 
 	@Override
-	public PlatformEventFactory getEventFactory() {
+	public PlatformEventRegistry getEventRegistry() {
+		return ForgeEventFactory.INSTANCE;
+	}
+
+	@Override
+	public PlatformEventDispatcher getEventDispatch() {
 		return ForgeEventFactory.INSTANCE;
 	}
 
@@ -281,7 +290,7 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 
 	@Override
 	public PlatformLocationAdapter<ForgeVec3> getPlatformLocationAdapter() {
-		return new ForgePlatformLocationAdapter();
+		return ForgePlatformLocationAdapter.getInstance();
 	}
 
 	@Override

@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.CommonLevelAccessor;
 import net.minecraft.world.level.chunk.ChunkStatus;
-import net.minecraft.world.level.chunk.LevelChunk;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.forge.entity.ForgePlatformEntity;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
@@ -84,10 +83,10 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 		if (world instanceof ServerLevel serverLevel) {
 			var list = new ArrayList<PlatformEntity>();
 			serverLevel.getAllEntities().forEach(e -> {
-				if (e instanceof LivingEntity le) {
-					list.add(ForgePlatformLivingEntity.from(le));
-				} else if (e instanceof Player pe) {
+				if (e instanceof Player pe) {
 					list.add(ForgePlatformPlayer.from(pe));
+				} else if (e instanceof LivingEntity le) {
+					list.add(ForgePlatformLivingEntity.from(le));
 				} else {
 					list.add(ForgePlatformEntity.from(e));
 				}
@@ -102,10 +101,10 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 		if (world instanceof ServerLevel serverLevel) {
 			var list = new ArrayList<PlatformEntity>();
 			serverLevel.getEntities().get(AABB.ofSize(new net.minecraft.world.phys.Vec3(x, y, z), r, r, r), e -> {
-				if (e instanceof LivingEntity le) {
-					list.add(ForgePlatformLivingEntity.from(le));
-				} else if (e instanceof Player pe) {
+				if (e instanceof Player pe) {
 					list.add(ForgePlatformPlayer.from(pe));
+				} else if (e instanceof LivingEntity le) {
+					list.add(ForgePlatformLivingEntity.from(le));
 				} else {
 					list.add(ForgePlatformEntity.from(e));
 				}
@@ -121,10 +120,10 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 		if (world instanceof ServerLevel serverLevel) {
 			var list = new ArrayList<PlatformLivingEntity>();
 			serverLevel.getEntities().get(AABB.ofSize(new net.minecraft.world.phys.Vec3(x, y, z), r, r, r), e -> {
-				if (e instanceof LivingEntity le) {
-					list.add(ForgePlatformLivingEntity.from(le));
-				} else if (e instanceof Player pe) {
+				if (e instanceof Player pe) {
 					list.add(ForgePlatformPlayer.from(pe));
+				} else if (e instanceof LivingEntity le) {
+					list.add(ForgePlatformLivingEntity.from(le));
 				}
 			});
 			return list;
@@ -215,15 +214,15 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 
 	@Override
 	public void loadChunkIfNeeded(int chunkX, int chunkZ) {
-		// Force-load chunk if not loaded
 		world.getChunk(chunkX, chunkZ,
 				ChunkStatus.FULL,
-				true);
+				true
+		);
 	}
 
 	@Override
-	public boolean isChunkLoaded(int chunkX, int chunkZ) {
-		return world.hasChunk(chunkX, chunkZ);
+	public boolean isChunkLoaded(int x, int z) {
+		return world.getChunk(x, z, ChunkStatus.FULL, false) != null;
 	}
 
 	@Override
@@ -240,6 +239,22 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 			return getBlockAt(hitPos.getX(), hitPos.getY(), hitPos.getZ());
 		}
 		return null;
+	}
+
+	@Override
+	public long getDayTime() {
+		if (world instanceof Level level) {
+			return level.getDayTime();
+		}
+		return 0L;
+	}
+
+	@Override
+	public long getGameTime() {
+		if (world instanceof Level level) {
+			return level.getGameTime();
+		}
+		return 0L;
 	}
 
 }

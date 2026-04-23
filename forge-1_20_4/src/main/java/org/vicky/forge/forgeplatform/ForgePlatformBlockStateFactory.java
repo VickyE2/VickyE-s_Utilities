@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform;
 
+import org.jetbrains.annotations.NotNull;
 import org.vicky.VickyUtilitiesForge;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformBlockStateAdapter;
 import org.vicky.platform.world.PlatformBlockState;
@@ -19,6 +20,18 @@ import net.minecraft.world.level.block.state.BlockState;
 public class ForgePlatformBlockStateFactory implements PlatformBlockStateFactory {
 	private static HolderLookup.Provider lookup;
 
+	private static ForgePlatformBlockStateFactory INSTANCE;
+
+	private ForgePlatformBlockStateFactory() {
+	}
+
+	public static ForgePlatformBlockStateFactory getInstance() {
+		if (INSTANCE == null) {
+			INSTANCE = new ForgePlatformBlockStateFactory();
+		}
+		return INSTANCE;
+	}
+
 	public static void setLookupProvider(HolderLookup.Provider provider) {
 		VickyUtilitiesForge.LOGGER.info("Setting lookup provider to: {}", provider);
 		lookup = provider;
@@ -36,7 +49,7 @@ public class ForgePlatformBlockStateFactory implements PlatformBlockStateFactory
 	}
 
 	@Override
-	public PlatformBlockState<?> getBlockState(String type) {
+	public @NotNull PlatformBlockState<?> getBlockState(String type) {
 		try {
 			var state = parseBlockState(type);
 			return new ForgePlatformBlockStateAdapter(state);

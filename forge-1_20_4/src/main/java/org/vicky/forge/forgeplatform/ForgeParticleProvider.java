@@ -16,6 +16,19 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 public class ForgeParticleProvider implements PlatformParticleProvider {
+
+	private static ForgeParticleProvider INSTANCE;
+
+	private ForgeParticleProvider() {
+	}
+
+	public static ForgeParticleProvider getInstance() {
+		if (INSTANCE == null) {
+			INSTANCE = new ForgeParticleProvider();
+		}
+		return INSTANCE;
+	}
+	
 	@Override
 	public void spawnBasic(PlatformParticle type, PlatformLocation loc, int count, double spreadX, double spreadY,
 			double spreadZ, float speed, float size) {

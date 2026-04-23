@@ -10,6 +10,19 @@ import org.vicky.platform.utils.BossBarDescriptor;
 import net.minecraft.resources.ResourceLocation;
 
 public class ForgeBossBarFactory implements PlatformBossBarFactory {
+
+	private static ForgeBossBarFactory INSTANCE;
+
+	private ForgeBossBarFactory() {
+	}
+
+	public static ForgeBossBarFactory getInstance() {
+		if (INSTANCE == null) {
+			INSTANCE = new ForgeBossBarFactory();
+		}
+		return INSTANCE;
+	}
+	
 	@Override
 	public <T extends BossBarDescriptor> PlatformBossBar createBossBar(T descriptor) {
 		return switch (descriptor.context) {

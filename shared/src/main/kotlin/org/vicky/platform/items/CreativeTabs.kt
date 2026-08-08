@@ -9,6 +9,7 @@ import org.vicky.platform.utils.ResourceLocation
 import org.vicky.utilities.ContextLogger.ContextLogger
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Supplier
 
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
@@ -29,7 +30,7 @@ object Tabs {
 
 data class CreativeTabDescriptor(
     val title: Component,
-    val icon: () -> PlatformItemStack
+    val icon: Supplier<PlatformItemStack>
 )
 
 abstract class PlatformCreativeTabRegistry {

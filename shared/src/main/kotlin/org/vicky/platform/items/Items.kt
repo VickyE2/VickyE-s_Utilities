@@ -33,6 +33,7 @@ class DescriptorNotRegisteredException : RuntimeException {
 
 data class ItemDescriptor(
     val displayName: Component,
+    val tab: CreativeTabMenu? = null,
     val lore: List<Component> = emptyList(),
     val baseNbt: Map<String, Any> = emptyMap(),
     val handler: ItemEventsHandler = DefaultItemEventsHandler,
@@ -377,7 +378,7 @@ class ItemDescriptorBuilder(private val displayName: Component) {
     }
 
     fun build(): ItemDescriptor = ItemDescriptor(
-        displayName,
+        displayName, tab,
         lore, baseNbt, handler, physicalProps, foodProps
     )
 }

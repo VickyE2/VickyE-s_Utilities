@@ -170,44 +170,50 @@ interface PlatformEntity {
 }
 
 class AttributeModifier(
+    val id: String,
     val attribute: PlatformEntityAttribute,
     val value: Double,
     val operation: ModifierOperation
 )
 enum class ModifierOperation {
-    SET,
-    ADD,
-    MULTIPLY
+    ADD_VALUE,
+    ADD_MULTIPLY_TOTAL,
+    ADD_MULTIPLY_BASE
+}
+enum class InbuiltEntityProperties {
+    HEALTH,
+    MAX_ABSORPTION,
+    ABSORPTION,
+    STEP_HEIGHT
 }
 enum class InbuiltAttributes {
     MAX_HEALTH,
-    HEALTH,
-
-    MAX_ABSORPTION,
-    ABSORPTION,
 
     ATTACK_DAMAGE,
     ATTACK_SPEED,
+
     ARMOR,
     ARMOR_TOUGHNESS,
     KNOCKBACK_RESISTANCE,
+
     LUCK,
 
     MOVEMENT_SPEED,
     FLYING_SPEED,
     FOLLOW_RANGE,
-    STEP_HEIGHT,
 
     ATTACK_KNOCKBACK,
     SPAWN_REINFORCEMENTS_CHANCE,
 
     GRAVITY,
     JUMP_STRENGTH,
+
     SAFE_FALL_DISTANCE,
     FALL_DAMAGE_MULTIPLIER,
 
     HORSE_JUMP_STRENGTH,
-    SWEEPING_DAMAGE_RATIO;
+
+    SWEEPING_DAMAGE_RATIO
 }
 sealed class PlatformEntityAttribute {
     data class Inbuilt(val type: InbuiltAttributes) : PlatformEntityAttribute()
@@ -266,6 +272,9 @@ interface PlatformLivingEntity : PlatformEntity {
     val canBeSeenByAnyone: Boolean
     val canFreeze: Boolean
 
+    fun getProperty(attribute: InbuiltEntityProperties): Double?
+    fun setProperty(value: InbuiltEntityProperties)
+    
     /**
      * New Attribute manipulation layer
      */

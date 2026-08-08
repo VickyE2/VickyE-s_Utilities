@@ -2,8 +2,8 @@
 package org.vicky.platform.entity
 
 import kotlinx.serialization.Contextual
-import org.vicky.platform.PlatformPlayer
 import org.vicky.platform.entity.distpacher.EntityTaskState
+import org.vicky.platform.player.PlatformPlayer
 import org.vicky.platform.utils.ResourceLocation
 import org.vicky.platform.world.PlatformBlock
 import org.vicky.platform.world.PlatformWorld
@@ -777,7 +777,7 @@ object WalkToBlock : BlockTimedActionSpec(
         if (block == null) return@start false
         self.getNavigator()?.let {
             val path = it.createPath(block.blockPos, self.lookDistance.toInt()) ?: return@start false
-            it.moveTo(path, self.getSpeed().toDouble())
+            it.moveTo(path, self.getAttribute(PlatformEntityAttribute.Inbuilt(InbuiltAttributes.MOVEMENT_SPEED)) ?: return@start false)
             return@start true
         }
         logger.warn("start - Entity ${self.typeId} is not a path based entity and cannot walk-to-block")

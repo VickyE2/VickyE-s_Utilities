@@ -99,6 +99,9 @@ project(":shared") {
 
     tasks.withType<Javadoc> {
         options.encoding = "UTF-8"
+        (options as StandardJavadocDocletOptions).tags(
+            "apiNote:a:API Note"
+        )
     }
 
     plugins.withType<KotlinPlatformJvmPlugin> {

@@ -42,7 +42,8 @@ data class EffectDescriptor(
     val defaultDuration: Int,
     val onTick: Consumer<EffectTickContext>,
     val onEffectStarted: Consumer<EffectApplyContext>,
-    val onRemove: Consumer<EffectRemoveContext>
+    val onRemove: Consumer<EffectRemoveContext>,
+    val ticksAsOneSeconds: Int = 20,
 )
 
 data class EffectApplyContext(

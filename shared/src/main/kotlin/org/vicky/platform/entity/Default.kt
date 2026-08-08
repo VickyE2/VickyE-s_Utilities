@@ -1,12 +1,12 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.platform.entity
 
-import org.vicky.platform.PlatformPlayer
-import org.vicky.platform.entity.LookAtAttacker as BBLookAtAttacker
 import org.vicky.platform.PlatformPlugin
 import org.vicky.platform.entity.distpacher.Signals
+import org.vicky.platform.player.PlatformPlayer
 import org.vicky.platform.utils.ResourceLocation
 import org.vicky.utilities.Pair
+import org.vicky.platform.entity.LookAtAttacker as BBLookAtAttacker
 
 fun rl(key: String, location: String): ResourceLocation =
     ResourceLocation.from(key, location)

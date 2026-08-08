@@ -29,6 +29,7 @@ dependencies {
     implementation("org.jboss.logging:jboss-logging:3.5.3.Final")
     implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
     implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
     // Other runtime dependencies
     compileOnly("org.xerial:sqlite-jdbc:3.48.0.0")

@@ -1,16 +1,15 @@
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.platform.items
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
-import org.vicky.platform.PlatformItemStack
-import org.vicky.platform.PlatformPlayer
-import org.vicky.platform.PlatformPlugin
-import org.vicky.platform.entity.PlatformEffectInstance
 import org.vicky.platform.entity.PlatformLivingEntity
 import org.vicky.platform.entity.minecraft
-import org.vicky.platform.entity.pair
 import org.vicky.platform.entity.rli
+import org.vicky.platform.item.InteractionHand
+import org.vicky.platform.item.PlatformItemStack
+import org.vicky.platform.player.PlatformPlayer
 import org.vicky.platform.utils.ResourceLocation
 import org.vicky.platform.world.PlatformBlock
 import org.vicky.platform.world.PlatformMaterial
@@ -173,11 +172,6 @@ class FoodPropertiesBuilder {
     fun build(): FoodProperties = FoodProperties(
         nutrition, saturationModifier, isMeat, canAlwaysEat, fastFood, effects
     )
-}
-
-enum class InteractionHand {
-    MAIN_HAND,
-    OFF_HAND
 }
 
 interface ItemEventsHandler {
@@ -370,14 +364,17 @@ object Items {
         }
 
         handler {
-            onUse = { self, _, user ->
-                if (user.isPlayer && !self.hasNbt("has_used")) {
-                    user as PlatformPlayer
-                    user.sendMessage("This is a simple text and if you see this... it works lmao. it should only work on the first click")
-                    self.applyNbt("has_used" pair true)
-                    InteractionResult.SUCCESS
+            onUse = onUse@{ self, _, user ->
+                var result = InteractionResult.FAIL
+                self.edit().customData { tag ->
+                    if (user.isPlayer && !tag.contains("has_used")) {
+                        user as PlatformPlayer
+                        user.sendMessage("This is a simple text and if you see this... it works lmao. it should only work on the first click")
+                        tag.putBoolean("has_used", true)
+                        result = InteractionResult.SUCCESS
+                    }
                 }
-                InteractionResult.FAIL
+                return@onUse result
             }
         }
     }
@@ -392,6 +389,9 @@ abstract class PlatformItemFactory : InternalPlatformItemFactory {
         if (prev != null) error("Duplicate item ${id}")
     }
     override fun getDescriptor(id: ResourceLocation): ItemDescriptor? = descriptors[id]
+    fun create(id: ResourceLocation): PlatformItemStack? {
+        return create(id, mapOf())
+    }
     override fun create(id: ResourceLocation, overrides: Map<String, Any>): PlatformItemStack? {
         val desc = descriptors[id] ?: return null
         return try {
@@ -407,20 +407,22 @@ abstract class PlatformItemFactory : InternalPlatformItemFactory {
         try {
             overrides["count"]?.let { count ->
                 val c = (count as Number).toInt()
-                stack.count = c
+                stack.count(c)
             }
 
             overrides["displayName"]?.let { name ->
                 if (name is Component)
-                    stack.name = name
+                    stack.setTooltipName(name)
                 else if (name as? String != null)
-                    stack.name = name.textComponent()
+                    stack.setTooltipName(name.textComponent())
             }
 
             // merge baseNbt overrides if any (adapter can provide a method setNbt(Map) or applyNbt)
             overrides["nbt"]?.let { nbt ->
                 if (nbt is Map<*, *>) {
-                    stack.applyNbt(nbt as Map<String, Any>)
+                    stack.edit().customData {
+                        it.applyRaw(nbt as Map<String, Any>)
+                    }
                 }
             }
         } catch (t: Throwable) {

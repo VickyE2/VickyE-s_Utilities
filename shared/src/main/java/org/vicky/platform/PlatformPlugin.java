@@ -1,17 +1,19 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2025-2026. */
 package org.vicky.platform;
+
+import org.vicky.musicPlayer.PlatformSoundBackend;
+import org.vicky.platform.entity.MobEntityDescriptor;
+import org.vicky.platform.entity.PlatformEffectBridge;
+import org.vicky.platform.entity.PlatformEntityFactory;
+import org.vicky.platform.events.PlatformEventDispatcher;
+import org.vicky.platform.events.PlatformEventRegistry;
+import org.vicky.platform.guiscreens.DefaultGuis;
+import org.vicky.platform.items.PlatformItemFactory;
+import org.vicky.platform.player.PlatformPlayer;
+import org.vicky.platform.world.PlatformBlockStateFactory;
 
 import java.io.File;
 import java.util.*;
-
-import org.vicky.musicPlayer.PlatformSoundBackend;
-import org.vicky.platform.entity.*;
-import org.vicky.platform.events.PlatformEventDispatcher;
-import org.vicky.platform.events.PlatformEventRegistry;
-import org.vicky.platform.items.PlatformItemFactory;
-import org.vicky.platform.world.PlatformBlockStateFactory;
-
-import static org.vicky.platform.AnnotationScannerKt.registerAllAnnotatedThings;
 
 public interface PlatformPlugin {
 
@@ -25,6 +27,7 @@ public interface PlatformPlugin {
 	static void set(PlatformPlugin instance) {
 		if (Holder.INSTANCE == null) {
 			Holder.INSTANCE = instance;
+			DefaultGuis.INSTANCE.register();
 		} else {
 			throw new IllegalStateException("Cannot set PlatformPlugin after its already been set.");
 		}

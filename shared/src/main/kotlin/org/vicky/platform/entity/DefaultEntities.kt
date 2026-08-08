@@ -1,7 +1,6 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.platform.entity
 
-import org.vicky.platform.PlatformPlugin
 import org.vicky.platform.entity.distpacher.Trigger
 
 @Retention(AnnotationRetention.RUNTIME)
@@ -19,9 +18,7 @@ object DefaultEntities {
         "test_dummy".core()
     ) {
         defaults("Dummy") {
-            spawn {
-                condition { _ -> false }
-            }
+            spawnOverride {  }
             attributes {
                 maxHealth = 40.0
                 baseArmor = 0.43

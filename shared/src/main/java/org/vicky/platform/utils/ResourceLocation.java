@@ -1,49 +1,60 @@
-/* Licensed under Apache-2.0 2025. */
+/* Licensed under Apache-2.0 2025-2026. */
 package org.vicky.platform.utils;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
+
+import java.util.Locale;
 
 public class ResourceLocation {
-	private static final Map<String, ResourceLocation> CACHE = new ConcurrentHashMap<>();
+	private static final LoadingCache<String, ResourceLocation> CACHE = Caffeine.newBuilder().maximumSize(10_000)
+			.softValues().build(ResourceLocation::new);
 
 	private String namespace = "minecraft";
 	private final String path;
 
-	private ResourceLocation(String path) {
-		if (path.isEmpty())
-			throw new IllegalArgumentException("The path of a resource locator cannot be null.");
-		if (path.contains(":")) {
-			String[] parts = path.split(":", 2);
-			if (!parts[0].matches("[a-z0-9_.-/]+"))
+	private ResourceLocation(String parseable) {
+		parseable = parseable.trim().replace("\\", "/");
+
+		if (parseable.isEmpty())
+			throw new IllegalArgumentException("The parseable of a resource locator cannot be null.");
+		if (parseable.contains(":")) {
+			String[] parts = parseable.split(":", 2);
+			if (!parts[0].matches("[a-z0-9_./]+"))
 				throw new IllegalArgumentException("Invalid namespace " + namespace);
-			if (!parts[1].matches("[a-z0-9_.-/]+"))
-				throw new IllegalArgumentException("Invalid path " + path);
+			if (!parts[1].matches("[a-z0-9_./]+"))
+				throw new IllegalArgumentException("Invalid path " + parseable);
 			this.namespace = parts[0];
 			this.path = parts[1];
 		} else {
-			if (!path.matches("[a-z0-9_.-/]+"))
-				throw new IllegalArgumentException("Invalid path " + path);
-			this.path = path;
+			if (!parseable.matches("[a-z0-9_.-/]+"))
+				throw new IllegalArgumentException("Invalid path " + parseable);
+			this.path = parseable;
 		}
 	}
-
 	private ResourceLocation(String namespace, String path) {
+		namespace = namespace.trim();
+		path = path.trim().replace("\\", "/");
+
 		if (path.isEmpty())
 			throw new IllegalArgumentException("The path of a resource locator cannot be null.");
 		if (namespace.isEmpty())
 			throw new IllegalArgumentException("The namespace of a resource locator cannot be null.");
-		if (!namespace.matches("[a-z0-9_.-/]+"))
+		if (!namespace.matches("[a-z0-9_./]+"))
 			throw new IllegalArgumentException("Invalid namespace " + namespace);
-		if (!path.matches("[a-z0-9_.-/]+"))
+		if (!path.matches("[a-z0-9_./]+"))
 			throw new IllegalArgumentException("Invalid path " + path);
+
 		this.path = path;
 		this.namespace = namespace;
 	}
 
 	public static ResourceLocation getEMPTY() {
 		return new ResourceLocation("empty", "empty");
+	}
+
+	private static String normalize(String input) {
+		return input.toLowerCase(Locale.ROOT);
 	}
 
 	/**
@@ -54,11 +65,11 @@ public class ResourceLocation {
 	 * @return A ResourceLocator with minecraf as the namespace
 	 */
 	public static ResourceLocation from(String path) {
-		return CACHE.computeIfAbsent(path, ResourceLocation::new);
+		return CACHE.get(normalize(path));
 	}
 
 	public static ResourceLocation from(String namespace, String path) {
-		return CACHE.computeIfAbsent(namespace+":"+path, ResourceLocation::new);
+		return from(namespace + ":" + path);
 	}
 
 	public String getPath() {
@@ -80,10 +91,13 @@ public class ResourceLocation {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj) return true;
-		if (!(obj instanceof ResourceLocation other)) return false;
+		if (this == obj)
+			return true;
+		if (!(obj instanceof ResourceLocation other))
+			return false;
 
-		if (!this.namespace.equals(other.namespace)) return false;
+		if (!this.namespace.equals(other.namespace))
+			return false;
 		return this.path.equals(other.path);
 	}
 

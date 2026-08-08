@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024. */
+/* Licensed under Apache-2.0 2024-2026. */
 package org.vicky.utilities.ContextLogger;
 
 import org.vicky.platform.PlatformLogger;
@@ -10,564 +10,714 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ContextLogger provides a structured logging utility with ANSI color formatting
- * for both plugin-specific and global Bukkit logging.
+ * ContextLogger provides a structured logging utility with ANSI color
+ * formatting for both plugin-specific and global Bukkit logging.
  * <p>
- * This logger allows messages to be formatted with a context tag,
- * which includes a context type and a context name, as well as
- * additional formatting such as color- and post-effects (e.g., bold, italic).
+ * This logger allows messages to be formatted with a context tag, which
+ * includes a context type and a context name, as well as additional formatting
+ * such as color- and post-effects (e.g., bold, italic).
  * </p>
  */
 public class ContextLogger {
-  protected final ContextType context;
-  protected final String contextName;
-  protected final PlatformLogger logger;
-  private int requiredLogLevel = PlatformPlugin.isInitialised() ? PlatformPlugin.logLevel() : -2;
+	protected final ContextType context;
+	protected final String contextName;
+	protected final PlatformLogger logger;
+	private int requiredLogLevel = PlatformPlugin.isInitialised() ? PlatformPlugin.logLevel() : -2;
 
-  /**
-   * Constructs a ContextLogger with the specified context type and context name.
-   * The plugin instance is retrieved via {@code vicky_utils.getPlugin()}.
-   *
-   * @param context     The context type (e.g., SYSTEM, FEATURE, HIBERNATE)
-   * @param contextName A name representing the logging context (converted to uppercase)
-   */
-  public ContextLogger(ContextType context, String contextName, PlatformLogger logger) {
-    this.context = context;
-    this.contextName = contextName.toUpperCase();
-    if (logger instanceof DefaultPlatformLogger) {
-      this.logger = PlatformPlugin.logger() != null ? PlatformPlugin.logger() : new DefaultPlatformLogger(contextName);
-    }
-    else this.logger = logger;
-  }
+	/**
+	 * Constructs a ContextLogger with the specified context type and context name.
+	 * The plugin instance is retrieved via {@code vicky_utils.getPlugin()}.
+	 *
+	 * @param context
+	 *            The context type (e.g., SYSTEM, FEATURE, HIBERNATE)
+	 * @param contextName
+	 *            A name representing the logging context (converted to uppercase)
+	 */
+	public ContextLogger(ContextType context, String contextName, PlatformLogger logger) {
+		this.context = context;
+		this.contextName = contextName.toUpperCase();
+		if (logger instanceof DefaultPlatformLogger) {
+			this.logger = PlatformPlugin.isInitialised()
+					? (PlatformPlugin.logger() != null
+							? PlatformPlugin.logger()
+							: new DefaultPlatformLogger(contextName))
+					: new DefaultPlatformLogger(contextName);
+		} else
+			this.logger = logger;
+	}
 
-  public ContextLogger(ContextType context, String contextName) {
-    this.context = context;
-    this.contextName = contextName.toUpperCase();
-    this.logger = PlatformPlugin.logger() != null ? PlatformPlugin.logger() : new DefaultPlatformLogger(contextName);
-  }
+	public ContextLogger(ContextType context, String contextName) {
+		this.context = context;
+		this.contextName = contextName.toUpperCase();
+		this.logger = PlatformPlugin.isInitialised()
+				? (PlatformPlugin.logger() != null ? PlatformPlugin.logger() : new DefaultPlatformLogger(contextName))
+				: new DefaultPlatformLogger(contextName);
+	}
 
-  public static String replacePlaceholders(String input, List<Integer> indices, List<String> replacements) {
-    StringBuilder sb = new StringBuilder();
-    int placeholderIndex = 0; // counts {} occurrences
-    int replacementIndex = 0; // where we are in replacements list
+	public static String replacePlaceholders(String input, List<Integer> indices, List<String> replacements) {
+		StringBuilder sb = new StringBuilder();
+		int placeholderIndex = 0; // counts {} occurrences
+		int replacementIndex = 0; // where we are in replacements list
 
-    for (int i = 0; i < input.length(); i++) {
-      if (i + 1 < input.length() && input.charAt(i) == '{' && input.charAt(i + 1) == '}') {
-        // check if this {} is one we should replace
-        if (indices.contains(placeholderIndex)) {
-          sb.append(replacements.get(replacementIndex++));
-        } else {
-          sb.append("{}"); // leave as-is
-        }
-        placeholderIndex++;
-        i++; // skip over '}'
-      } else {
-        sb.append(input.charAt(i));
-      }
-    }
-    return sb.toString();
-  }
+		for (int i = 0; i < input.length(); i++) {
+			if (i + 1 < input.length() && input.charAt(i) == '{' && input.charAt(i + 1) == '}') {
+				// check if this {} is one we should replace
+				if (indices.contains(placeholderIndex)) {
+					sb.append(replacements.get(replacementIndex++));
+				} else {
+					sb.append("{}"); // leave as-is
+				}
+				placeholderIndex++;
+				i++; // skip over '}'
+			} else {
+				sb.append(input.charAt(i));
+			}
+		}
+		return sb.toString();
+	}
 
-  public static String replaceAllOrdered(String input, List<String> replacements) {
-    StringBuilder sb = new StringBuilder();
-    int replacementIndex = 0;
+	public static String replaceAllOrdered(String input, List<String> replacements) {
+		StringBuilder sb = new StringBuilder();
+		int replacementIndex = 0;
 
-    for (int i = 0; i < input.length(); i++) {
-      if (i + 1 < input.length() && input.charAt(i) == '{' && input.charAt(i + 1) == '}') {
-        if (replacementIndex < replacements.size()) {
-          sb.append(replacements.get(replacementIndex++));
-        } else {
-          sb.append("{}"); // no replacement left
-        }
-        i++; // skip '}'
-      } else {
-        sb.append(input.charAt(i));
-      }
-    }
+		for (int i = 0; i < input.length(); i++) {
+			if (i + 1 < input.length() && input.charAt(i) == '{' && input.charAt(i + 1) == '}') {
+				if (replacementIndex < replacements.size()) {
+					sb.append(replacements.get(replacementIndex++));
+				} else {
+					sb.append("{}"); // no replacement left
+				}
+				i++; // skip '}'
+			} else {
+				sb.append(input.charAt(i));
+			}
+		}
 
-    return sb.toString();
-  }
+		return sb.toString();
+	}
 
-  /**
-   * Logs a message to the plugin logger using the default cyan context formatting.
-   *
-   * @param message The message to log.
-   */
-  public void debug(String message) {
-    if (requiredLogLevel > LogType.DEBUG.level) return;
-    String contextTag = createTag(LogType.DEBUG);
-    String finalContext = contextTag + message;
-    logger.info(finalContext);
-  }
+	/**
+	 * Logs a message to the plugin logger using the default cyan context
+	 * formatting.
+	 *
+	 * @param message
+	 *            The message to log.
+	 */
+	public void debug(String message) {
+		if (requiredLogLevel > LogType.DEBUG.level)
+			return;
+		String contextTag = createTag(LogType.DEBUG);
+		String finalContext = contextTag + message;
+		logger.info(finalContext);
+	}
 
-  /**
-   * Logs a message to the plugin logger using the default cyan context formatting.
-   *
-   * @param message The message to log.
-   */
-  @Deprecated
-  public void print(String message) {
-    if (requiredLogLevel > LogType.BASIC.level) return;
-    String contextTag = createTag(LogType.BASIC);
-    String finalContext = contextTag + message;
-    logger.info(finalContext);
-  }
+	/**
+	 * Logs a message to the plugin logger using the default cyan context
+	 * formatting.
+	 *
+	 * @param message
+	 *            The message to log.
+	 */
+	@Deprecated
+	public void print(String message) {
+		if (requiredLogLevel > LogType.BASIC.level)
+			return;
+		String contextTag = createTag(LogType.BASIC);
+		String finalContext = contextTag + message;
+		logger.info(finalContext);
+	}
 
-  /**
-   * Logs a message to the plugin logger with an optional error flag.
-   * The context tag is formatted in red if the message is an error, or in cyan otherwise.
-   *
-   * @param message The message to log
-   * @param isError If true, the message is treated as an error (red formatting); otherwise, cyan is used.
-   */
-  @Deprecated
-  public void print(String message, boolean isError) {
-    if (requiredLogLevel > (isError ? LogType.ERROR.level : LogType.BASIC.level)) return;
-    String contextTag = createTag(isError ? LogType.ERROR : LogType.BASIC);
-    String finalContext =
-        contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
-    if (isError) logger.error(finalContext);
-    else logger.info(finalContext);
-  }
+	/**
+	 * Logs a message to the plugin logger with an optional error flag. The context
+	 * tag is formatted in red if the message is an error, or in cyan otherwise.
+	 *
+	 * @param message
+	 *            The message to log
+	 * @param isError
+	 *            If true, the message is treated as an error (red formatting);
+	 *            otherwise, cyan is used.
+	 */
+	@Deprecated
+	public void print(String message, boolean isError) {
+		if (requiredLogLevel > (isError ? LogType.ERROR.level : LogType.BASIC.level))
+			return;
+		String contextTag = createTag(isError ? LogType.ERROR : LogType.BASIC);
+		String finalContext = contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
+		if (isError)
+			logger.error(finalContext);
+		else
+			logger.info(finalContext);
+	}
 
-  /**
-   * Logs a message to the plugin logger using the default cyan context formatting.
-   * This takes an array of object arguments
-   * They will be replaced in the message by the {} placeholder
-   *
-   * @param message The message to log.
-   */
-  @Deprecated
-  public void print(String message, boolean isError, Object... args) {
-    if (requiredLogLevel > (isError ? LogType.ERROR.level : LogType.BASIC.level)) return;
-    List<String> finalised = new ArrayList<>();
-    for (var arg : args) {
-      finalised.add(arg.toString());
-    }
-    String contextTag = createTag(isError ? LogType.ERROR : LogType.BASIC);
-    message = replaceAllOrdered(message, finalised);
-    String finalContext =
-            contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
-    if (isError) logger.error(finalContext);
-    else logger.info(finalContext);
-  }
+	/**
+	 * Logs a message to the plugin logger using the default cyan context
+	 * formatting. This takes an array of object arguments They will be replaced in
+	 * the message by the {} placeholder
+	 *
+	 * @param message
+	 *            The message to log.
+	 */
+	@Deprecated
+	public void print(String message, boolean isError, Object... args) {
+		if (requiredLogLevel > (isError ? LogType.ERROR.level : LogType.BASIC.level))
+			return;
+		List<String> finalised = new ArrayList<>();
+		for (var arg : args) {
+			finalised.add(arg.toString());
+		}
+		String contextTag = createTag(isError ? LogType.ERROR : LogType.BASIC);
+		message = replaceAllOrdered(message, finalised);
+		String finalContext = contextTag + (isError ? ANSIColor.colorize(message, ANSIColor.RED) : message);
+		if (isError)
+			logger.error(finalContext);
+		else
+			logger.info(finalContext);
+	}
 
-  /**
-   * Logs a message to the plugin logger using the default cyan context formatting.
-   * This takes an array of object arguments
-   * They will be replaced in the message by the {} placeholder
-   *
-   * @param message The message to log.
-   */
-  @Deprecated
-  public void print(String message, Object... args) {
-    if (requiredLogLevel > LogType.BASIC.level) return;
-    List<String> finalised = new ArrayList<>();
-    for (var arg : args) {
-      finalised.add(arg.toString());
-    }
+	/**
+	 * Logs a message to the plugin logger using the default cyan context
+	 * formatting. This takes an array of object arguments They will be replaced in
+	 * the message by the {} placeholder
+	 *
+	 * @param message
+	 *            The message to log.
+	 */
+	@Deprecated
+	public void print(String message, Object... args) {
+		if (requiredLogLevel > LogType.BASIC.level)
+			return;
+		List<String> finalised = new ArrayList<>();
+		for (var arg : args) {
+			finalised.add(arg.toString());
+		}
 
-    String contextTag = createTag(LogType.BASIC);
-    String finalContext = contextTag + replaceAllOrdered(message, finalised);
-    logger.info(finalContext);
-  }
+		String contextTag = createTag(LogType.BASIC);
+		String finalContext = contextTag + replaceAllOrdered(message, finalised);
+		logger.info(finalContext);
+	}
 
-  /**
-   * Logs a debug message to the plugin logger.
-   * This takes an array of object arguments
-   * They will be replaced in the message by the {} placeholder
-   *
-   * @param message The message to log.
-   */
-  public void debug(String message, Object... args) {
-    if (requiredLogLevel > LogType.DEBUG.level) return;
-    List<String> finalised = new ArrayList<>();
-    for (var arg : args) {
-      finalised.add(arg.toString());
-    }
+	/**
+	 * Logs a debug message to the plugin logger. This takes an array of object
+	 * arguments They will be replaced in the message by the {} placeholder
+	 *
+	 * @param message
+	 *            The message to log.
+	 */
+	public void debug(String message, Object... args) {
+		if (requiredLogLevel > LogType.DEBUG.level)
+			return;
+		List<String> finalised = new ArrayList<>();
+		for (var arg : args) {
+			finalised.add(arg.toString());
+		}
 
-    String contextTag = createTag(LogType.DEBUG);
-    String finalContext = contextTag + replaceAllOrdered(message, finalised);
-    logger.info(finalContext);
-  }
+		String contextTag = createTag(LogType.DEBUG);
+		String finalContext = contextTag + replaceAllOrdered(message, finalised);
+		logger.info(finalContext);
+	}
 
-  /**
-   * Logs a message to the plugin logger with a specified log type.
-   * The log type determines the color formatting for the context tag and the message.
-   *
-   * @param message The message to log.
-   * @param type    The log type, which determines the color used for formatting.
-   */
-  @Deprecated
-  public void print(String message, LogType type) {
-    if (requiredLogLevel > type.level) return;
-    String contextTag = createTag(type);
-    String finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
-    if (type.equals(LogType.WARNING)) logger.warn(finalContext);
-    else if (type.equals(LogType.ERROR)) logger.error(finalContext);
-    else if (type.equals(LogType.AMBIENCE)) logger.debug(finalContext);
-    else logger.info(finalContext);
-  }
+	/**
+	 * Logs a message to the plugin logger with a specified log type. The log type
+	 * determines the color formatting for the context tag and the message.
+	 *
+	 * @param message
+	 *            The message to log.
+	 * @param type
+	 *            The log type, which determines the color used for formatting.
+	 */
+	@Deprecated
+	public void print(String message, LogType type) {
+		if (requiredLogLevel > type.level)
+			return;
+		String contextTag = createTag(type);
+		String finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
+		if (type.equals(LogType.WARNING))
+			logger.warn(finalContext);
+		else if (type.equals(LogType.ERROR))
+			logger.error(finalContext);
+		else if (type.equals(LogType.AMBIENCE))
+			logger.debug(finalContext);
+		else
+			logger.info(finalContext);
+	}
 
-  /**
-   * Logs a message to the plugin logger using the default cyan context formatting.
-   * This takes an array of object arguments
-   * They will be replaced in the message by the {} placeholder
-   *
-   * @param message The message to log.
-   */
-  @Deprecated
-  public void print(String message, LogType type, Object... args) {
-    if (requiredLogLevel > type.level) return;
-    List<String> finalised = new ArrayList<>();
-    for (var arg : args) {
-      finalised.add(arg.toString());
-    }
-    message = replaceAllOrdered(message, finalised);
-    print(message, type);
-  }
+	/**
+	 * Logs a message to the plugin logger using the default cyan context
+	 * formatting. This takes an array of object arguments They will be replaced in
+	 * the message by the {} placeholder
+	 *
+	 * @param message
+	 *            The message to log.
+	 */
+	@Deprecated
+	public void print(String message, LogType type, Object... args) {
+		if (requiredLogLevel > type.level)
+			return;
+		List<String> finalised = new ArrayList<>();
+		for (var arg : args) {
+			finalised.add(arg.toString());
+		}
+		message = replaceAllOrdered(message, finalised);
+		print(message, type);
+	}
 
-  /**
-   * Logs a message to the plugin logger with a specified log type and a post-formatting effect.
-   * The post effect is applied to the message.
-   *
-   * @param message The message to log.
-   * @param type    The log type which determines the base color for formatting.
-   * @param effect  The post-formatting effect to apply (e.g., bold, italic, underline).
-   */
-  @Deprecated
-  public void print(String message, LogType type, LogPostType effect) {
-    if (requiredLogLevel > type.level) return;
-    String contextTag = createTag(type);
-    String finalContext =
-        contextTag
-            + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
-    if (type.equals(LogType.WARNING)) logger.warn(finalContext);
-    else if (type.equals(LogType.ERROR)) logger.error(finalContext);
-    else if (type.equals(LogType.AMBIENCE)) logger.debug(finalContext);
-    else logger.info(finalContext);
-  }
+	/**
+	 * Logs a message to the plugin logger with a specified log type and a
+	 * post-formatting effect. The post effect is applied to the message.
+	 *
+	 * @param message
+	 *            The message to log.
+	 * @param type
+	 *            The log type which determines the base color for formatting.
+	 * @param effect
+	 *            The post-formatting effect to apply (e.g., bold, italic,
+	 *            underline).
+	 */
+	@Deprecated
+	public void print(String message, LogType type, LogPostType effect) {
+		if (requiredLogLevel > type.level)
+			return;
+		String contextTag = createTag(type);
+		String finalContext = contextTag
+				+ ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
+		if (type.equals(LogType.WARNING))
+			logger.warn(finalContext);
+		else if (type.equals(LogType.ERROR))
+			logger.error(finalContext);
+		else if (type.equals(LogType.AMBIENCE))
+			logger.debug(finalContext);
+		else
+			logger.info(finalContext);
+	}
 
-  /**
-   * Logs a message to the plugin logger using the default cyan context formatting.
-   * This takes an array of object arguments
-   * They will be replaced in the message by the {} placeholder
-   *
-   * @param message The message to log.
-   */
-  @Deprecated
-  public void print(String message, LogType type, LogPostType effect, Object... args) {
-    if (requiredLogLevel > type.level) return;
-    List<String> finalised = new ArrayList<>();
-    for (var arg : args) {
-      finalised.add(arg.toString());
-    }
-    message = replaceAllOrdered(message, finalised);
-    print(message, type, effect);
-  }
+	/**
+	 * Logs a message to the plugin logger using the default cyan context
+	 * formatting. This takes an array of object arguments They will be replaced in
+	 * the message by the {} placeholder
+	 *
+	 * @param message
+	 *            The message to log.
+	 */
+	@Deprecated
+	public void print(String message, LogType type, LogPostType effect, Object... args) {
+		if (requiredLogLevel > type.level)
+			return;
+		List<String> finalised = new ArrayList<>();
+		for (var arg : args) {
+			finalised.add(arg.toString());
+		}
+		message = replaceAllOrdered(message, finalised);
+		print(message, type, effect);
+	}
 
-  /**
-   * Logs a message to the plugin logger with a specified log type.
-   * Optionally, the message itself can be affected by the log type's color formatting.
-   *
-   * @param message             The message to log.
-   * @param type                The log type which determines the color formatting of the context tag.
-   * @param shouldAffectMessage If true, the message is formatted with the log type's color; otherwise, it is not.
-   */
-  @Deprecated
-  public void print(String message, LogType type, boolean shouldAffectMessage) {
-    if (requiredLogLevel > type.level) return;
-    String contextTag = createTag(type);
-    String finalContext;
-    if (shouldAffectMessage) {
-      finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
-    } else {
-      finalContext = contextTag + message;
-    }
-    if (type.equals(LogType.WARNING)) logger.warn(finalContext);
-    else if (type.equals(LogType.ERROR)) logger.error(finalContext);
-    else if (type.equals(LogType.AMBIENCE)) logger.debug(finalContext);
-    else logger.info(finalContext);
-  }
+	/**
+	 * Logs a message to the plugin logger with a specified log type. Optionally,
+	 * the message itself can be affected by the log type's color formatting.
+	 *
+	 * @param message
+	 *            The message to log.
+	 * @param type
+	 *            The log type which determines the color formatting of the context
+	 *            tag.
+	 * @param shouldAffectMessage
+	 *            If true, the message is formatted with the log type's color;
+	 *            otherwise, it is not.
+	 */
+	@Deprecated
+	public void print(String message, LogType type, boolean shouldAffectMessage) {
+		if (requiredLogLevel > type.level)
+			return;
+		String contextTag = createTag(type);
+		String finalContext;
+		if (shouldAffectMessage) {
+			finalContext = contextTag + ANSIColor.colorize(type.color + "[" + message + "]");
+		} else {
+			finalContext = contextTag + message;
+		}
+		if (type.equals(LogType.WARNING))
+			logger.warn(finalContext);
+		else if (type.equals(LogType.ERROR))
+			logger.error(finalContext);
+		else if (type.equals(LogType.AMBIENCE))
+			logger.debug(finalContext);
+		else
+			logger.info(finalContext);
+	}
 
-    private String createTag(LogType type) {
-        return "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + " / " + type.name().toLowerCase() + "]") + "/] ";
-    }
+	private String createTag(LogType type) {
+		return "["
+				+ ANSIColor.colorize(
+						type.color + "[" + context + "-" + contextName + " / " + type.name().toLowerCase() + "]")
+				+ "/] ";
+	}
 
-  /**
-   * Logs a message to the plugin logger using the default cyan context formatting.
-   * This takes an array of object arguments
-   * They will be replaced in the message by the {} placeholder
-   *
-   * @param message The message to log.
-   */
-  @Deprecated
-  public void print(String message, LogType type, boolean shouldAffectMessage, Object... args) {
-    if (requiredLogLevel > type.level) return;
-    List<String> finalised = new ArrayList<>();
-    for (var arg : args) {
-      finalised.add(arg.toString());
-    }
-    message = replaceAllOrdered(message, finalised);
-    print(message, type, shouldAffectMessage);
-  }
+	/**
+	 * Logs a message to the plugin logger using the default cyan context
+	 * formatting. This takes an array of object arguments They will be replaced in
+	 * the message by the {} placeholder
+	 *
+	 * @param message
+	 *            The message to log.
+	 */
+	@Deprecated
+	public void print(String message, LogType type, boolean shouldAffectMessage, Object... args) {
+		if (requiredLogLevel > type.level)
+			return;
+		List<String> finalised = new ArrayList<>();
+		for (var arg : args) {
+			finalised.add(arg.toString());
+		}
+		message = replaceAllOrdered(message, finalised);
+		print(message, type, shouldAffectMessage);
+	}
 
-  /**
-   * Logs a debug message to the plugin logger.
-   * Optionally, the message itself can be affected by the log type's color formatting.
-   *
-   * @param message             The message to log.
-   * @param shouldAffectMessage If true, the message is formatted with the log type's color; otherwise, it is not.
-   */
-  public void debug(String message, boolean shouldAffectMessage) {
-    if (requiredLogLevel > LogType.DEBUG.level) return;
-    String contextTag =
-        "[" + ANSIColor.colorize(LogType.DEBUG.color + "[" + context + "-" + contextName + "]") + "] ";
-    String finalContext;
-    if (shouldAffectMessage) {
-      finalContext = contextTag + ANSIColor.colorize(LogType.DEBUG.color + "[" + message + "]");
-    } else {
-      finalContext = contextTag + message;
-    }
-    logger.debug(finalContext);
-  }
+	/**
+	 * Logs a debug message to the plugin logger. Optionally, the message itself can
+	 * be affected by the log type's color formatting.
+	 *
+	 * @param message
+	 *            The message to log.
+	 * @param shouldAffectMessage
+	 *            If true, the message is formatted with the log type's color;
+	 *            otherwise, it is not.
+	 */
+	public void debug(String message, boolean shouldAffectMessage) {
+		if (requiredLogLevel > LogType.DEBUG.level)
+			return;
+		String contextTag = "[" + ANSIColor.colorize(LogType.DEBUG.color + "[" + context + "-" + contextName + "]")
+				+ "] ";
+		String finalContext;
+		if (shouldAffectMessage) {
+			finalContext = contextTag + ANSIColor.colorize(LogType.DEBUG.color + "[" + message + "]");
+		} else {
+			finalContext = contextTag + message;
+		}
+		logger.debug(finalContext);
+	}
 
-  /**
-   * Logs a message to the plugin logger using the default cyan context formatting.
-   * This takes an array of object arguments
-   * They will be replaced in the message by the {} placeholder
-   *
-   * @param message The message to log.
-   */
-  public void debug(String message, boolean shouldAffectMessage, Object... args) {
-    if (requiredLogLevel > LogType.DEBUG.level) return;
-    List<String> finalised = new ArrayList<>();
-    for (var arg : args) {
-      finalised.add(arg.toString());
-    }
-    message = replaceAllOrdered(message, finalised);
-    debug(message, shouldAffectMessage);
-  }
+	/**
+	 * Logs a message to the plugin logger using the default cyan context
+	 * formatting. This takes an array of object arguments They will be replaced in
+	 * the message by the {} placeholder
+	 *
+	 * @param message
+	 *            The message to log.
+	 */
+	public void debug(String message, boolean shouldAffectMessage, Object... args) {
+		if (requiredLogLevel > LogType.DEBUG.level)
+			return;
+		List<String> finalised = new ArrayList<>();
+		for (var arg : args) {
+			finalised.add(arg.toString());
+		}
+		message = replaceAllOrdered(message, finalised);
+		debug(message, shouldAffectMessage);
+	}
 
-  /**
-   * Logs a message to the plugin logger with a specified log type and post-formatting effect,
-   * with an option to affect the message formatting.
-   *
-   * @param message             The message to log.
-   * @param type                The log type which determines the base color for formatting the context tag.
-   * @param effect              The post-formatting effect to apply.
-   * @param shouldAffectMessage If true, the message is additionally formatted with the log type's color; otherwise, only the effect is applied.
-   */
-  @Deprecated
-  public void print(String message, LogType type, LogPostType effect, boolean shouldAffectMessage) {
-    if (requiredLogLevel > type.level) return;
-    String contextTag =
-        "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
-    String finalContext;
-    if (shouldAffectMessage) {
-      finalContext =
-          contextTag
-              + ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
-    } else {
-      finalContext = contextTag + ANSIColor.colorize(effect.effect + "[" + message + "]");
-    }
-    if (type.equals(LogType.WARNING)) logger.warn(finalContext);
-    else if (type.equals(LogType.ERROR)) logger.error(finalContext);
-    else if (type.equals(LogType.AMBIENCE)) logger.debug(finalContext);
-    else logger.info(finalContext);
-  }
+	/**
+	 * Logs a message to the plugin logger with a specified log type and
+	 * post-formatting effect, with an option to affect the message formatting.
+	 *
+	 * @param message
+	 *            The message to log.
+	 * @param type
+	 *            The log type which determines the base color for formatting the
+	 *            context tag.
+	 * @param effect
+	 *            The post-formatting effect to apply.
+	 * @param shouldAffectMessage
+	 *            If true, the message is additionally formatted with the log type's
+	 *            color; otherwise, only the effect is applied.
+	 */
+	@Deprecated
+	public void print(String message, LogType type, LogPostType effect, boolean shouldAffectMessage) {
+		if (requiredLogLevel > type.level)
+			return;
+		String contextTag = "[" + ANSIColor.colorize(type.color + "[" + context + "-" + contextName + "]") + "] ";
+		String finalContext;
+		if (shouldAffectMessage) {
+			finalContext = contextTag
+					+ ANSIColor.colorize(effect.effect + "[" + type.color + "[" + message + "]" + "]");
+		} else {
+			finalContext = contextTag + ANSIColor.colorize(effect.effect + "[" + message + "]");
+		}
+		if (type.equals(LogType.WARNING))
+			logger.warn(finalContext);
+		else if (type.equals(LogType.ERROR))
+			logger.error(finalContext);
+		else if (type.equals(LogType.AMBIENCE))
+			logger.debug(finalContext);
+		else
+			logger.info(finalContext);
+	}
 
-  /**
-   * Logs a message to the plugin logger using the default cyan context formatting.
-   * This takes an array of object arguments
-   * They will be replaced in the message by the {} placeholder
-   *
-   * @param message The message to log.
-   */
-  @Deprecated
-  public void print(String message, LogType type, LogPostType effect, boolean shouldAffectMessage, Object... args) {
-    if (requiredLogLevel > type.level) return;
-    List<String> finalised = new ArrayList<>();
-    for (var arg : args) {
-      finalised.add(arg.toString());
-    }
-    message = replaceAllOrdered(message, finalised);
-    print(message, type, effect, shouldAffectMessage);
-  }
+	/**
+	 * Logs a message to the plugin logger using the default cyan context
+	 * formatting. This takes an array of object arguments They will be replaced in
+	 * the message by the {} placeholder
+	 *
+	 * @param message
+	 *            The message to log.
+	 */
+	@Deprecated
+	public void print(String message, LogType type, LogPostType effect, boolean shouldAffectMessage, Object... args) {
+		if (requiredLogLevel > type.level)
+			return;
+		List<String> finalised = new ArrayList<>();
+		for (var arg : args) {
+			finalised.add(arg.toString());
+		}
+		message = replaceAllOrdered(message, finalised);
+		print(message, type, effect, shouldAffectMessage);
+	}
 
-  public void setLevel(LogType level) {
-    if (level.level > this.requiredLogLevel) {
-      this.requiredLogLevel = level.level;
-    }
-  }
+	public void setLevel(LogType level) {
+		if (level.level > this.requiredLogLevel) {
+			this.requiredLogLevel = level.level;
+		}
+	}
 
-  public void info(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.BASIC, shouldAffectMessage, args);}
-  public void info(String message, boolean shouldAffectMessage) {print(message, LogType.BASIC, shouldAffectMessage);}
-  public void info(String message, LogPostType effect, Object... args) {print(message, LogType.BASIC, effect, args);}
-  public void info(String message, LogPostType effect) {print(message, LogType.BASIC, effect);}
-  public void info(String message, Object... args) {print(message, LogType.BASIC, args);}
-  public void info(String message) {print(message, LogType.BASIC);}
+	public void infoAffect(String message, Object... args) {
+		print(message, LogType.BASIC, true, args);
+	}
+	public void info(String message, boolean shouldAffectMessage) {
+		print(message, LogType.BASIC, shouldAffectMessage);
+	}
+	public void info(String message, LogPostType effect, Object... args) {
+		print(message, LogType.BASIC, effect, args);
+	}
+	public void info(String message, LogPostType effect) {
+		print(message, LogType.BASIC, effect);
+	}
+	public void info(String message, Object... args) {
+		print(message, LogType.BASIC, args);
+	}
+	public void info(String message) {
+		print(message, LogType.BASIC);
+	}
 
-  public void warn(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.WARNING, shouldAffectMessage, args);}
-  public void warn(String message, boolean shouldAffectMessage) {print(message, LogType.WARNING, shouldAffectMessage);}
-  public void warn(String message, LogPostType effect, Object... args) {print(message, LogType.WARNING, effect, args);}
-  public void warn(String message, LogPostType effect) {print(message, LogType.WARNING, effect);}
-  public void warn(String message, Object... args) {print(message, LogType.WARNING, args);}
-  public void warn(String message) {print(message, LogType.WARNING);}
+	public void warnAffect(String message, Object... args) {
+		print(message, LogType.WARNING, true, args);
+	}
+	public void warn(String message, boolean shouldAffectMessage) {
+		print(message, LogType.WARNING, shouldAffectMessage);
+	}
+	public void warn(String message, LogPostType effect, Object... args) {
+		print(message, LogType.WARNING, effect, args);
+	}
+	public void warn(String message, LogPostType effect) {
+		print(message, LogType.WARNING, effect);
+	}
+	public void warn(String message, Object... args) {
+		print(message, LogType.WARNING, args);
+	}
+	public void warn(String message) {
+		print(message, LogType.WARNING);
+	}
 
-  public void severe(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.ERROR, shouldAffectMessage, args);}
-  public void severe(String message, boolean shouldAffectMessage) {print(message, LogType.ERROR, shouldAffectMessage);}
-  public void severe(String message, LogPostType effect, Object... args) {print(message, LogType.ERROR, effect, args);}
-  public void severe(String message, LogPostType effect) {print(message, LogType.ERROR, effect);}
-  public void severe(String message, Object... args) {print(message, LogType.ERROR, args);}
-  public void severe(String message) {print(message, LogType.ERROR);}
+	public void severeAffect(String message, Object... args) {
+		print(message, LogType.ERROR, true, args);
+	}
+	public void severe(String message, boolean shouldAffectMessage) {
+		print(message, LogType.ERROR, shouldAffectMessage);
+	}
+	public void severe(String message, LogPostType effect, Object... args) {
+		print(message, LogType.ERROR, effect, args);
+	}
+	public void severe(String message, LogPostType effect) {
+		print(message, LogType.ERROR, effect);
+	}
+	public void severe(String message, Object... args) {
+		print(message, LogType.ERROR, args);
+	}
+	public void severe(String message) {
+		print(message, LogType.ERROR);
+	}
 
-  public void pending(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.PENDING, shouldAffectMessage, args);}
-  public void pending(String message, boolean shouldAffectMessage) {print(message, LogType.PENDING, shouldAffectMessage);}
-  public void pending(String message, LogPostType effect, Object... args) {print(message, LogType.PENDING, effect, args);}
-  public void pending(String message, LogPostType effect) {print(message, LogType.PENDING, effect);}
-  public void pending(String message, Object... args) {print(message, LogType.PENDING, args);}
-  public void pending(String message) {print(message, LogType.PENDING);}
+	public void pendingAffect(String message, Object... args) {
+		print(message, LogType.PENDING, true, args);
+	}
+	public void pending(String message, boolean shouldAffectMessage) {
+		print(message, LogType.PENDING, shouldAffectMessage);
+	}
+	public void pending(String message, LogPostType effect, Object... args) {
+		print(message, LogType.PENDING, effect, args);
+	}
+	public void pending(String message, LogPostType effect) {
+		print(message, LogType.PENDING, effect);
+	}
+	public void pending(String message, Object... args) {
+		print(message, LogType.PENDING, args);
+	}
+	public void pending(String message) {
+		print(message, LogType.PENDING);
+	}
 
-  public void success(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.SUCCESS, shouldAffectMessage, args);}
-  public void success(String message, boolean shouldAffectMessage) {print(message, LogType.SUCCESS, shouldAffectMessage);}
-  public void success(String message, LogPostType effect, Object... args) {print(message, LogType.SUCCESS, effect, args);}
-  public void success(String message, LogPostType effect) {print(message, LogType.SUCCESS, effect);}
-  public void success(String message, Object... args) {print(message, LogType.SUCCESS, args);}
-  public void success(String message) {print(message, LogType.SUCCESS);}
+	public void successAffect(String message, Object... args) {
+		print(message, LogType.SUCCESS, true, args);
+	}
+	public void success(String message, boolean shouldAffectMessage) {
+		print(message, LogType.SUCCESS, shouldAffectMessage);
+	}
+	public void success(String message, LogPostType effect, Object... args) {
+		print(message, LogType.SUCCESS, effect, args);
+	}
+	public void success(String message, LogPostType effect) {
+		print(message, LogType.SUCCESS, effect);
+	}
+	public void success(String message, Object... args) {
+		print(message, LogType.SUCCESS, args);
+	}
+	public void success(String message) {
+		print(message, LogType.SUCCESS);
+	}
 
-  public void ambient(String message, boolean shouldAffectMessage, Object... args) {print(message, LogType.AMBIENCE, shouldAffectMessage, args);}
-  public void ambient(String message, boolean shouldAffectMessage) {print(message, LogType.AMBIENCE, shouldAffectMessage);}
-  public void ambient(String message, LogPostType effect, Object... args) {print(message, LogType.AMBIENCE, effect, args);}
-  public void ambient(String message, LogPostType effect) {print(message, LogType.AMBIENCE, effect);}
-  public void ambient(String message, Object... args) {print(message, LogType.AMBIENCE, args);}
-  public void ambient(String message) {print(message, LogType.AMBIENCE);}
+	public void ambientAffect(String message, Object... args) {
+		print(message, LogType.AMBIENCE, true, args);
+	}
+	public void ambient(String message, boolean shouldAffectMessage) {
+		print(message, LogType.AMBIENCE, shouldAffectMessage);
+	}
+	public void ambient(String message, LogPostType effect, Object... args) {
+		print(message, LogType.AMBIENCE, effect, args);
+	}
+	public void ambient(String message, LogPostType effect) {
+		print(message, LogType.AMBIENCE, effect);
+	}
+	public void ambient(String message, Object... args) {
+		print(message, LogType.AMBIENCE, args);
+	}
+	public void ambient(String message) {
+		print(message, LogType.AMBIENCE);
+	}
 
-  /**
-   * Enumeration defining different logging contexts.
-   */
-  public enum ContextType {
-    /**
-     * System-level logging context.
-     */
-    SYSTEM,
-    /**
-     * Sub-system-level logging context.
-     * Usually used in cases of logs for a class of a system like:
-     * <pre>
-     *     class SystemA extends SystemB {
-     *
-     *     }
-     * </pre>
-     */
-    SUB_SYSTEM,
-    /**
-     * Feature-level logging context.
-     */
-    FEATURE,
-    /**
-     * A sub feature level logging context.
-     * Usually used in cases of logs for a class of a feature like:
-     * <pre>
-     *     class FeatureA extends FeatureB {
-     *
-     *     }
-     * </pre>
-     */
-    MINI_FEATURE,
-    /**
-     * Hibernate-related logging context.
-     */
-    HIBERNATE,
-    /**
-     * Ecosystem-related logging context.
-     */
-    COMMUNICATION,
+	/**
+	 * Enumeration defining different logging contexts.
+	 */
+	public enum ContextType {
+		/**
+		 * System-level logging context.
+		 */
+		SYSTEM,
+		/**
+		 * Sub-system-level logging context. Usually used in cases of logs for a class
+		 * of a system like:
+		 * 
+		 * <pre>
+		 * class SystemA extends SystemB {
+		 *
+		 * }
+		 * </pre>
+		 */
+		SUB_SYSTEM,
+		/**
+		 * Feature-level logging context.
+		 */
+		FEATURE,
+		/**
+		 * A sub feature level logging context. Usually used in cases of logs for a
+		 * class of a feature like:
+		 * 
+		 * <pre>
+		 * class FeatureA extends FeatureB {
+		 *
+		 * }
+		 * </pre>
+		 */
+		MINI_FEATURE,
+		/**
+		 * Hibernate-related logging context.
+		 */
+		HIBERNATE,
+		/**
+		 * Ecosystem-related logging context.
+		 */
+		COMMUNICATION,
 
-    /**
-     * Storage-related logging context.
-     */
-    REGISTRY
-  }
+		/**
+		 * Storage-related logging context.
+		 */
+		REGISTRY
+	}
 
-  /**
-   * Enumeration defining different log message types with associated ANSI color codes.
-   */
-  public enum LogType {
-    /**
-     * Represents error messages (red).
-     */
-    ERROR("red", 3),
-    /**
-     * Represents warning messages (yellow).
-     */
-    WARNING("yellow", 2),
-    /**
-     * Represents success messages (green).
-     */
-    SUCCESS("green", 1),
-    /**
-     * Represents pending messages (orange).
-     */
-    PENDING("orange", 1),
-    /**
-     * Represents basic messages (cyan).
-     */
-    BASIC("cyan", 0),
-    /**
-     * Represents plain messages (white).
-     */
-    PLAIN("white", 0),
-    /**
-     * Represents ambient messages (purple).
-     */
-    AMBIENCE("purple", 0),
-    DEBUG("pink", -1);
+	/**
+	 * Enumeration defining different log message types with associated ANSI color
+	 * codes.
+	 */
+	public enum LogType {
+		/**
+		 * Represents error messages (red).
+		 */
+		ERROR("red", 3),
+		/**
+		 * Represents warning messages (yellow).
+		 */
+		WARNING("yellow", 2),
+		/**
+		 * Represents success messages (green).
+		 */
+		SUCCESS("green", 1),
+		/**
+		 * Represents pending messages (orange).
+		 */
+		PENDING("orange", 1),
+		/**
+		 * Represents basic messages (cyan).
+		 */
+		BASIC("cyan", 0),
+		/**
+		 * Represents plain messages (white).
+		 */
+		PLAIN("white", 0),
+		/**
+		 * Represents ambient messages (purple).
+		 */
+		AMBIENCE("purple", 0), DEBUG("pink", -1);
 
-    /**
-     * The ANSI color code for the log type.
-     */
-    public final String color;
-    private final int level;
+		/**
+		 * The ANSI color code for the log type.
+		 */
+		public final String color;
+		private final int level;
 
-    LogType(String color, int level) {
-      this.level = level;
-      this.color = color;
-    }
-  }
+		LogType(String color, int level) {
+			this.level = level;
+			this.color = color;
+		}
+	}
 
-  /**
-   * Enumeration defining post-formatting effects for log messages.
-   */
-  public enum LogPostType {
-    /**
-     * Underlines the log message.
-     */
-    UNDERLINE("underline"),
-    /**
-     * Strikes through the log message.
-     */
-    STRIKETHROUGH("strikethrough"),
-    /**
-     * Applies both bold and italic formatting to the log message.
-     */
-    BOLD_ITALIC("bold_italic"),
-    /**
-     * Applies italic formatting to the log message.
-     */
-    ITALIC("italic"),
-    /**
-     * Applies bold formatting to the log message.
-     */
-    BOLD("bold");
+	/**
+	 * Enumeration defining post-formatting effects for log messages.
+	 */
+	public enum LogPostType {
+		/**
+		 * Underlines the log message.
+		 */
+		UNDERLINE("underline"),
+		/**
+		 * Strikes through the log message.
+		 */
+		STRIKETHROUGH("strikethrough"),
+		/**
+		 * Applies both bold and italic formatting to the log message.
+		 */
+		BOLD_ITALIC("bold_italic"),
+		/**
+		 * Applies italic formatting to the log message.
+		 */
+		ITALIC("italic"),
+		/**
+		 * Applies bold formatting to the log message.
+		 */
+		BOLD("bold");
 
-    /**
-     * The effect code used for formatting the log message.
-     */
-    public final String effect;
+		/**
+		 * The effect code used for formatting the log message.
+		 */
+		public final String effect;
 
-    LogPostType(String effect) {
-      this.effect = effect;
-    }
-  }
+		LogPostType(String effect) {
+			this.effect = effect;
+		}
+	}
 }

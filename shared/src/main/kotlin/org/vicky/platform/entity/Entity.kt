@@ -4,19 +4,14 @@ package org.vicky.platform.entity
 import de.pauleff.core.Tag
 import de.pauleff.core.Tag_Compound
 import net.kyori.adventure.text.Component
-import org.vicky.platform.PlatformItemStack
-import org.vicky.utilities.Pair
-import org.vicky.platform.PlatformPlayer
 import org.vicky.platform.defaults.AABB
-import org.vicky.platform.entity.distpacher.CompiledTaskRegistry
-import org.vicky.platform.entity.distpacher.EntityTaskManager
-import org.vicky.platform.entity.distpacher.SignalManager
-import org.vicky.platform.entity.distpacher.Signals
-import org.vicky.platform.entity.distpacher.Trigger
-import org.vicky.platform.entity.distpacher.TriggerManager
+import org.vicky.platform.entity.distpacher.*
+import org.vicky.platform.item.PlatformItemStack
+import org.vicky.platform.player.PlatformPlayer
 import org.vicky.platform.utils.*
 import org.vicky.platform.world.PlatformLocation
 import org.vicky.platform.world.PlatformWorld
+import org.vicky.utilities.Pair
 import java.util.*
 
 class ErrorOnMobProductionException : RuntimeException {
@@ -174,11 +169,53 @@ interface PlatformEntity {
     val isPlayer: Boolean
 }
 
+class AttributeModifier(
+    val attribute: PlatformEntityAttribute,
+    val value: Double,
+    val operation: ModifierOperation
+)
+enum class ModifierOperation {
+    SET,
+    ADD,
+    MULTIPLY
+}
+enum class InbuiltAttributes {
+    MAX_HEALTH,
+    HEALTH,
+
+    MAX_ABSORPTION,
+    ABSORPTION,
+
+    ATTACK_DAMAGE,
+    ATTACK_SPEED,
+    ARMOR,
+    ARMOR_TOUGHNESS,
+    KNOCKBACK_RESISTANCE,
+    LUCK,
+
+    MOVEMENT_SPEED,
+    FLYING_SPEED,
+    FOLLOW_RANGE,
+    STEP_HEIGHT,
+
+    ATTACK_KNOCKBACK,
+    SPAWN_REINFORCEMENTS_CHANCE,
+
+    GRAVITY,
+    JUMP_STRENGTH,
+    SAFE_FALL_DISTANCE,
+    FALL_DAMAGE_MULTIPLIER,
+
+    HORSE_JUMP_STRENGTH,
+    SWEEPING_DAMAGE_RATIO;
+}
+sealed class PlatformEntityAttribute {
+    data class Inbuilt(val type: InbuiltAttributes) : PlatformEntityAttribute()
+    data class Custom(val id: ResourceLocation) : PlatformEntityAttribute()
+}
+
 interface PlatformLivingEntity : PlatformEntity {
     var health: Float
-    var absorption: Float
-    fun getMaxHealth(): Float
-    fun getMaxAbsorption(): Float
     var lookDistance: Double
 
     fun hurt(amount: Float, source: AntagonisticDamageSource)
@@ -186,17 +223,10 @@ interface PlatformLivingEntity : PlatformEntity {
     fun heal(amount: Float)
 
     fun hasLineOfSight(target: PlatformEntity): Boolean
-    fun setAttributeBaseValue(key: String, value: Double)
-    fun getAttributeBaseValue(key: String): Double?
-    fun getAttributeValue(key: String): Double?
-    fun getAttributes(): Map<String, Double>
 
     fun increaseAirSupply(value: Int)
     fun decreaseAirSupply(value: Int)
     var airSupply: Int
-
-    fun setSpeed(value: Float)
-    fun getSpeed(): Float
 
     val isOnGround: Boolean
     val isInWater: Boolean
@@ -235,6 +265,14 @@ interface PlatformLivingEntity : PlatformEntity {
     val canChangeDimensions: Boolean
     val canBeSeenByAnyone: Boolean
     val canFreeze: Boolean
+
+    /**
+     * New Attribute manipulation layer
+     */
+    fun setAttribute(value: AttributeModifier)
+    fun getAttribute(attribute: PlatformEntityAttribute): Double?
+    fun getAttributes(): Map<PlatformEntityAttribute, Double>
+    fun hasAttribute(attribute: PlatformEntityAttribute): Boolean
 }
 
 data class MobEntityDescriptor(
@@ -251,7 +289,9 @@ class MobDefaults(
     val category: MobCategory = MobCategory.MISC,
 
     val movementModes: Set<MovementMode> = setOf(MovementMode.GROUND),
-    var movementPriority: Set<MovementMode> = setOf(MovementMode.GROUND),
+    val movementPriority: Set<MovementMode> = setOf(MovementMode.GROUND),
+    val penalizeDeepWater: Boolean = true,
+    val canLeapOutOfWater: Boolean = true,
 
     // --- Model / Appearance ---
     val modelId: ResourceLocation,
@@ -296,7 +336,9 @@ class MobDefaults(
     // val boss: BossSettings? = null,
 
     // --- Spawn Settings (optional) ---
-    val spawn: MobSpawnSettings? = null,
+    val spawnGroups: List<ResourceLocation> = emptyList(),
+    // optional per-mob overrides
+    val spawnOverrides: SpawnOverrides? = null,
 
     // --- State Machine / Animations ---
     val animations: AnimationDefinition,
@@ -313,6 +355,47 @@ class MobDefaults(
     val metadata: Map<String, Any> = emptyMap()
 )
 
+fun resolveSpawnSettings(
+    mob: MobEntityDescriptor
+): List<MobSpawnSettings> {
+    return mob.mobDetails.spawnGroups.mapNotNull { id ->
+        val group = SpawnGroupRegistry.get(id) ?: return@mapNotNull null
+
+        val overrides = mob.mobDetails.spawnOverrides
+
+        MobSpawnSettings(
+            mobId = mob.mobDetails.mobKey,
+            category = group.category,
+            weight = overrides?.weight ?: group.weight,
+            minGroupSize = group.minGroupSize,
+            maxGroupSize = group.maxGroupSize,
+
+            conditions = group.conditions + (overrides?.additionalConditions ?: emptyList()),
+            modifiers = group.modifiers,
+
+            spawnHeight = group.spawnHeight,
+            lightLevel = group.lightLevel.first to group.lightLevel.last,
+
+            allowedBiomes = group.allowedBiomes,
+            prohibitedBiomes = group.prohibitedBiomes,
+
+            maxPerChunk = overrides?.maxPerChunk ?: group.maxPerChunk,
+            maxGlobal = overrides?.maxGlobal ?: group.maxGlobal
+        )
+    }
+}
+
+object SpawnGroupRegistry {
+    private val groups = mutableMapOf<ResourceLocation, SpawnGroup>()
+
+    fun register(group: SpawnGroup) {
+        groups[group.id] = group
+    }
+
+    fun get(id: ResourceLocation): SpawnGroup? = groups[id]
+
+    fun all(): Collection<SpawnGroup> = groups.values
+}
 data class MobSpawnSettings(
     val mobId: ResourceLocation,
     val category: SpawnCategory = SpawnCategory.CREATURE,
@@ -327,6 +410,32 @@ data class MobSpawnSettings(
     val spawnHeight: SpawnHeight = SpawnHeight.ON_GROUND,
     val lightLevel: Pair<Int, Int> = Pair.of(0, 15),
     val allowedBiomes: Set<String> = emptySet(),   // platform-agnostic biome identifiers
+    val prohibitedBiomes: Set<String> = emptySet(),
+
+    val maxPerChunk: Int = 8,
+    val maxGlobal: Int = 200,
+)
+data class SpawnOverrides(
+    val weight: Int? = null,
+    val maxPerChunk: Int? = null,
+    val maxGlobal: Int? = null,
+    val additionalConditions: List<SpawnCondition> = emptyList()
+)
+data class SpawnGroup(
+    val id: ResourceLocation,
+
+    val category: SpawnCategory = SpawnCategory.CREATURE,
+    val weight: Int = 10,
+    val minGroupSize: Int = 1,
+    val maxGroupSize: Int = 4,
+
+    val conditions: List<SpawnCondition> = emptyList(),
+    val modifiers: List<SpawnModifier> = emptyList(),
+
+    val spawnHeight: SpawnHeight = SpawnHeight.ON_GROUND,
+    val lightLevel: IntRange = 0..15,
+
+    val allowedBiomes: Set<String> = emptySet(),
     val prohibitedBiomes: Set<String> = emptySet(),
 
     val maxPerChunk: Int = 8,
@@ -648,6 +757,8 @@ class MobDefaultsBuilder(
     var category: MobCategory = MobCategory.MISC
     var movementModes: Set<MovementMode> = setOf(MovementMode.GROUND)
     var movementPriority: Set<MovementMode> = setOf(MovementMode.GROUND)
+    var penalizeDeepWater: Boolean = true
+    var canLeapOutOfWater: Boolean = true
 
     var scale: Double = 1.0
     var baby: Boolean = false
@@ -659,9 +770,18 @@ class MobDefaultsBuilder(
 
     private var sounds: MobSounds = MobSounds()
     private var animations: AnimationDefinition? = null
-    private var spawn: MobSpawnSettings? = null
+    private var spawnGroups: List<ResourceLocation> = listOf()
+    private var spawnOverrides: SpawnOverrides? = null
     private val drops = mutableListOf<DropEntry>()
     private val metadata = mutableMapOf<String, Any>()
+
+    fun spawnGroup(rl: ResourceLocation) {
+        spawnGroups += rl
+    }
+
+    fun spawnGroups(rls: List<ResourceLocation>) {
+        spawnGroups += rls
+    }
 
     fun sounds(block: MobSoundsBuilder.() -> Unit) {
         sounds = MobSoundsBuilder().apply(block).build()
@@ -675,8 +795,8 @@ class MobDefaultsBuilder(
         animations = AnimationBuilder(idle, walk).apply(block).build()
     }
 
-    fun spawn(block: SpawnSettingsBuilder.() -> Unit) {
-        spawn = SpawnSettingsBuilder(mobKey).apply(block).build()
+    fun spawnOverride(block: SpawnOverridesBuilder.() -> Unit) {
+        spawnOverrides = SpawnOverridesBuilder().apply(block).build()
     }
 
     fun drop(weight: Int, vararg items: PlatformItemStack) {
@@ -699,6 +819,8 @@ class MobDefaultsBuilder(
             category = category,
             movementModes = movementModes,
             movementPriority = movementPriority,
+            penalizeDeepWater = penalizeDeepWater,
+            canLeapOutOfWater = canLeapOutOfWater,
             modelId = modelId,
             texture = texture,
             animationsFile = animationsFile,
@@ -711,7 +833,8 @@ class MobDefaultsBuilder(
             sounds = sounds,
             animations = animations
                 ?: error("Animations must be defined for mob '$mobKey'"),
-            spawn = spawn,
+            spawnGroups = spawnGroups,
+            spawnOverrides = spawnOverrides,
             drops = drops,
             metadata = metadata,
             maxHealth = attributes.maxHealth,
@@ -756,7 +879,8 @@ class MobSoundsBuilder {
 class AnimationBuilder(
     private val idle: String,
     private val walk: String
-) {
+)
+{
     var hurt: String? = null
     var attack: String? = null
     var step: String? = null
@@ -785,41 +909,23 @@ class AnimationBuilder(
         )
 }
 
-class SpawnSettingsBuilder(private val mobId: ResourceLocation) {
-    var category: SpawnCategory = SpawnCategory.CREATURE
+class SpawnOverridesBuilder {
     var weight: Int = 10
-    var groupSize: Pair<Int, Int> = 1 to 4
-    var height: SpawnHeight = SpawnHeight.ON_GROUND
-    var light: Pair<Int, Int> = 0 to 15
+    var maxPerChunk: Int? = null
+    var maxGlobal: Int? = null
 
-    private val conditions = mutableListOf<SpawnCondition>()
-    private val modifiers = mutableListOf<SpawnModifier>()
-    private val tags = mutableSetOf<String>()
+    private val additionalConditions = mutableListOf<SpawnCondition>()
 
-    fun condition(cond: SpawnCondition) {
-        conditions += cond
+    fun addCondition(cond: SpawnCondition) {
+        additionalConditions += cond
     }
 
-    fun modifier(mod: SpawnModifier) {
-        modifiers += mod
-    }
-
-    fun tag(tag: String) {
-        tags += tag
-    }
-
-    fun build(): MobSpawnSettings =
-        MobSpawnSettings(
-            mobId = mobId,
-            category = category,
+    fun build(): SpawnOverrides =
+        SpawnOverrides(
             weight = weight,
-            minGroupSize = groupSize.first,
-            maxGroupSize = groupSize.second,
-            spawnHeight = height,
-            lightLevel = light,
-            conditions = conditions,
-            modifiers = modifiers,
-            tags = tags
+            maxPerChunk = maxPerChunk,
+            maxGlobal = maxGlobal,
+            additionalConditions = additionalConditions
         )
 }
 

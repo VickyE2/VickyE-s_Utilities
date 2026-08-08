@@ -1,7 +1,9 @@
+/* Licensed under Apache-2.0 2024. */
 package org.vicky.musicPlayer
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.Style
 import net.kyori.adventure.text.format.TextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
@@ -12,7 +14,7 @@ import org.vicky.music.utils.MusicPiece
 import org.vicky.music.utils.MusicTrack
 import org.vicky.platform.IColor
 import org.vicky.platform.PlatformBossBar
-import org.vicky.platform.PlatformPlayer
+import org.vicky.platform.player.PlatformPlayer
 import org.vicky.platform.PlatformPlugin
 import org.vicky.platform.defaults.BossBarOverlay
 import org.vicky.platform.defaults.VanillaColor
@@ -52,8 +54,8 @@ object MusicPlayer {
         PlatformPlugin.logger().info("MusicPlayer logging is now ${if (loggingEnabled) "ENABLED" else "DISABLED"}")
         return loggingEnabled
     }
-    private fun log(message: String) {
-        if (loggingEnabled) {
+    private fun log(message: String, mustLog: Boolean = false) {
+        if (loggingEnabled || mustLog) {
             PlatformPlugin.logger().info("[MusicPlayer] $message")
         }
     }
@@ -64,61 +66,214 @@ object MusicPlayer {
         }
     }
 
-    data class PlayerState(
-        var track: MusicPiece,
+    enum class MusicPriority(val level: Int) {
+        BIOME(10),
+        AMBIENT(20),
+        PLAYER_REQUEST(50),
+        EVENT(80),
+        BOSS(100),
+        FORCE(1000)
+    }
+
+    enum class ResumeBehavior {
+        RESUME,     // continue from tick
+        RESTART,    // restart from 0 later
+        DISCARD     // forget it
+    }
+
+    data class MusicSession(
+        val track: MusicPiece,
+        val priority: MusicPriority,
+        val source: String, // "biome", "player", "boss", etc.
+        val resumePolicy : ResumeBehavior,
+        val overrideExisting: Boolean = false,
         var tick: Int = 0,
         var paused: Boolean = false,
-        var queue: MutableList<MusicPiece> = mutableListOf(),
-        var bossBar: PlatformBossBar,
-        var tickEvents: MutableMap<Long, MutableList<MusicEvent>> = mutableMapOf()
+        var renderBossBar: Boolean = true,
+        var tickEvents: MutableMap<Long, MutableList<MusicEvent>> = mutableMapOf(),
+        val icon: String
+    )
+    data class PlayerState(
+        var current: MusicSession? = null,
+        val stack: ArrayDeque<MusicSession> = ArrayDeque(),
+        val queue: ArrayDeque<MusicSession> = ArrayDeque(),
+        var bossBar: PlatformBossBar? = null
     )
 
+    fun playSession(
+        player: PlatformPlayer,
+        session: MusicSession,
+    ) {
+        val state = playerStates.getOrPut(player.uniqueId()) {
+            PlayerState()
+        }
+        val dbMusic = MusicPlayerDAO.INSTANCE.findById(player.uniqueId()).orElse(null)
+        if (dbMusic == null) {
+            player.sendMessage(Component.text("Failed to play message because a sever server error occurred: NO_MUSIC_DATABASE")
+                .style(Style.style(NamedTextColor.DARK_RED, TextDecoration.BOLD)))
+            return
+        }
+        startSession(player, state, session, dbMusic.allowedPriorities.contains(session.priority))
+    }
+
     @JvmOverloads
-    fun play(player: PlatformPlayer, track: MusicPiece, iconResourceLocation: String = "minecraft:block/dirt") {
-        log(player, "Started playing track '${track.pieceName}' with ${track.trackList.sumOf { it.events.size }} total events.")
+    fun play(
+        player: PlatformPlayer,
+        track: MusicPiece,
+        source: String = "player",
+        policy: ResumeBehavior = ResumeBehavior.RESUME,
+        priority: MusicPriority = MusicPriority.PLAYER_REQUEST,
+        override: Boolean = false,
+        iconResourceLocation: String = "minecraft:block/dirt"
+    ) {
+        val state = playerStates.getOrPut(player.uniqueId()) {
+            PlayerState()
+        }
+        val dbMusic = MusicPlayerDAO.INSTANCE.findById(player.uniqueId()).orElse(null)
+        if (dbMusic == null) {
+            player.sendMessage(Component.text("Failed to play message because a sever server error occurred: NO_MUSIC_DATABASE",
+                NamedTextColor.DARK_RED, TextDecoration.BOLD))
+            return
+        }
+        val incoming = MusicSession(
+            track = track,
+            priority = priority,
+            source = source,
+            resumePolicy = policy,
+            overrideExisting = override,
+            icon = iconResourceLocation
+        )
+
+        val current = state.current
+
+        if (current == null) {
+            startSession(player, state, incoming, dbMusic.allowedPriorities.contains(priority))
+            return
+        }
+
+        val shouldInterrupt =
+            override ||
+                    incoming.priority.level > current.priority.level
+
+        if (shouldInterrupt) {
+            when (current.resumePolicy) {
+                ResumeBehavior.RESUME -> {
+                    current.paused = true
+                    state.stack.addLast(current)
+                }
+                ResumeBehavior.RESTART -> {
+                    state.queue.add(current)
+                }
+                ResumeBehavior.DISCARD -> {
+                }
+            }
+
+            startSession(player, state, incoming, dbMusic.allowedPriorities.contains(priority))
+            return
+        }
+
+        // lower or equal priority
+        if (incoming.priority.level == current.priority.level) {
+            // either replace, queue, or ignore
+            state.stack.addLast(incoming) // optional
+        }
+    }
+
+    private fun startSession(
+        player: PlatformPlayer,
+        state: PlayerState,
+        session: MusicSession,
+        renderBossBar: Boolean = true
+    ) {
+        session.tickEvents = buildTickEvents(session.track)
+        session.tick = 0
+        session.renderBossBar = false
+        session.paused = false
+        state.current = session
+
+        if (renderBossBar) {
+            player.showBossBar(createBossBarFor(session))
+        }
+
+        playTick(player)
+    }
+    fun finishCurrent(player: PlatformPlayer) {
+        val state = playerStates[player.uniqueId()] ?: return
+        val dbMusic = MusicPlayerDAO.INSTANCE.findById(player.uniqueId()).orElse(null)
+        if (dbMusic == null) {
+            player.sendMessage(
+                Component.text("Failed to play message because a sever server error occurred: NO_MUSIC_DATABASE",
+                    NamedTextColor.DARK_RED, TextDecoration.BOLD))
+            return
+        }
+
+        state.current = null
+
+        // 1. Try to resume interrupted sessions (stack = LIFO)
+        while (state.stack.isNotEmpty()) {
+            val next = state.stack.removeLast()
+
+            when (next.resumePolicy) {
+                ResumeBehavior.RESUME -> {
+                    startSession(player, state, next, dbMusic.allowedPriorities.contains(next.priority))
+                    return
+                }
+
+                ResumeBehavior.RESTART -> {
+                    state.queue.addFirst(next) // or wrap as session
+                }
+
+                ResumeBehavior.DISCARD -> {
+                    // do nothing
+                }
+            }
+        }
+
+        // 2. If nothing to resume, try queued tracks (FIFO)
+        if (state.queue.isNotEmpty()) {
+            val nextTrack = state.queue.removeFirst()
+            playSession(
+                player,
+                nextTrack
+            )
+            return
+        }
+
+        // 3. Nothing left → clean up UI
+        state.bossBar?.let { player.hideBossBar(it) }
+        state.bossBar = null
+    }
+
+    private fun createBossBarFor(session: MusicSession): PlatformBossBar {
+        val genre = session.track.genre?.lowercase() ?: "default"
+        val color = genreColors[genre] ?: TextColor.color(0xAAAAAA)
+        val status = "▶ Now Playing : ${session.track.pieceName}"
+        val title = Component.text("$status: ${session.track.pieceName}", color)
+        val progress = 0.toFloat().coerceIn(0f, 1f)
+        return PlatformPlugin.bossBarFactory().createBossBar(
+            MusicBossBarDescriptor(
+                title,
+                Component.text(session.track.authors.contentToString()
+                    .replace("[", "").replace("]", ""), NamedTextColor.GRAY),
+                progress,
+                VanillaColor.decode(color.asHexString()),
+                BossBarOverlay.PROGRESS,
+                genre,
+                true,
+                session.tickEvents.keys.max(),
+                0,
+                session.icon
+            )
+        )
+    }
+    private fun buildTickEvents(track: MusicPiece): MutableMap<Long, MutableList<MusicEvent>> {
         val tickEvents = mutableMapOf<Long, MutableList<MusicEvent>>()
         track.trackList.forEach { t ->
             t.events.forEach { e ->
                 tickEvents.getOrPut(e.timeOffset) { mutableListOf() }.add(e)
             }
         }
-        val state = playerStates.getOrPut(player.uniqueId()) {
-            val genre = track.genre?.lowercase() ?: "default"
-            val color = genreColors[genre] ?: TextColor.color(0xAAAAAA)
-
-            val status = "▶ Now Playing : ${track.pieceName}"
-            val title = Component.text("$status: ${track.pieceName}", color)
-            val progress = (0).toFloat().coerceIn(0f, 1f)
-            PlayerState(
-                track = track, bossBar = PlatformPlugin.bossBarFactory().createBossBar(
-                    MusicBossBarDescriptor(
-                        title,
-                        Component.text(track.authors.toString().replace("[", "").replace("]", ""), NamedTextColor.GRAY),
-                        progress,
-                        VanillaColor.decode(color.asHexString()),
-                        BossBarOverlay.PROGRESS,
-                        genre,
-                        true,
-                        tickEvents.keys.max(),
-                        0,
-                        iconResourceLocation
-                    )
-                )
-            )
-        }
-        state.tickEvents = tickEvents
-        state.track = track
-        state.tick = 0
-        state.paused = false
-        log("[MusicPlayer.trace] about to call player.showBossBar for ${player.uniqueId()} bossbar=${state.bossBar}")
-        try {
-            player.showBossBar(state.bossBar)
-            log("[MusicPlayer.trace] player.showBossBar returned normally")
-        } catch (t: Throwable) {
-            t.printStackTrace()
-            log("[MusicPlayer.trace] player.showBossBar threw: " + t.message)
-        }
-        playTick(player)
+        return tickEvents
     }
 
     fun playInstrumentTracks(player: PlatformPlayer, instrumentTracks: List<MusicTrack>) {
@@ -126,7 +281,7 @@ object MusicPlayer {
     }
 
     /**
-     * Plays a MusicTrack for the given player.
+     * Plays a singular instrument MusicTrack for the given player.
      *
      * @param player the player to play the track for.
      * @param track  the MusicTrack to play.
@@ -140,7 +295,7 @@ object MusicPlayer {
         }
 
         for ((tickOffset, events) in arrangedEvents) {
-            PlatformPlugin.scheduler().runScheduled(Runnable {
+            PlatformPlugin.scheduler().runScheduled({
                 for (event in events) {
                     val key = NoteKey(player.uniqueId(), event.sound?.name ?: "unknown", event.pitch, event.volume)
                     if (event.part != null) {
@@ -194,15 +349,26 @@ object MusicPlayer {
     }
 
     fun togglePause(player: PlatformPlayer) {
-        playerStates[player.uniqueId()]?.let {
-            it.paused = !it.paused
-            log(player, if (it.paused) "Paused at tick ${it.tick}" else "Resumed at tick ${it.tick}")
-            updateBossBar(player, it.track, it.tick, it.paused)
-            val dbMusic = MusicPlayerDAO().findById(player.uniqueId()).get()
-            dbMusic.lastPiece = MusicPieceDAO().findById(it.track.key)
-            dbMusic.lastTick = it.tick
-            MusicPlayerDAO().update(dbMusic)
-        }
+        val state = playerStates[player.uniqueId()] ?: return
+        val session = state.current ?: return
+
+        session.paused = !session.paused
+
+        log(
+            player,
+            if (session.paused)
+                "Paused '${session.track.pieceName}' at tick ${session.tick}"
+            else
+                "Resumed '${session.track.pieceName}' at tick ${session.tick}"
+        )
+
+        updateBossBar(player, session.track, session.tick, session.paused)
+
+        // Persist
+        val dbMusic = MusicPlayerDAO.INSTANCE.findById(player.uniqueId()).orElse(null) ?: return
+        MusicPieceDAO().findById(session.track.key).ifPresent { dbMusic.lastPiece = it }
+        dbMusic.lastTick = session.tick
+        MusicPlayerDAO.INSTANCE.update(dbMusic)
     }
 
     fun tickAll() {
@@ -212,13 +378,14 @@ object MusicPlayer {
             val (uuid, state) = it.next()
 
             // If it's already paused, skip
-            if (state.paused) continue
+            val current = state.current ?: continue
+            if (current.paused) continue
 
             // Try to get the platform player; if not present, pause this state
             val optPlayer = PlatformPlugin.getPlayer(uuid)
             if (optPlayer.isEmpty) {
                 // Player disconnected — pause their music state instead of dropping it
-                state.paused = true
+                current.paused = true
                 log("Paused music for disconnected player: $uuid")
                 continue
             }
@@ -230,37 +397,26 @@ object MusicPlayer {
                 playTick(player)
             } catch (t: Throwable) {
                 t.printStackTrace()
-                log("playTick threw for $uuid: ${t.message}")
+                log("playTick threw for $uuid: ${t.message}", true)
                 // optionally pause to avoid repeated exceptions
-                state.paused = true
+                current.paused = true
                 continue
             }
 
-            state.tick++
+            current.tick++
 
-            if (state.tick >= state.track.totalDuration()) {
-                if (state.queue.isNotEmpty()) {
-                    // start next queued track
-                    play(player, state.queue.removeFirst())
-                } else {
-                    // finished and no queue: hide bossbar and remove state safely via iterator
-                    try {
-                        player.hideBossBar(state.bossBar)
-                    } catch (t: Throwable) {
-                        t.printStackTrace()
-                        log("hideBossBar threw for $uuid: ${t.message}")
-                    }
-                    it.remove() // safe removal while iterating
-                }
+            if (current.tick >= current.track.totalDuration()) {
+                finishCurrent(player)
             } else {
-                updateBossBar(player, state.track, state.tick, false)
+                updateBossBar(player, current.track, current.tick, false)
             }
         }
     }
 
     private fun playTick(player: PlatformPlayer) {
         val state = playerStates[player.uniqueId()] ?: return
-        val events = state.tickEvents[state.tick.toLong()] ?: return
+        val current = state.current ?: return
+        val events = current.tickEvents[current.tick.toLong()] ?: return
         events.forEach { event ->
             log(player, "volume: ${event.volume}")
             val key = NoteKey(player.uniqueId(), event.sound?.name ?: "unknown", event.pitch, event.volume)
@@ -284,7 +440,6 @@ object MusicPlayer {
             } else PlatformPlugin.soundBackend().playNoteFor(player, event, 0.3)
         }
     }
-
 
     private fun updateBossBar(player: PlatformPlayer, track: MusicPiece, tick: Int, paused: Boolean) {
         val genre = track.genre?.uppercase() ?: "default"

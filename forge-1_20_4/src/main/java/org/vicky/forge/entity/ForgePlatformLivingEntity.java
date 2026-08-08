@@ -1,28 +1,24 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import net.kyori.adventure.text.Component;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.entity.navigation.ForgePlatformNavigator;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
+import org.vicky.forge.forgeplatform.item.ForgeItemStack;
+import org.vicky.forge.forgeplatform.player.ForgePlatformPlayer;
 import org.vicky.forge.forgeplatform.useables.ForgeHacks;
-import org.vicky.forge.forgeplatform.useables.ForgePlatformItem;
-import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
-import org.vicky.platform.PlatformItemStack;
-import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.entity.*;
+import org.vicky.platform.item.PlatformItemStack;
+import org.vicky.platform.player.PlatformPlayer;
 
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.ai.attributes.Attribute;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraftforge.registries.ForgeRegistries;
+import java.util.Map;
 
 public class ForgePlatformLivingEntity extends ForgePlatformEntity implements PlatformLivingEntity {
 
@@ -45,26 +41,6 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 	@Override
 	public void setHealth(float v) {
 		ordinal.setHealth(v);
-	}
-
-	@Override
-	public float getAbsorption() {
-		return ordinal.getAbsorptionAmount();
-	}
-
-	@Override
-	public void setAbsorption(float v) {
-		ordinal.setAbsorptionAmount(v);
-	}
-
-	@Override
-	public float getMaxHealth() {
-		return ordinal.getMaxHealth();
-	}
-
-	@Override
-	public float getMaxAbsorption() {
-		return ordinal.getMaxAbsorption();
 	}
 
 	// Make double
@@ -93,36 +69,8 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 	}
 
 	@Override
-	public @Nullable Double getAttributeBaseValue(@NotNull String s) {
-		Attribute pos = ForgeRegistries.ATTRIBUTES.getValue(ResourceLocation.parse(s));
-		if (pos != null)
-			if (ordinal.getAttribute(pos) != null)
-				return ordinal.getAttribute(pos).getBaseValue();
-
-		return null;
-	}
-
-	@Override
-	public @Nullable Double getAttributeValue(@NotNull String s) {
-		return 0.0;
-	}
-
-	@Override
-	public void setAttributeBaseValue(@NotNull String s, double v) {
-		Attribute pos = ForgeRegistries.ATTRIBUTES.getValue(ResourceLocation.parse(s));
-		if (pos != null)
-			if (ordinal.getAttribute(pos) != null)
-				ordinal.getAttribute(pos).setBaseValue(v);
-	}
-
-	@Override
 	public void setLookDistance(double v) {
 
-	}
-
-	@Override
-	public @NotNull Map<String, Double> getAttributes() {
-		return new HashMap<>();
 	}
 
 	@Override
@@ -143,16 +91,6 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 	@Override
 	public void setAirSupply(int i) {
 		ordinal.setAirSupply(i);
-	}
-
-	@Override
-	public void setSpeed(float v) {
-		ordinal.setSpeed(v);
-	}
-
-	@Override
-	public float getSpeed() {
-		return (float) ordinal.getAttributeValue(Attributes.MOVEMENT_SPEED);
 	}
 
 	@Override
@@ -213,23 +151,23 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 
 	@Override
 	public @Nullable PlatformItemStack getOffhandItem() {
-		return new ForgePlatformItem(ordinal.getOffhandItem());
+		return new ForgeItemStack(ordinal.getOffhandItem());
 	}
 
 	@Override
 	public @Nullable PlatformItemStack getMainHandItem() {
-		return new ForgePlatformItem(ordinal.getMainHandItem());
+		return new ForgeItemStack(ordinal.getMainHandItem());
 	}
 
 	@Override
 	public void setItemSlot(@NotNull EquipmentSlot equipmentSlot, @NotNull PlatformItemStack platformItem) {
-		if (platformItem instanceof ForgePlatformItem i)
-			ordinal.setItemSlot(net.minecraft.world.entity.EquipmentSlot.valueOf(equipmentSlot.name()), i.item());
+		if (platformItem instanceof ForgeItemStack i)
+			ordinal.setItemSlot(net.minecraft.world.entity.EquipmentSlot.valueOf(equipmentSlot.name()), i.delegate());
 	}
 
 	@Override
 	public @Nullable PlatformItemStack getItemBySlot(@NotNull EquipmentSlot equipmentSlot) {
-		return new ForgePlatformItem(
+		return new ForgeItemStack(
 				ordinal.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.valueOf(equipmentSlot.name())));
 	}
 
@@ -240,8 +178,8 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 
 	@Override
 	public boolean isHolding(@NotNull PlatformItemStack platformItem) {
-		if (platformItem instanceof ForgePlatformItem i)
-			return ordinal.isHolding(i.item().getItem());
+		if (platformItem instanceof ForgeItemStack i)
+			return ordinal.isHolding(i.delegate().getItem());
 		return false;
 	}
 
@@ -343,5 +281,74 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 	@Override
 	public void setCustomName(@NotNull Component component) {
 		ordinal.setCustomName(AdventureComponentConverter.toNative(component));
+	}
+
+	@Override
+	public void setAttribute(@NotNull AttributeModifier attributeModifier) {
+		if (ForgeHacks.isNativeAttribute(attributeModifier.getAttribute())) {
+			AttributeInstance instance = ordinal.getAttribute(
+					ForgeHacks.fromVicky(attributeModifier.getAttribute())
+			);
+			if (instance == null) {
+				return;
+			}
+
+
+			if (instance.getModifier(ForgeHacks.getFromString(attributeModifier.getId()))
+					!= null)
+				instance.removeModifier(ForgeHacks.getFromString(attributeModifier.getId()));
+
+			instance.addPermanentModifier(
+					new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+							ForgeHacks.getFromString(attributeModifier.getId()),
+							attributeModifier.getId(),
+							attributeModifier.getValue(),
+							ForgeHacks.fromVicky(attributeModifier.getOperation())
+					)
+			);
+		}
+	}
+
+	@Override
+	public @Nullable Double getAttribute(
+			@NotNull PlatformEntityAttribute platformEntityAttribute
+	) {
+		AttributeInstance instance = ordinal.getAttribute(
+				ForgeHacks.fromVicky(platformEntityAttribute)
+		);
+
+		return instance != null ? instance.getValue() : null;
+	}
+
+	@Override
+	public boolean hasAttribute(
+			@NotNull PlatformEntityAttribute platformEntityAttribute
+	) {
+		return ordinal.getAttribute(ForgeHacks.fromVicky(platformEntityAttribute)) != null;
+	}
+
+	@Override
+	public @NotNull Map<PlatformEntityAttribute, Double> getAttributes() {
+		return Map.of();
+	}
+
+	@Override
+	public @Nullable Double getProperty(@NotNull InbuiltEntityProperties inbuiltEntityProperties) {
+		return (double) switch (inbuiltEntityProperties) {
+            case HEALTH -> ordinal.getHealth();
+            case MAX_ABSORPTION -> ordinal.getMaxAbsorption();
+            case ABSORPTION -> ordinal.getAbsorptionAmount();
+            case STEP_HEIGHT -> ordinal.maxUpStep();
+        };
+	}
+
+	@Override
+	public void setProperty(@NotNull InbuiltEntityProperties inbuiltEntityProperties, double value) {
+		switch (inbuiltEntityProperties) {
+            case HEALTH -> ordinal.setHealth((float) value);
+            case ABSORPTION -> ordinal.setAbsorptionAmount((float) value);
+            case STEP_HEIGHT -> ordinal.setMaxUpStep((float) value);
+			case MAX_ABSORPTION -> {}
+        }
 	}
 }

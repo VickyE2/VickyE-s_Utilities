@@ -2,26 +2,44 @@
 package org.vicky.forge.forgeplatform.useables;
 
 import de.pauleff.core.*;
+import de.pauleff.core.Tag;
 import de.pauleff.util.NBTTags;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.*;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
+import org.vicky.platform.entity.ModifierOperation;
+import org.vicky.platform.entity.PlatformEntityAttribute;
 import org.vicky.platform.events.EventPriority;
+import org.vicky.platform.item.InteractionHand;
+import org.vicky.platform.items.CreativeTabMenu;
 import org.vicky.platform.items.EventResult;
-import org.vicky.platform.items.InteractionHand;
+import org.vicky.platform.items.ItemRenderPerspective;
 import org.vicky.platform.utils.IntVec3;
 import org.vicky.platform.world.PlatformLocation;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
-
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class ForgeHacks {
@@ -47,8 +65,10 @@ public class ForgeHacks {
 
 	public static @NotNull net.minecraftforge.eventbus.api.EventPriority fromVicky(EventPriority priority) {
 		return switch (priority) {
-			case LOW -> net.minecraftforge.eventbus.api.EventPriority.LOW;
-			case NORMAL -> net.minecraftforge.eventbus.api.EventPriority.NORMAL;
+            case LOWEST -> net.minecraftforge.eventbus.api.EventPriority.LOWEST;
+            case LOW -> net.minecraftforge.eventbus.api.EventPriority.LOW;
+            case HIGHEST -> net.minecraftforge.eventbus.api.EventPriority.HIGHEST;
+            case NORMAL -> net.minecraftforge.eventbus.api.EventPriority.NORMAL;
 			case HIGH -> net.minecraftforge.eventbus.api.EventPriority.HIGH;
 			// case HIGHEST -> net.minecraftforge.eventbus.api.EventPriority.HIGHEST;
 			// case LOWEST -> net.minecraftforge.eventbus.api.EventPriority.LOWEST;
@@ -89,37 +109,37 @@ public class ForgeHacks {
 		};
     }
 
-	public static @NotNull Tag_Compound toVicky(String name, net.minecraft.nbt.CompoundTag tag) {
+	public static @NotNull Tag_Compound toVicky(String name, CompoundTag tag) {
 		Tag_Compound result = new Tag_Compound(name);
 
 		for (String key : tag.getAllKeys()) {
 			net.minecraft.nbt.Tag value = tag.get(key);
 
-			if (value instanceof net.minecraft.nbt.StringTag) {
+			if (value instanceof StringTag) {
 				result.addString(key, value.getAsString());
 
-			} else if (value instanceof net.minecraft.nbt.IntTag) {
-				result.addInt(key, ((net.minecraft.nbt.IntTag) value).getAsInt());
+			} else if (value instanceof IntTag) {
+				result.addInt(key, ((IntTag) value).getAsInt());
 
-			} else if (value instanceof net.minecraft.nbt.DoubleTag) {
-				result.addDouble(key, ((net.minecraft.nbt.DoubleTag) value).getAsDouble());
+			} else if (value instanceof DoubleTag) {
+				result.addDouble(key, ((DoubleTag) value).getAsDouble());
 
-			} else if (value instanceof net.minecraft.nbt.FloatTag) {
-				result.addFloat(key, ((net.minecraft.nbt.FloatTag) value).getAsFloat());
+			} else if (value instanceof FloatTag) {
+				result.addFloat(key, ((FloatTag) value).getAsFloat());
 
-			} else if (value instanceof net.minecraft.nbt.ByteTag) {
-				result.addByte(key, ((net.minecraft.nbt.ByteTag) value).getAsByte());
+			} else if (value instanceof ByteTag) {
+				result.addByte(key, ((ByteTag) value).getAsByte());
 
-			} else if (value instanceof net.minecraft.nbt.ShortTag) {
-				result.addShort(key, ((net.minecraft.nbt.ShortTag) value).getAsShort());
+			} else if (value instanceof ShortTag) {
+				result.addShort(key, ((ShortTag) value).getAsShort());
 
-			} else if (value instanceof net.minecraft.nbt.LongTag) {
-				result.addLong(key, ((net.minecraft.nbt.LongTag) value).getAsLong());
+			} else if (value instanceof LongTag) {
+				result.addLong(key, ((LongTag) value).getAsLong());
 
-			} else if (value instanceof net.minecraft.nbt.CompoundTag) {
-				result.addTag(toVicky(key, (net.minecraft.nbt.CompoundTag) value));
+			} else if (value instanceof CompoundTag) {
+				result.addTag(toVicky(key, (CompoundTag) value));
 
-			} else if (value instanceof net.minecraft.nbt.ListTag mcList) {
+			} else if (value instanceof ListTag mcList) {
 				Tag_List list = new Tag_List(key, NBTTags.Tag_Compound.getId());
 
                 for (net.minecraft.nbt.Tag item : mcList) {
@@ -133,31 +153,31 @@ public class ForgeHacks {
 		return result;
 	}
 	public static @NotNull Tag<?> toVicky(net.minecraft.nbt.Tag tag) {
-		if (tag instanceof net.minecraft.nbt.StringTag) {
+		if (tag instanceof StringTag) {
 			return new Tag_String("", tag.getAsString());
 
-		} else if (tag instanceof net.minecraft.nbt.IntTag) {
-			return new Tag_Int("", ((net.minecraft.nbt.IntTag) tag).getAsInt());
+		} else if (tag instanceof IntTag) {
+			return new Tag_Int("", ((IntTag) tag).getAsInt());
 
-		} else if (tag instanceof net.minecraft.nbt.DoubleTag) {
-			return new Tag_Double("", ((net.minecraft.nbt.DoubleTag) tag).getAsDouble());
+		} else if (tag instanceof DoubleTag) {
+			return new Tag_Double("", ((DoubleTag) tag).getAsDouble());
 
-		} else if (tag instanceof net.minecraft.nbt.FloatTag) {
-			return new Tag_Float("", ((net.minecraft.nbt.FloatTag) tag).getAsFloat());
+		} else if (tag instanceof FloatTag) {
+			return new Tag_Float("", ((FloatTag) tag).getAsFloat());
 
-		} else if (tag instanceof net.minecraft.nbt.ByteTag) {
-			return new Tag_Byte("", ((net.minecraft.nbt.ByteTag) tag).getAsByte());
+		} else if (tag instanceof ByteTag) {
+			return new Tag_Byte("", ((ByteTag) tag).getAsByte());
 
-		} else if (tag instanceof net.minecraft.nbt.ShortTag) {
-			return new Tag_Short("", ((net.minecraft.nbt.ShortTag) tag).getAsShort());
+		} else if (tag instanceof ShortTag) {
+			return new Tag_Short("", ((ShortTag) tag).getAsShort());
 
-		} else if (tag instanceof net.minecraft.nbt.LongTag) {
-			return new Tag_Long("", ((net.minecraft.nbt.LongTag) tag).getAsLong());
+		} else if (tag instanceof LongTag) {
+			return new Tag_Long("", ((LongTag) tag).getAsLong());
 
-		} else if (tag instanceof net.minecraft.nbt.CompoundTag) {
-			return toVicky("", (net.minecraft.nbt.CompoundTag) tag);
+		} else if (tag instanceof CompoundTag) {
+			return toVicky("", (CompoundTag) tag);
 
-		} else if (tag instanceof net.minecraft.nbt.ListTag mcList) {
+		} else if (tag instanceof ListTag mcList) {
 			Tag_List list = new Tag_List("", NBTTags.Tag_Compound.getId());
 
             for (net.minecraft.nbt.Tag value : mcList) {
@@ -171,25 +191,25 @@ public class ForgeHacks {
 	}
 	public static @NotNull net.minecraft.nbt.Tag fromVicky(Tag<?> tag) {
 		if (tag instanceof Tag_String value) {
-			return net.minecraft.nbt.StringTag.valueOf(value.getData());
+			return StringTag.valueOf(value.getData());
 
 		} else if (tag instanceof Tag_Int value) {
-			return net.minecraft.nbt.IntTag.valueOf(value.getData());
+			return IntTag.valueOf(value.getData());
 
 		} else if (tag instanceof Tag_Double value) {
-			return net.minecraft.nbt.DoubleTag.valueOf(value.getData());
+			return DoubleTag.valueOf(value.getData());
 
 		} else if (tag instanceof Tag_Float value) {
-			return net.minecraft.nbt.FloatTag.valueOf(value.getData());
+			return FloatTag.valueOf(value.getData());
 
 		} else if (tag instanceof Tag_Byte value) {
-			return net.minecraft.nbt.ByteTag.valueOf(value.getData());
+			return ByteTag.valueOf(value.getData());
 
 		} else if (tag instanceof Tag_Short value) {
-			return net.minecraft.nbt.ShortTag.valueOf(value.getData());
+			return ShortTag.valueOf(value.getData());
 
 		} else if (tag instanceof Tag_Long value) {
-			return net.minecraft.nbt.LongTag.valueOf(value.getData());
+			return LongTag.valueOf(value.getData());
 
 		} else if (tag instanceof Tag_Compound value) {
 			return fromVicky(value);
@@ -198,34 +218,34 @@ public class ForgeHacks {
 			return convertListFromVicky(mcList);
 		}
 
-		return net.minecraft.nbt.StringTag.valueOf(tag.toString()); // fallback
+		return StringTag.valueOf(tag.toString()); // fallback
 	}
 	public static @NotNull Tag<?> toVicky(String key, net.minecraft.nbt.Tag tag) {
-		if (tag instanceof net.minecraft.nbt.StringTag) {
+		if (tag instanceof StringTag) {
 			return new Tag_String(key, tag.getAsString());
 
-		} else if (tag instanceof net.minecraft.nbt.IntTag) {
-			return new Tag_Int(key, ((net.minecraft.nbt.IntTag) tag).getAsInt());
+		} else if (tag instanceof IntTag) {
+			return new Tag_Int(key, ((IntTag) tag).getAsInt());
 
-		} else if (tag instanceof net.minecraft.nbt.DoubleTag) {
-			return new Tag_Double(key, ((net.minecraft.nbt.DoubleTag) tag).getAsDouble());
+		} else if (tag instanceof DoubleTag) {
+			return new Tag_Double(key, ((DoubleTag) tag).getAsDouble());
 
-		} else if (tag instanceof net.minecraft.nbt.FloatTag) {
-			return new Tag_Float(key, ((net.minecraft.nbt.FloatTag) tag).getAsFloat());
+		} else if (tag instanceof FloatTag) {
+			return new Tag_Float(key, ((FloatTag) tag).getAsFloat());
 
-		} else if (tag instanceof net.minecraft.nbt.ByteTag) {
-			return new Tag_Byte(key, ((net.minecraft.nbt.ByteTag) tag).getAsByte());
+		} else if (tag instanceof ByteTag) {
+			return new Tag_Byte(key, ((ByteTag) tag).getAsByte());
 
-		} else if (tag instanceof net.minecraft.nbt.ShortTag) {
-			return new Tag_Short(key, ((net.minecraft.nbt.ShortTag) tag).getAsShort());
+		} else if (tag instanceof ShortTag) {
+			return new Tag_Short(key, ((ShortTag) tag).getAsShort());
 
-		} else if (tag instanceof net.minecraft.nbt.LongTag) {
-			return new Tag_Long(key, ((net.minecraft.nbt.LongTag) tag).getAsLong());
+		} else if (tag instanceof LongTag) {
+			return new Tag_Long(key, ((LongTag) tag).getAsLong());
 
-		} else if (tag instanceof net.minecraft.nbt.CompoundTag) {
-			return toVicky(key, (net.minecraft.nbt.CompoundTag) tag);
+		} else if (tag instanceof CompoundTag) {
+			return toVicky(key, (CompoundTag) tag);
 
-		} else if (tag instanceof net.minecraft.nbt.ListTag mcList) {
+		} else if (tag instanceof ListTag mcList) {
 			Tag_List list = new Tag_List(key, NBTTags.Tag_Compound.getId());
 
             for (net.minecraft.nbt.Tag value : mcList) {
@@ -238,8 +258,8 @@ public class ForgeHacks {
 		return new Tag_String(key, tag.toString()); // fallback
 	}
 
-	public static @NotNull net.minecraft.nbt.CompoundTag fromVicky(Tag_Compound tag) {
-		net.minecraft.nbt.CompoundTag result = new net.minecraft.nbt.CompoundTag();
+	public static @NotNull CompoundTag fromVicky(Tag_Compound tag) {
+		CompoundTag result = new CompoundTag();
 
 		ArrayList<Tag<?>> data = tag.getData();
 
@@ -277,8 +297,8 @@ public class ForgeHacks {
 
 		return result;
 	}
-	private static net.minecraft.nbt.ListTag convertListFromVicky(Tag_List list) {
-		net.minecraft.nbt.ListTag result = new net.minecraft.nbt.ListTag();
+	private static ListTag convertListFromVicky(Tag_List list) {
+		ListTag result = new ListTag();
 
 		ArrayList<Tag<?>> data = list.getData();
 
@@ -290,25 +310,25 @@ public class ForgeHacks {
 	}
 	private static net.minecraft.nbt.Tag convertListElementFromVicky(Tag<?> tag) {
 		if (tag instanceof Tag_String) {
-			return net.minecraft.nbt.StringTag.valueOf((String) tag.getData());
+			return StringTag.valueOf((String) tag.getData());
 
 		} else if (tag instanceof Tag_Int) {
-			return net.minecraft.nbt.IntTag.valueOf((Integer) tag.getData());
+			return IntTag.valueOf((Integer) tag.getData());
 
 		} else if (tag instanceof Tag_Double) {
-			return net.minecraft.nbt.DoubleTag.valueOf((Double) tag.getData());
+			return DoubleTag.valueOf((Double) tag.getData());
 
 		} else if (tag instanceof Tag_Float) {
-			return net.minecraft.nbt.FloatTag.valueOf((Float) tag.getData());
+			return FloatTag.valueOf((Float) tag.getData());
 
 		} else if (tag instanceof Tag_Byte) {
-			return net.minecraft.nbt.ByteTag.valueOf((Byte) tag.getData());
+			return ByteTag.valueOf((Byte) tag.getData());
 
 		} else if (tag instanceof Tag_Short) {
-			return net.minecraft.nbt.ShortTag.valueOf((Short) tag.getData());
+			return ShortTag.valueOf((Short) tag.getData());
 
 		} else if (tag instanceof Tag_Long) {
-			return net.minecraft.nbt.LongTag.valueOf((Long) tag.getData());
+			return LongTag.valueOf((Long) tag.getData());
 
 		} else if (tag instanceof Tag_Compound) {
 			return fromVicky((Tag_Compound) tag);
@@ -317,44 +337,44 @@ public class ForgeHacks {
 			return convertListFromVicky((Tag_List) tag);
 		}
 
-		return net.minecraft.nbt.StringTag.valueOf(tag.getData().toString()); // fallback
+		return StringTag.valueOf(tag.getData().toString()); // fallback
 	}
 
 	public static @NotNull net.minecraft.nbt.Tag toNBT(Object value) {
 		if (value instanceof Integer i) {
-			return net.minecraft.nbt.IntTag.valueOf(i);
+			return IntTag.valueOf(i);
 
 		}
 		else if (value instanceof Double d) {
-			return net.minecraft.nbt.DoubleTag.valueOf(d);
+			return DoubleTag.valueOf(d);
 
 		}
 		else if (value instanceof Long d) {
-			return net.minecraft.nbt.LongTag.valueOf(d);
+			return LongTag.valueOf(d);
 
 		}
 		else if (value instanceof Float d) {
-			return net.minecraft.nbt.FloatTag.valueOf(d);
+			return FloatTag.valueOf(d);
 
 		}
 		else if (value instanceof String s) {
-			return net.minecraft.nbt.StringTag.valueOf(s);
+			return StringTag.valueOf(s);
 
 		}
 		else if (value instanceof Boolean b) {
-			return net.minecraft.nbt.ByteTag.valueOf((byte) (b ? 1 : 0));
+			return ByteTag.valueOf((byte) (b ? 1 : 0));
 
 		}
 		else if (value instanceof Byte b) {
-			return net.minecraft.nbt.ByteTag.valueOf(b);
+			return ByteTag.valueOf(b);
 
 		}
 		else if (value instanceof Short b) {
-			return net.minecraft.nbt.ShortTag.valueOf(b);
+			return ShortTag.valueOf(b);
 
 		}
 		else if (value instanceof Map<?, ?> map) {
-			net.minecraft.nbt.CompoundTag compound = new net.minecraft.nbt.CompoundTag();
+			CompoundTag compound = new CompoundTag();
 			for (Map.Entry<?, ?> entry : map.entrySet()) {
 				if (entry.getKey() instanceof String key) {
 					compound.put(key, toNBT(entry.getValue()));
@@ -364,7 +384,7 @@ public class ForgeHacks {
 
 		}
 		else if (value instanceof List<?> list) {
-			net.minecraft.nbt.ListTag listTag = new net.minecraft.nbt.ListTag();
+			ListTag listTag = new ListTag();
 			for (Object o : list) {
 				listTag.add(toNBT(o));
 			}
@@ -373,34 +393,34 @@ public class ForgeHacks {
 		else if (value instanceof Tag<?> tag) {
 			return toNBT(tag.getData());
 		}
-		else if (value == null) return null;
+		else if (value == null) return StringTag.valueOf("null");
 
 		// LAST RESORT
-		return net.minecraft.nbt.StringTag.valueOf(value.toString());
+		return StringTag.valueOf(value.toString());
 	}
 	public static @NotNull Object fromNBT(net.minecraft.nbt.Tag tag) {
 
-		if (tag instanceof net.minecraft.nbt.IntTag t) {
+		if (tag instanceof IntTag t) {
 			return t.getAsInt();
 
 		}
-		else if (tag instanceof net.minecraft.nbt.DoubleTag t) {
+		else if (tag instanceof DoubleTag t) {
 			return t.getAsDouble();
 
 		}
-		else if (tag instanceof net.minecraft.nbt.LongTag t) {
+		else if (tag instanceof LongTag t) {
 			return t.getAsLong();
 
 		}
-		else if (tag instanceof net.minecraft.nbt.FloatTag t) {
+		else if (tag instanceof FloatTag t) {
 			return t.getAsFloat();
 
 		}
-		else if (tag instanceof net.minecraft.nbt.StringTag t) {
+		else if (tag instanceof StringTag t) {
 			return t.getAsString();
 
 		}
-		else if (tag instanceof net.minecraft.nbt.ByteTag t) {
+		else if (tag instanceof ByteTag t) {
 			byte b = t.getAsByte();
 			// Optional: interpret as boolean if it's 0/1
 			if (b == 0 || b == 1) {
@@ -409,11 +429,11 @@ public class ForgeHacks {
 			return b;
 
 		}
-		else if (tag instanceof net.minecraft.nbt.ShortTag t) {
+		else if (tag instanceof ShortTag t) {
 			return t.getAsShort();
 
 		}
-		else if (tag instanceof net.minecraft.nbt.CompoundTag compound) {
+		else if (tag instanceof CompoundTag compound) {
 			Map<String, Object> map = new HashMap<>();
 
 			for (String key : compound.getAllKeys()) {
@@ -423,7 +443,7 @@ public class ForgeHacks {
 			return map;
 
 		}
-		else if (tag instanceof net.minecraft.nbt.ListTag list) {
+		else if (tag instanceof ListTag list) {
 			List<Object> result = new ArrayList<>();
 
 			for (int i = 0; i < list.size(); i++) {
@@ -473,4 +493,152 @@ public class ForgeHacks {
 	private static <T> T cast(Object obj) {
 		return (T) obj;
 	}
+
+    public static MutableComponent fromVicky(net.kyori.adventure.text.Component component) {
+		String jsonString = GsonComponentSerializer.gson().serialize(component);
+		MutableComponent forgeComponent = MutableComponent.Serializer.fromJson(jsonString);
+		return forgeComponent != null ? forgeComponent : Component.empty();
+    }
+
+	public static boolean isNativeAttribute(PlatformEntityAttribute type) {
+		if (type instanceof PlatformEntityAttribute.Inbuilt inbuilt)
+			return switch (inbuilt.getType()) {
+				case MAX_HEALTH,
+					 ATTACK_DAMAGE,
+					 ATTACK_SPEED,
+					 ARMOR,
+					 ARMOR_TOUGHNESS,
+					 KNOCKBACK_RESISTANCE,
+					 LUCK,
+					 MOVEMENT_SPEED,
+					 FLYING_SPEED,
+					 FOLLOW_RANGE,
+					 ATTACK_KNOCKBACK,
+					 SPAWN_REINFORCEMENTS_CHANCE,
+					 JUMP_STRENGTH-> true;
+				default -> false;
+			};
+
+		return false;
+	}
+
+    public static Attribute fromVicky(PlatformEntityAttribute attribute) {
+		if (attribute instanceof PlatformEntityAttribute.Inbuilt inbuilt) {
+			return switch (inbuilt.getType()) {
+                case MAX_HEALTH -> Attributes.MAX_HEALTH;
+                case ATTACK_DAMAGE -> Attributes.ATTACK_DAMAGE;
+                case ATTACK_SPEED -> Attributes.ATTACK_SPEED;
+                case ARMOR -> Attributes.ARMOR;
+                case ARMOR_TOUGHNESS -> Attributes.ARMOR_TOUGHNESS;
+                case KNOCKBACK_RESISTANCE -> Attributes.KNOCKBACK_RESISTANCE;
+                case LUCK -> Attributes.LUCK;
+                case MOVEMENT_SPEED -> Attributes.MOVEMENT_SPEED;
+                case FLYING_SPEED -> Attributes.FLYING_SPEED;
+                case FOLLOW_RANGE -> Attributes.FOLLOW_RANGE;
+                case ATTACK_KNOCKBACK -> Attributes.ATTACK_KNOCKBACK;
+                case SPAWN_REINFORCEMENTS_CHANCE -> Attributes.SPAWN_REINFORCEMENTS_CHANCE;
+                case JUMP_STRENGTH -> Attributes.JUMP_STRENGTH;
+				default -> null;
+            };
+		}
+		if (attribute instanceof PlatformEntityAttribute.Custom custom)
+			return ForgeRegistries.ATTRIBUTES.getValue(fromVicky(custom.getId()));
+
+		// should never reach here
+		return null;
+    }
+
+	public static UUID getFromString(String determiner) {
+		return UUID.nameUUIDFromBytes(
+				determiner.getBytes(StandardCharsets.UTF_8)
+		);
+	}
+
+    public static AttributeModifier.Operation fromVicky(ModifierOperation operation) {
+        return switch (operation) {
+            case ADD_VALUE -> AttributeModifier.Operation.ADDITION;
+            case ADD_MULTIPLY_TOTAL -> AttributeModifier.Operation.MULTIPLY_TOTAL;
+            case ADD_MULTIPLY_BASE -> AttributeModifier.Operation.MULTIPLY_BASE;
+        };
+    }
+
+	public static ResourceKey<CreativeModeTab> fromVicky(
+            CreativeTabMenu.Inbuilt tab
+    ) {
+		if (tab instanceof CreativeTabMenu.Inbuilt.BuildingBlocks) {
+			return CreativeModeTabs.BUILDING_BLOCKS;
+		}
+
+		if (tab instanceof CreativeTabMenu.Inbuilt.ColoredBlocks) {
+			return CreativeModeTabs.COLORED_BLOCKS;
+		}
+
+		if (tab instanceof CreativeTabMenu.Inbuilt.NaturalBlocks) {
+			return CreativeModeTabs.NATURAL_BLOCKS;
+		}
+
+		if (tab instanceof CreativeTabMenu.Inbuilt.FunctionalBlocks) {
+			return CreativeModeTabs.FUNCTIONAL_BLOCKS;
+		}
+
+		if (tab instanceof CreativeTabMenu.Inbuilt.RedstoneBlocks) {
+			return CreativeModeTabs.REDSTONE_BLOCKS;
+		}
+
+		if (tab instanceof CreativeTabMenu.Inbuilt.Tools) {
+			return CreativeModeTabs.TOOLS_AND_UTILITIES;
+		}
+
+		if (tab instanceof CreativeTabMenu.Inbuilt.Combat) {
+			return CreativeModeTabs.COMBAT;
+		}
+
+		if (tab instanceof CreativeTabMenu.Inbuilt.FoodAndDrinks) {
+			return CreativeModeTabs.FOOD_AND_DRINKS;
+		}
+
+		if (tab instanceof CreativeTabMenu.Inbuilt.Ingredients) {
+			return CreativeModeTabs.INGREDIENTS;
+		}
+
+		if (tab instanceof CreativeTabMenu.Inbuilt.SpawnEggs) {
+			return CreativeModeTabs.SPAWN_EGGS;
+		}
+
+		if (tab instanceof CreativeTabMenu.Inbuilt.Operator) {
+			return CreativeModeTabs.OP_BLOCKS;
+		}
+
+		return null;
+	}
+
+    public static InteractionHand interactionHand(EquipmentSlot data) {
+        return switch (data) {
+            case MAINHAND -> InteractionHand.MAIN_HAND;
+            case OFFHAND -> InteractionHand.OFF_HAND;
+            case FEET, LEGS, CHEST, HEAD -> null;
+        };
+    }
+
+    public static double doubles(EquipmentSlot data) {
+        return switch (data) {
+            case MAINHAND -> 0.0;
+            case OFFHAND -> 1.0;
+            case FEET, LEGS, CHEST, HEAD -> 0.0;
+        };
+    }
+
+    public static ItemRenderPerspective toVicky(ItemDisplayContext data) {
+        return switch (data) {
+            case NONE -> ItemRenderPerspective.NONE;
+            case THIRD_PERSON_LEFT_HAND -> ItemRenderPerspective.THIRD_PERSON_LEFT_HAND;
+            case THIRD_PERSON_RIGHT_HAND -> ItemRenderPerspective.THIRD_PERSON_RIGHT_HAND;
+            case FIRST_PERSON_LEFT_HAND -> ItemRenderPerspective.FIRST_PERSON_LEFT_HAND;
+            case FIRST_PERSON_RIGHT_HAND -> ItemRenderPerspective.FIRST_PERSON_RIGHT_HAND;
+            case HEAD -> ItemRenderPerspective.HEAD;
+            case GUI -> ItemRenderPerspective.GUI;
+            case GROUND -> ItemRenderPerspective.GROUND;
+            case FIXED -> ItemRenderPerspective.FIXED;
+        };
+    }
 }

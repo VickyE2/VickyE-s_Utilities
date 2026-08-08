@@ -1,39 +1,36 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity;
 
-import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
-
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
+import de.pauleff.core.Tag_Compound;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.forgeplatform.ForgePlatformAnimationController;
 import org.vicky.forge.forgeplatform.ForgePlatformLocationAdapter;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
+import org.vicky.forge.forgeplatform.player.ForgePlatformPlayer;
 import org.vicky.forge.forgeplatform.useables.ForgeHacks;
-import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
 import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
 import org.vicky.forge.forgeplatform.useables.ForgeVec3;
-import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.defaults.AABB;
 import org.vicky.platform.entity.PlatformAnimationController;
 import org.vicky.platform.entity.PlatformEntity;
+import org.vicky.platform.player.PlatformPlayer;
 import org.vicky.platform.utils.Direction;
 import org.vicky.platform.utils.ResourceLocation;
 import org.vicky.platform.utils.Vec3;
 import org.vicky.platform.world.PlatformLocation;
 import org.vicky.platform.world.PlatformWorld;
 
-import de.pauleff.core.*;
-import net.minecraft.nbt.*;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.player.Player;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 
 public class ForgePlatformEntity implements PlatformEntity {
 

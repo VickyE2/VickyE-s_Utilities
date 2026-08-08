@@ -1,23 +1,23 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform.useables;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
-
+import net.kyori.adventure.text.Component;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
+import org.vicky.forge.forgeplatform.player.ForgePlatformPlayer;
 import org.vicky.forge.network.PacketHandler;
 import org.vicky.forge.network.registeredpackets.CreateSSBossBar;
 import org.vicky.forge.network.registeredpackets.RemoveSSBossBar;
 import org.vicky.forge.network.registeredpackets.UpdateSSBossBar;
 import org.vicky.platform.IColor;
 import org.vicky.platform.PlatformBossBar;
-import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.defaults.BossBarOverlay;
+import org.vicky.platform.player.PlatformPlayer;
 import org.vicky.platform.utils.BossBarDescriptor;
 
-import net.kyori.adventure.text.Component;
-import net.minecraft.resources.ResourceLocation;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 public class MusicScreenSlidingBossBar implements PlatformBossBar {
 	private final UUID id = UUID.randomUUID();

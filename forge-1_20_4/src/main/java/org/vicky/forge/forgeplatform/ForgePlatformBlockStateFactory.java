@@ -1,21 +1,19 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform;
 
-import org.jetbrains.annotations.NotNull;
-import org.vicky.VickyUtilitiesForge;
-import org.vicky.forge.forgeplatform.useables.ForgePlatformBlockStateAdapter;
-import org.vicky.platform.world.PlatformBlockState;
-import org.vicky.platform.world.PlatformBlockStateFactory;
-
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.NotNull;
+import org.vicky.forge.VickyUtilitiesForge;
+import org.vicky.forge.forgeplatform.useables.ForgePlatformBlockStateAdapter;
+import org.vicky.platform.world.PlatformBlockState;
+import org.vicky.platform.world.PlatformBlockStateFactory;
 
 public class ForgePlatformBlockStateFactory implements PlatformBlockStateFactory {
 	private static HolderLookup.Provider lookup;

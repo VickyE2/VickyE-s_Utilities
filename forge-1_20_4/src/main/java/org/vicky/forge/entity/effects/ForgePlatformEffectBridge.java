@@ -1,26 +1,24 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity.effects;
 
-import static org.vicky.VickyUtilitiesForge.LOGGER;
-import static org.vicky.VickyUtilitiesForge.MODID;
-import static org.vicky.forge.forgeplatform.useables.ForgeHacks.fromVicky;
-import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
 import org.vicky.platform.entity.*;
 import org.vicky.platform.utils.ResourceLocation;
 
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.effect.MobEffect;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static org.vicky.forge.VickyUtilitiesForge.LOGGER;
+import static org.vicky.forge.forgeplatform.useables.ForgeHacks.fromVicky;
+import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 
 // make universal effect an interface
 public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlatformLivingEntity> {
@@ -44,7 +42,7 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
 							}, (ctx) -> {
 								if (ctx.getEntity() instanceof ForgePlatformLivingEntity e)
 									effect.applyEffectTick(e.ordinal, ctx.getAmplifier());
-							}));
+							}, 20));
 		});
 	}
 
@@ -111,7 +109,7 @@ public class ForgePlatformEffectBridge implements PlatformEffectBridge<ForgePlat
 							}, (ctx) -> {
 								if (ctx.getEntity() instanceof ForgePlatformLivingEntity e)
 									found.applyEffectTick(e.ordinal, ctx.getAmplifier());
-							}));
+							}, 20));
 			return new RegisteredUniversalEffect(ForgePlatformEffect.from(found));
 		}
 

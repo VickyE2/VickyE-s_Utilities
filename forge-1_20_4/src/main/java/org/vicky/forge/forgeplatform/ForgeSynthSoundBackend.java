@@ -1,13 +1,9 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform;
 
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-
 import org.jetbrains.annotations.NotNull;
 import org.vicky.forge.client.audio.InstrumentMapper;
-import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
+import org.vicky.forge.forgeplatform.player.ForgePlatformPlayer;
 import org.vicky.forge.network.PacketHandler;
 import org.vicky.forge.network.registeredpackets.NoteOffPacket;
 import org.vicky.forge.network.registeredpackets.NoteOnPacket;
@@ -15,9 +11,13 @@ import org.vicky.music.utils.MusicEvent;
 import org.vicky.musicPlayer.ADSR;
 import org.vicky.musicPlayer.DefaultAdsrMapper;
 import org.vicky.musicPlayer.PlatformSoundBackend;
-import org.vicky.platform.PlatformPlayer;
 import org.vicky.platform.PlatformPlugin;
+import org.vicky.platform.player.PlatformPlayer;
 import org.vicky.platform.utils.SoundCategory;
+
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 
 public class ForgeSynthSoundBackend implements PlatformSoundBackend {
 	private static final Set<Integer> keys = new HashSet<>();

@@ -133,7 +133,7 @@ configurations.configureEach {
 jarJar.enable()
 
 tasks.named('jarJar').configure {
-    finalizedBy 'reobfJar'
+    finalizedBy 'reobfJarJar'
 }
 
 // Make 'build' also include the jarJar'd jar
@@ -166,14 +166,18 @@ dependencies {
 
     implementation "io.github.classgraph:classgraph:4.8.154"
     compileOnly fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}")
+    compileOnly "com.eliotlash.mclib:mclib:20"
 
-    jarJar("io.github.classgraph:classgraph:[4.8.154]")
+    jarJar("io.github.classgraph:classgraph:[4.8.154]") {
+        exclude group: "org.checkerframework", module: "checker-qual"
+    }
+
     jarJar("io.github.vickye2:vicky-utils-core:[0.0.1]")
-    jarJar("org.jetbrains.kotlin:kotlin-stdlib:[1.9.10]")
+    jarJar("org.jetbrains.kotlin:kotlin-stdlib:[2.3.10]")
     jarJar("org.xerial:sqlite-jdbc:[3.48.0.0]")
 
     jarJar("net.kyori:examination-api:[1.3.0]")
-    jarJar("net.kyori:examination-string:[1.3.0]", "net.kyori:examination-string:[1.3.0]", "net.kyori:examination-string:[1.3.0]", "net.kyori:examination-string:[1.3.0]", "net.kyori:examination-string:[1.3.0]", "net.kyori:examination-string:[1.3.0]", "net.kyori:examination-string:[1.3.0]")
+    jarJar("net.kyori:examination-string:[1.3.0]")
     jarJar("net.kyori:adventure-api:[4.17.0]")
     jarJar("net.kyori:adventure-key:[4.17.0]")
     jarJar("net.kyori:adventure-text-serializer-plain:[4.17.0]")
@@ -192,9 +196,13 @@ dependencies {
     jarJar("com.fasterxml.jackson.core:jackson-databind:[2.15.2]")
     jarJar("com.fasterxml.jackson.core:jackson-annotations:[2.15.2]")
 
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.3.10"
+
     implementation("io.github.vickye2:vicky-utils-core:[0.0.1]")
+
     // compileOnly("org.jetbrains.kotlin:kotlin-stdlib:[1.9.10]")
     // compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:[1.9.10]")
+
     implementation("org.xerial:sqlite-jdbc:[3.48.0.0]")
     implementation("net.kyori:examination-api:[1.3.0]")
     implementation("net.kyori:examination-string:[1.3.0]")
@@ -203,10 +211,12 @@ dependencies {
     implementation("net.kyori:adventure-text-serializer-plain:[4.17.0]")
     implementation("net.kyori:adventure-text-serializer-gson:[4.17.0]")
     implementation("io.leangen.geantyref:geantyref:[1.3.13]")
+
     implementation("org.spongepowered:configurate-yaml:[4.1.2]")
     implementation("org.spongepowered:configurate-core:[4.1.2]")
     implementation("org.spongepowered:configurate-jackson:[4.1.2]")
     implementation("org.spongepowered:configurate-xml:[4.1.2]")
+
     implementation("com.fasterxml.jackson.core:jackson-core:[2.15.2]")
     implementation("com.fasterxml.jackson.core:jackson-databind:[2.15.2]")
     implementation("com.fasterxml.jackson.core:jackson-annotations:[2.15.2]")
@@ -223,11 +233,6 @@ tasks.named('processResources', ProcessResources).configure {
         exclude '**/META-INF/**'
         exclude '**/module-info.class'
 
-        eachFile { FileCopyDetails details ->
-            if (details.path.startsWith("assets/core/models/")) {
-                details.path = details.path.replace("assets/core/models/", "assets/core/geo/models/")
-            }
-        }
         includeEmptyDirs = false
     }
     var replaceProperties = [

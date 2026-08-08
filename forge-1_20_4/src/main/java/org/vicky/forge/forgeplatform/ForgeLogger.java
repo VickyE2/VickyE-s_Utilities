@@ -1,7 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform;
 
-import org.vicky.VickyUtilitiesForge;
+import org.vicky.forge.VickyUtilitiesForge;
 import org.vicky.platform.PlatformLogger;
 
 public class ForgeLogger implements PlatformLogger {

@@ -1,8 +1,6 @@
-package org.vicky.forge.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.item;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -19,6 +17,9 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
+import org.vicky.forge.forgeplatform.player.ForgePlatformPlayer;
+import org.vicky.forge.forgeplatform.useables.ForgeHacks;
+import org.vicky.forge.forgeplatform.useables.ForgePlatformBlockAdapter;
 import org.vicky.platform.items.ItemDescriptor;
 
 import java.util.List;
@@ -51,7 +52,7 @@ public class DescriptorItem extends Item {
                                                            @NotNull LivingEntity livingEntity, @NotNull InteractionHand hand) {
         if (player instanceof ServerPlayer sp)
             return ForgeHacks.fromVicky(descriptor.getHandler().onInteractLiving(
-                    new ForgePlatformItem(stack),
+                    new ForgeItemStack(stack),
                     ForgeHacks.toVicky(hand),
                     ForgePlatformPlayer.adapt(sp),
                     ForgePlatformLivingEntity.from(livingEntity)
@@ -62,7 +63,7 @@ public class DescriptorItem extends Item {
 
     @Override
     public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slot, boolean selected) {
-        var platformStack = new ForgePlatformItem(stack);
+        var platformStack = new ForgeItemStack(stack);
         if (entity instanceof LivingEntity livingEntity) {
             descriptor.getHandler().whenInInventory(
                     platformStack,
@@ -101,7 +102,7 @@ public class DescriptorItem extends Item {
         var stack = player.getItemInHand(hand);
         if (player instanceof ServerPlayer sp) {
             var result = descriptor.getHandler().onUse(
-                    new ForgePlatformItem(stack),
+                    new ForgeItemStack(stack),
                     ForgeHacks.toVicky(hand),
                     ForgePlatformPlayer.adapt(sp)
             );
@@ -120,7 +121,7 @@ public class DescriptorItem extends Item {
     public @NotNull InteractionResult useOn(@NotNull UseOnContext ctx) {
         if (ctx.getPlayer() instanceof ServerPlayer sp)
             return ForgeHacks.fromVicky(descriptor.getHandler().onUseOn(
-                    new ForgePlatformItem(ctx.getItemInHand()),
+                    new ForgeItemStack(ctx.getItemInHand()),
                     ForgeHacks.toVicky(ctx.getHand()),
                     ForgePlatformLivingEntity.from(sp),
                     new ForgePlatformBlockAdapter(

@@ -1,13 +1,6 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.network.registeredpackets;
 
-import java.util.UUID;
-
-import org.jetbrains.annotations.Nullable;
-import org.vicky.VickyUtilitiesForge;
-import org.vicky.forge.client.ClientIncomingPacketHandler;
-import org.vicky.forge.network.Packetable;
-
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.minecraft.network.FriendlyByteBuf;
@@ -15,9 +8,19 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.network.CustomPayloadEvent;
 import net.minecraftforge.fml.DistExecutor;
+import org.jetbrains.annotations.Nullable;
+import org.vicky.forge.VickyUtilitiesForge;
+import org.vicky.forge.client.ClientIncomingPacketHandler;
+import org.vicky.forge.network.Packetable;
 
-public record CreateSSBossBar(UUID id, Component title, Component subTitle, float progress, String hex,
-		@Nullable ResourceLocation image) implements Packetable {
+import java.util.UUID;
+
+public final class CreateSSBossBar extends BossBarMessage implements Packetable {
+
+	public CreateSSBossBar(UUID id, Component title, Component subTitle, float progress, String hex, @Nullable ResourceLocation image) {
+		super(id, title, subTitle, progress, hex, image);
+	}
+
 	public static CreateSSBossBar decode(FriendlyByteBuf buf) {
 		UUID id = buf.readUUID();
 
@@ -61,31 +64,5 @@ public record CreateSSBossBar(UUID id, Component title, Component subTitle, floa
 			ClientIncomingPacketHandler.proceedWithSSBossBar(msg);
 		}));
 		ctx.setPacketHandled(true);
-	}
-
-	public void encode(FriendlyByteBuf buf) {
-		buf.writeUUID(id);
-
-		// title - assume not null, but still safe
-		buf.writeUtf(GsonComponentSerializer.gson().serialize(title));
-
-		// subTitle - nullable -> write a boolean flag then the string
-		if (subTitle != null) {
-			buf.writeBoolean(true);
-			buf.writeUtf(GsonComponentSerializer.gson().serialize(subTitle));
-		} else {
-			buf.writeBoolean(false);
-		}
-
-		buf.writeFloat(progress);
-		buf.writeUtf(hex == null ? "" : hex);
-
-		// image - nullable -> boolean flag then the string
-		if (image != null) {
-			buf.writeBoolean(true);
-			buf.writeUtf(image.toString());
-		} else {
-			buf.writeBoolean(false);
-		}
 	}
 }

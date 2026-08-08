@@ -1,17 +1,16 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.network.registeredpackets;
 
-import java.util.Optional;
-
-import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraftforge.event.network.CustomPayloadEvent;
+import org.vicky.forge.forgeplatform.player.ForgePlatformPlayer;
 import org.vicky.forge.network.Packetable;
 import org.vicky.music.MusicRegistry;
 import org.vicky.music.utils.MusicPiece;
 import org.vicky.musicPlayer.MusicPlayer;
 
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
-import net.minecraftforge.event.network.CustomPayloadEvent;
+import java.util.Optional;
 
 public record PlaySpecifyableSong(String id) implements Packetable {
 	public static PlaySpecifyableSong decode(FriendlyByteBuf friendlyByteBuf) {

@@ -1,15 +1,14 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.network;
 
-import org.vicky.VickyUtilitiesForge;
-import org.vicky.forge.network.registeredpackets.*;
-
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.ChannelBuilder;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.SimpleChannel;
+import org.vicky.forge.VickyUtilitiesForge;
+import org.vicky.forge.network.registeredpackets.*;
 
 public class PacketHandler {
 	public static final ResourceLocation CHANNEL_NAME = ResourceLocation.fromNamespaceAndPath(VickyUtilitiesForge.MODID,
@@ -49,6 +48,15 @@ public class PacketHandler {
 		MAIN_CHNNEL.messageBuilder(PlayAnimationPacket.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
 				.encoder(PlayAnimationPacket::encode).decoder(PlayAnimationPacket::decode)
 				.consumerMainThread(PlayAnimationPacket::handle).add();
+		MAIN_CHNNEL.messageBuilder(StopAnimationPacket.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
+				.encoder(StopAnimationPacket::encode).decoder(StopAnimationPacket::decode)
+				.consumerMainThread(StopAnimationPacket::handle).add();
+		MAIN_CHNNEL.messageBuilder(PauseAnimationPacket.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
+				.encoder(PauseAnimationPacket::encode).decoder(PauseAnimationPacket::decode)
+				.consumerMainThread(PauseAnimationPacket::handle).add();
+		MAIN_CHNNEL.messageBuilder(ResumeAnimationPacket.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
+				.encoder(ResumeAnimationPacket::encode).decoder(ResumeAnimationPacket::decode)
+				.consumerMainThread(ResumeAnimationPacket::handle).add();
 		SYNTH_CHANNEL.messageBuilder(NoteOnPacket.class, synthPacketId++, NetworkDirection.PLAY_TO_CLIENT)
 				.encoder(NoteOnPacket::encode).decoder(NoteOnPacket::decode).consumerMainThread(NoteOnPacket::handle)
 				.add();

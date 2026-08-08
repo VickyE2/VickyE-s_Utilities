@@ -1,21 +1,5 @@
 /* Licensed under Apache-2.0 2024. */
-package org.vicky.forge.forgeplatform.useables;
-
-import java.util.Locale;
-import java.util.UUID;
-
-import net.minecraft.network.chat.ChatType;
-import net.minecraft.network.chat.OutgoingChatMessage;
-import net.minecraft.network.chat.PlayerChatMessage;
-import org.jetbrains.annotations.NotNull;
-import org.vicky.forge.entity.ForgePlatformEntity;
-import org.vicky.forge.entity.ForgePlatformLivingEntity;
-import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
-import org.vicky.platform.PlatformBossBar;
-import org.vicky.platform.PlatformItemStack;
-import org.vicky.platform.PlatformPlayer;
-import org.vicky.platform.entity.PlatformEntity;
-import org.vicky.platform.world.PlatformLocation;
+package org.vicky.forge.forgeplatform.player;
 
 import net.kyori.adventure.text.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -25,6 +9,23 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
+import org.vicky.forge.entity.ForgePlatformLivingEntity;
+import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
+import org.vicky.forge.forgeplatform.item.ForgeItemStack;
+import org.vicky.forge.forgeplatform.useables.ForgeVec3;
+import org.vicky.platform.PlatformBossBar;
+import org.vicky.platform.entity.PlatformEntity;
+import org.vicky.platform.guiscreens.GuiType;
+import org.vicky.platform.item.InteractionHand;
+import org.vicky.platform.item.PlatformItemStack;
+import org.vicky.platform.player.PlatformInventory;
+import org.vicky.platform.player.PlatformPlayer;
+import org.vicky.platform.player.PlatformRandom;
+import org.vicky.platform.world.PlatformLocation;
+
+import java.util.Locale;
+import java.util.UUID;
 
 public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements PlatformPlayer {
 
@@ -47,6 +48,31 @@ public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements Pl
 	@Override
 	public Component name() {
 		return Component.translatable(player.getName().getString());
+	}
+
+	@Override
+	public PlatformRandom random() {
+		return null;
+	}
+
+	@Override
+	public PlatformItemStack itemInHand(InteractionHand interactionHand) {
+		return null;
+	}
+
+	@Override
+	public void setItemInHand(InteractionHand interactionHand, PlatformItemStack platformItemStack) {
+
+	}
+
+	@Override
+	public void playItemBreakAnimation(InteractionHand interactionHand) {
+
+	}
+
+	@Override
+	public PlatformInventory inventory() {
+		return null;
 	}
 
 	@Override
@@ -92,16 +118,16 @@ public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements Pl
 	}
 
 	@Override
-	public double flightSpeed() {
-		return ordinal.getSpeed();
+	public void giveItem(PlatformItemStack item) {
+		if (item instanceof ForgeItemStack i) {
+			ItemStack stack = i.delegate();
+			ordinal.onItemPickup(i.delegate().getEntityRepresentation().spawnAtLocation(stack));
+		}
 	}
 
 	@Override
-	public void giveItem(PlatformItemStack item) {
-		if (item instanceof ForgePlatformItem i) {
-			ItemStack stack = i.item();
-			ordinal.onItemPickup(i.item().getEntityRepresentation().spawnAtLocation(stack));
-		}
+	public boolean hasPermissions(int i) {
+		return false;
 	}
 
 	@Override
@@ -113,6 +139,11 @@ public class ForgePlatformPlayer extends ForgePlatformLivingEntity implements Pl
 		player.playNotifySound(event, SoundSource.valueOf(category.toString().toUpperCase(Locale.ROOT)), // e.g.
 				// "RECORDS"
 				volume, pitch);
+	}
+
+	@Override
+	public void openGui(GuiType guiType) {
+
 	}
 
 	@Override

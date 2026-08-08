@@ -4,40 +4,41 @@ package org.vicky.forge.entity;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.entity.ai.navigation.*;
-import net.minecraft.world.level.*;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.phys.AABB;
-import org.slf4j.Logger;
-import org.vicky.forge.entity.navigation.ForgeAdaptablePathNavigator;
-import org.vicky.forge.forgeplatform.useables.ForgeHacks;
-import org.vicky.forge.forgeplatform.useables.ForgePlatformWorldAdapter;
-import net.minecraft.tags.FluidTags;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.ChunkAccess;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
-import org.vicky.platform.PlatformPlayer;
-import org.vicky.platform.entity.*;
-import org.vicky.platform.entity.distpacher.EntityTaskManager;
-
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.ai.navigation.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.*;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.phys.AABB;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.vicky.forge.entity.navigation.ForgeAdaptablePathNavigator;
+import org.vicky.forge.forgeplatform.player.ForgePlatformPlayer;
+import org.vicky.forge.forgeplatform.useables.ExtendedAnimationController;
+import org.vicky.forge.forgeplatform.useables.ForgeHacks;
+import org.vicky.platform.entity.*;
+import org.vicky.platform.entity.distpacher.EntityTaskManager;
+import org.vicky.platform.items.Animation;
+import org.vicky.platform.player.PlatformPlayer;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
 import software.bernie.geckolib.core.animation.AnimationController;
-import software.bernie.geckolib.core.animation.AnimationState;
-import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
@@ -59,12 +60,12 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		super(type, level);
 		this.descriptor = descriptor;
 		this.handler = descriptor.getEventHandler();
-
 		this.setHealth((float) descriptor.getMobDetails().getMaxHealth());
 		if (descriptor.getMobDetails().getPersistent())
 			this.setPersistenceRequired();
 		this.setNoAi(false);
 		this.setCustomNameVisible(false);
+
 	}
 
 	public MobEntityDescriptor getDescriptor() {
@@ -187,9 +188,11 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 	}
 
 	@Override
-	public boolean checkSpawnRules(LevelAccessor world, MobSpawnType reason) {
+	public boolean checkSpawnRules(@NotNull LevelAccessor world, @NotNull MobSpawnType reason) {
+		// TODO
+		/*
 		// The descriptor is where your Kotlin MobSpawnSettings lives
-		MobSpawnSettings settings = descriptor.getMobDetails().getSpawn();
+		MobSpawnSettings settings = descriptor.getMobDetails().spa();
 		if (settings == null) return super.checkSpawnRules(world, reason);
 		BlockPos pos = this.blockPosition(); // entity's candidate spawn position
 
@@ -258,6 +261,8 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 
 		// finally, fall back to the vanilla check to preserve standard rules like collision and pathfinding spots
 		return super.checkSpawnRules(world, reason);
+		 */
+		return false;
 	}
 
 	protected boolean isValidGroundSpawn(LevelAccessor world, BlockPos pos) {
@@ -361,165 +366,66 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
 		return ForgeDamageSource.from(s);
 	}
 
+	private ExtendedAnimationController<PlatformBasedLivingEntity> actionController;
+
 	@Override
 	public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
 		final var animations = descriptor.getMobDetails().getAnimations();
 
-		// Idle: plays when the entity is NOT moving (stationary)
-		controllers.add(new AnimationController<>(this, "Idle", 5,
-				(event) -> animationControllerOf(event, animations.getIdle(), /* shouldBeStationary = */ true)));
-
-		// Walk: plays when the entity IS moving
-		controllers.add(new AnimationController<>(this, "Walk", 5,
-				(event) -> animationControllerOf(event, animations.getWalk(), /* shouldBeStationary = */ false)));
-
-		if (animations.getHurt() != null) {
-			controllers.add(new AnimationController<>(this, "Hurt", 2, (event) -> {
-				if (isForcedAnimation(event, animations.getHurt())) {
-					return playForcedAnimation(event, animations.getHurt(), false);
-				}
-				return PlayState.STOP;
-			}));
-		}
-
-		if (animations.getAttack() != null) {
-			controllers.add(new AnimationController<>(this, "Attack", 2, (event) -> {
-				if (isForcedAnimation(event, animations.getAttack())) {
-					return playForcedAnimation(event, animations.getAttack(), false);
-				}
-				return PlayState.STOP;
-			}));
-		}
-
-		if (animations.getShoot() != null) {
-			controllers.add(new AnimationController<>(this, "Shoot", 4, (event) -> {
-				if (isForcedAnimation(event, animations.getShoot())) {
-					return playForcedAnimation(event, animations.getShoot(), false);
-				}
-				return PlayState.STOP;
-			}));
-		}
-
-		if (animations.getStep() != null) {
-			controllers.add(new AnimationController<>(this, "Step", 4, (event) -> {
-				if (isForcedAnimation(event, animations.getStep())) {
-					return playForcedAnimation(event, animations.getStep(), false);
-				}
-				return PlayState.STOP;
-			}));
-		}
-
-		if (animations.getFlap() != null) {
-			controllers.add(new AnimationController<>(this, "Fly", 2,
-					(event) -> animationControllerOf(event, animations.getFlap(), false)));
-		}
-
-		if (animations.getSwim() != null) {
-			controllers.add(new AnimationController<>(this, "Swim", 2,
-					(event) -> animationControllerOf(event, animations.getSwim(), false)));
-		}
-
-		if (animations.getFall() != null) {
-			controllers.add(new AnimationController<>(this, "Swim", 2,
-					(event) -> animationControllerOf(event, animations.getFall(), false)));
-		}
-
-		// Add any custom animations as controllers — keys used as controller names
-		animations.getCustom().forEach((key, rl) -> {
-			controllers.add(new AnimationController<>(this, key, 5,
-					(event) -> animationControllerOf(event, rl, /* stationary? */ false)));
-		});
+		controllers.add(createLocomotionController(this, animations));
+		this.actionController = createActionController(this, animations);
+		controllers.add(this.actionController);
 	}
 
-	protected <E extends PlatformBasedLivingEntity> PlayState animationControllerOf(final AnimationState<E> event,
-			String animationLocation, boolean shouldBeStationary) {
+    public static AnimationController<PlatformBasedLivingEntity> createLocomotionController(PlatformBasedLivingEntity animatable, AnimationDefinition animations) {
+        return new ExtendedAnimationController<>(animatable, "locomotion_controller", 5, state -> {
+			if (animatable.isFallFlying())
+				return state.setAndContinue(animations.getFall());
 
-		// Protect against bad input
-		if (animationLocation == null || animationLocation.isEmpty())
-			return PlayState.STOP;
+            if (state.getDelegate().isMoving()) {
+                if (animatable.isFlapping())
+                    return state.setAndContinue(animations.getFlap());
 
-		final boolean moving = event.isMoving();
+                if (animatable.isSwimming())
+                    return state.setAndContinue(animations.getSwim());
 
-		// If a forced animation is present (from network), run it now.
-		if (isForcedAnimation(event, animationLocation)) {
-			// forced plays should honour loop choice done by the caller; we default to
-			// non-loop for "hurt"-like names
-			boolean loopForced = !looksLikeOneShot(animationLocation);
-			return playForcedAnimation(event, animationLocation, loopForced);
-		}
+                return state.setAndContinue(animations.getWalk());
+            }
 
-		// Decide whether this controller should play based on movement vs stationary
-		final boolean shouldPlay = shouldBeStationary != moving;
-		if (!shouldPlay)
-			return PlayState.STOP;
+            return state.setAndContinue(animations.getIdle());
+        });
+    }
 
-		// Choose whether to loop or play once based on animation name heuristics.
-		// (You can replace heuristics with explicit metadata if you prefer.)
-		final boolean loop = !looksLikeOneShot(animationLocation);
+	public static ExtendedAnimationController<PlatformBasedLivingEntity> createActionController(PlatformBasedLivingEntity animatable, AnimationDefinition animations) {
+		var controller = new ExtendedAnimationController<>(animatable, "action_controller",
+				5, state -> PlayState.STOP);
 
-		RawAnimation raw = loop
-				? RawAnimation.begin().thenLoop(animationLocation)
-				: RawAnimation.begin().thenPlay(animationLocation);
-		return event.setAndContinue(raw);
+		return controller;
 	}
 
-	/**
-	 * Heuristic to detect animations that should be played once
-	 * (hurt/attack/shoot/fall). Replace or extend this with explicit metadata if
-	 * you have it.
-	 */
-	private boolean looksLikeOneShot(String animationLocation) {
-		String s = animationLocation.toLowerCase();
-		return s.contains("hurt") || s.contains("attack") || s.contains("shoot") || s.contains("fall")
-				|| s.contains("hit");
+	@Override
+	protected boolean isFlapping() {
+		return descriptor.getMobDetails().getFlyingCreature() && !this.onGround();
 	}
 
-	/**
-	 * Return true if the Animatable has a forced/externally requested animation
-	 * matching this key. Implementation expects the animatable instance to expose a
-	 * 'forced animation' field that the client-side adapter sets when a
-	 * PlayAnimationPacket arrives.
-	 *
-	 * You need to implement getForcedAnimationName() /
-	 * getAndClearForcedAnimationName() in your animatable wrapper.
-	 */
-	private <E extends PlatformBasedLivingEntity> boolean isForcedAnimation(AnimationState<E> event,
-			String animationLocation) {
-		// Example: check a small runtime override field
-		String forced = getForcedAnimationForThisInstance();
-		return forced != null && !forced.isEmpty() && forced.equals(animationLocation);
+	public void forcePlay(Animation animation) {
+		if (this.actionController == null) return;
+		this.actionController.play(animation);
 	}
 
-	/**
-	 * Play a forced animation immediately. For non-looping animations we clear the
-	 * forced animation so the predicate won't try to restart it repeatedly.
-	 */
-	private <E extends PlatformBasedLivingEntity> PlayState playForcedAnimation(AnimationState<E> event,
-			String animationLocation, boolean loop) {
-		RawAnimation raw = loop
-				? RawAnimation.begin().thenLoop(animationLocation)
-				: RawAnimation.begin().thenPlay(animationLocation);
-		// If it's non-looping, we should clear the forced flag so it doesn't replay
-		// every tick.
-		if (!loop) {
-			clearForcedAnimationForThisInstance();
-		}
-		return event.setAndContinue(raw);
+	public void forceStop(@Nullable String animation) {
+		if (this.actionController == null) return;
+		this.actionController.stop(animation);
 	}
 
-	private volatile String forcedAnimation = null;
-	private volatile Boolean forcedAnimationLooped = false;
-
-	public void forcePlay(String animation, Boolean loop) {
-		this.forcedAnimation = animation;
-		this.forcedAnimationLooped = loop;
+	public void forcePause() {
+		if (this.actionController == null) return;
+		this.actionController.pause();
 	}
 
-	private String getForcedAnimationForThisInstance() {
-		return forcedAnimation;
-	}
-	private void clearForcedAnimationForThisInstance() {
-		forcedAnimation = null;
+	public void forceResume() {
+		if (this.actionController == null) return;
+		this.actionController.resume();
 	}
 
 	@Override

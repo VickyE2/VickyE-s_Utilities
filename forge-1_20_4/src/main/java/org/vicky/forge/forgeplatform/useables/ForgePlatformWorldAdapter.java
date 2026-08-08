@@ -1,25 +1,6 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform.useables;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-
-import net.minecraft.util.Mth;
-import net.minecraft.world.level.CommonLevelAccessor;
-import net.minecraft.world.level.chunk.ChunkStatus;
-import org.jetbrains.annotations.NotNull;
-import org.vicky.forge.entity.ForgePlatformEntity;
-import org.vicky.forge.entity.ForgePlatformLivingEntity;
-import org.vicky.platform.PlatformPlayer;
-import org.vicky.platform.entity.PlatformEntity;
-import org.vicky.platform.entity.PlatformLivingEntity;
-import org.vicky.platform.utils.Vec3;
-import org.vicky.platform.world.PlatformBlock;
-import org.vicky.platform.world.PlatformBlockState;
-import org.vicky.platform.world.PlatformWorld;
-
 import de.pauleff.api.ICompoundTag;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
@@ -27,20 +8,40 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.CommonLevelAccessor;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
+import org.vicky.forge.entity.ForgePlatformEntity;
+import org.vicky.forge.entity.ForgePlatformLivingEntity;
+import org.vicky.forge.forgeplatform.player.ForgePlatformPlayer;
+import org.vicky.platform.entity.PlatformEntity;
+import org.vicky.platform.entity.PlatformLivingEntity;
+import org.vicky.platform.player.PlatformPlayer;
+import org.vicky.platform.utils.Vec3;
+import org.vicky.platform.world.PlatformBiome;
+import org.vicky.platform.world.PlatformBlock;
+import org.vicky.platform.world.PlatformBlockState;
+import org.vicky.platform.world.PlatformWorld;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements PlatformWorld<BlockState, CommonLevelAccessor> {
 
@@ -135,6 +136,12 @@ public record ForgePlatformWorldAdapter(CommonLevelAccessor world) implements Pl
 	public List<PlatformPlayer> getPlayers() {
 		return world.players().stream().map(ServerPlayer.class::cast).map(ForgePlatformPlayer::new)
 				.collect(Collectors.toUnmodifiableList());
+	}
+
+	@Override
+	public PlatformBiome getBiomeAt(double x, double y, double z) {
+		BlockPos pos = new BlockPos(Mth.floor(x), Mth.floor(y), Mth.floor(z));
+		return new ForgePlatformBiome(world.getBiome(pos).get());
 	}
 
 	@Override

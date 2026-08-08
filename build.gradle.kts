@@ -63,7 +63,7 @@ allprojects {
 
     dependencies {
         // implementation(kotlin("stdlib-jdk8"))
-        api("org.reflections:reflections:0.10.2")
+        // api("org.reflections:reflections:0.10.2")
     }
 
     tasks.withType<JavaCompile> {

@@ -1,10 +1,9 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.client;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraftforge.event.network.CustomPayloadEvent;
 import org.vicky.forge.client.screen.SimpleMusicSliderBossBar;
 import org.vicky.forge.client.screen.SongLibraryScreen;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
@@ -13,9 +12,9 @@ import org.vicky.forge.network.registeredpackets.OpenOwnedRecordsScreen;
 import org.vicky.forge.network.registeredpackets.RemoveSSBossBar;
 import org.vicky.forge.network.registeredpackets.UpdateSSBossBar;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
-import net.minecraftforge.event.network.CustomPayloadEvent;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class ClientIncomingPacketHandler {
 	static final Map<UUID, SimpleMusicSliderBossBar> activeBars = new HashMap<>();
@@ -25,15 +24,15 @@ public class ClientIncomingPacketHandler {
 			SimpleMusicSliderBossBar bar = new SimpleMusicSliderBossBar();
 
 			// null-safe conversions — fallback to empty component / default image
-			bar.setProgress(msg.progress());
-			bar.setTitle(msg.title() == null ? Component.empty() : AdventureComponentConverter.toNative(msg.title()));
+			bar.setProgress(msg.progress);
+			bar.setTitle(msg.title == null ? Component.empty() : AdventureComponentConverter.toNative(msg.title));
 			bar.setSubTitle(
-					msg.subTitle() == null ? Component.empty() : AdventureComponentConverter.toNative(msg.subTitle()));
-			bar.setColor(msg.hex() == null ? "#FFFFFF" : msg.hex());
-			bar.setImage(msg.image()); // image may be null — let bar handle null gracefully
+					msg.subTitle == null ? Component.empty() : AdventureComponentConverter.toNative(msg.subTitle));
+			bar.setColor(msg.hex == null ? "#FFFFFF" : msg.hex);
+			bar.setImage(msg.image); // image may be null — let bar handle null gracefully
 
-			activeBars.put(msg.id(), bar);
-			System.out.println("[client] Created bossbar: " + msg.id() + " activeBars=" + activeBars.size());
+			activeBars.put(msg.id, bar);
+			System.out.println("[client] Created bossbar: " + msg.id + " activeBars=" + activeBars.size());
 		} catch (Throwable t) {
 			t.printStackTrace();
 		}
@@ -45,15 +44,15 @@ public class ClientIncomingPacketHandler {
 	}
 
 	public static void updateSSBossBar(UpdateSSBossBar msg, CustomPayloadEvent.Context ctx) {
-		SimpleMusicSliderBossBar bar = activeBars.get(msg.id());
+		SimpleMusicSliderBossBar bar = activeBars.get(msg.id);
 		if (bar != null) {
-			if (msg.title() != null)
-				bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
-			bar.setProgress(msg.progress());
-			bar.setTitle(AdventureComponentConverter.toNative(msg.title()));
-			bar.setSubTitle(AdventureComponentConverter.toNative(msg.subTitle()));
-			bar.setColor(msg.hex());
-			bar.setImage(msg.image());
+			if (msg.title != null)
+				bar.setTitle(AdventureComponentConverter.toNative(msg.title));
+			bar.setProgress(msg.progress);
+			bar.setTitle(AdventureComponentConverter.toNative(msg.title));
+			bar.setSubTitle(AdventureComponentConverter.toNative(msg.subTitle));
+			bar.setColor(msg.hex);
+			bar.setImage(msg.image);
 		}
 	}
 

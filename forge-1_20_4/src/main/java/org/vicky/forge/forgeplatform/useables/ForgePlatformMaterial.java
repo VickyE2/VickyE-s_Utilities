@@ -1,18 +1,17 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform.useables;
 
-import net.minecraft.world.level.block.LiquidBlock;
-import org.jetbrains.annotations.NotNull;
-import org.vicky.platform.utils.ResourceLocation;
-import org.vicky.platform.world.PlatformMaterial;
-
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
+import org.vicky.platform.utils.ResourceLocation;
+import org.vicky.platform.world.PlatformMaterial;
 
 public record ForgePlatformMaterial(ItemLike material) implements PlatformMaterial {
 
@@ -30,7 +29,7 @@ public record ForgePlatformMaterial(ItemLike material) implements PlatformMateri
 	public boolean isAir() {
 		Item item = material.asItem();
 
-		// Item.AIR covers the "no item" case
+		// Item.AIR covers the "no delegate" case
 		if (item == Items.AIR)
 			return true;
 

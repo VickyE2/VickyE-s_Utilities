@@ -1,13 +1,12 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.utilities;
 
-import org.vicky.VickyUtilitiesForge;
-import org.vicky.forge.forgeplatform.ForgePlatformConfig;
-
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
+import org.vicky.forge.VickyUtilitiesForge;
+import org.vicky.forge.forgeplatform.ForgePlatformConfig;
 
 @Mod.EventBusSubscriber(modid = VickyUtilitiesForge.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ForgeModConfig {

@@ -1,26 +1,25 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity.bridge;
 
-import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
-
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.entity.item.ItemTossEvent;
-import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
-import org.vicky.forge.entity.ForgePlatformLivingEntity;
-import org.vicky.forge.entity.PlatformBasedLivingEntity;
-import org.vicky.forge.forgeplatform.useables.DescriptorItem;
-import org.vicky.forge.forgeplatform.useables.ForgeHacks;
-import org.vicky.forge.forgeplatform.useables.ForgePlatformItem;
-import org.vicky.forge.forgeplatform.useables.ForgePlatformPlayer;
-import org.vicky.platform.PlatformPlugin;
-import org.vicky.platform.entity.*;
-
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraftforge.event.entity.item.ItemTossEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
+import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.vicky.forge.entity.ForgePlatformLivingEntity;
+import org.vicky.forge.entity.PlatformBasedLivingEntity;
+import org.vicky.forge.forgeplatform.item.DescriptorItem;
+import org.vicky.forge.forgeplatform.item.ForgeItemStack;
+import org.vicky.forge.forgeplatform.player.ForgePlatformPlayer;
+import org.vicky.forge.forgeplatform.useables.ForgeHacks;
+import org.vicky.platform.PlatformPlugin;
+import org.vicky.platform.entity.EventResult;
+
+import static org.vicky.forge.forgeplatform.useables.ForgeHacks.toVicky;
 
 /**
  * Forge → Platform event bridge.
@@ -40,14 +39,14 @@ public final class ForgeMobEventBridge {
 			if (event.getEntity() instanceof ServerPlayer player) {
 				event.setResult(ForgeHacks.fromVicky(descriptorItem.getDescriptor().getHandler()
 						.onPickedUpByPlayer(
-								new ForgePlatformItem(event.getItem().getItem()),
+								new ForgeItemStack(event.getItem().getItem()),
 								ForgePlatformPlayer.adapt(player)
 						))); // should return allow or deny event.setResult(Resul);
 				return;
 			}
 			event.setResult(ForgeHacks.fromVicky(descriptorItem.getDescriptor().getHandler()
 					.onPickedUp(
-							new ForgePlatformItem(event.getItem().getItem()),
+							new ForgeItemStack(event.getItem().getItem()),
 							ForgePlatformLivingEntity.from(event.getEntity())
 					)
 			));
@@ -59,7 +58,7 @@ public final class ForgeMobEventBridge {
 		if (event.getEntity().getItem().getItem() instanceof DescriptorItem descriptorItem) {
 			var result = descriptorItem.getDescriptor().getHandler()
 					.onDropped(
-							new ForgePlatformItem(event.getEntity().getItem()),
+							new ForgeItemStack(event.getEntity().getItem()),
 							ForgePlatformLivingEntity.from(event.getPlayer())
 					);
 			if (event.hasResult())

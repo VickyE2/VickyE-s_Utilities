@@ -1,16 +1,23 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity;
 
-import static org.vicky.VickyUtilitiesForge.MODID;
-import static org.vicky.forge.forgeplatform.useables.ForgeHacks.fromVicky;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Supplier;
-
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.item.Items;
 import net.minecraftforge.common.ForgeMod;
+import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -21,19 +28,12 @@ import org.vicky.platform.utils.ResourceLocation;
 import org.vicky.platform.world.PlatformLocation;
 import org.vicky.platform.world.PlatformWorld;
 
-import com.mojang.logging.LogUtils;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
 
-import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.projectile.Arrow;
-import net.minecraft.world.item.Items;
-import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import static org.vicky.forge.VickyUtilitiesForge.MODID;
+import static org.vicky.forge.forgeplatform.useables.ForgeHacks.fromVicky;
 
 public class ForgePlatformEntityFactory implements PlatformEntityFactory {
 	public static final ForgePlatformEntityFactory INSTANCE = new ForgePlatformEntityFactory();

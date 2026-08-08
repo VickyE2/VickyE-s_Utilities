@@ -1,24 +1,24 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.forgeplatform.useables;
 
-import static org.vicky.VickyUtilitiesForge.server;
+import net.kyori.adventure.text.Component;
+import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.BossEvent;
+import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
+import org.vicky.forge.forgeplatform.player.ForgePlatformPlayer;
+import org.vicky.platform.IColor;
+import org.vicky.platform.PlatformBossBar;
+import org.vicky.platform.PlatformPlugin;
+import org.vicky.platform.defaults.BossBarOverlay;
+import org.vicky.platform.player.PlatformPlayer;
+import org.vicky.platform.utils.BossBarDescriptor;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
-import org.vicky.platform.IColor;
-import org.vicky.platform.PlatformBossBar;
-import org.vicky.platform.PlatformPlayer;
-import org.vicky.platform.PlatformPlugin;
-import org.vicky.platform.defaults.BossBarOverlay;
-import org.vicky.platform.utils.BossBarDescriptor;
-
-import net.kyori.adventure.text.Component;
-import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.BossEvent;
+import static org.vicky.forge.VickyUtilitiesForge.server;
 
 public class ForgeDefaultPlatformBossBar implements PlatformBossBar {
 	private final UUID uuid = UUID.randomUUID();

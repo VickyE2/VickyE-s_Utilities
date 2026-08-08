@@ -1,33 +1,31 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.network.registeredpackets;
 
-import org.vicky.forge.network.Packetable;
-
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.event.network.CustomPayloadEvent;
+import org.vicky.forge.network.Packetable;
+import org.vicky.platform.items.Animation;
 
-public record PlayAnimationPacket(int entityId, String animationKey, boolean loop) implements Packetable {
+public record PlayAnimationPacket(int entityId, Animation animation) implements Packetable {
 
 	public static void encode(PlayAnimationPacket pkt, FriendlyByteBuf buf) {
 		buf.writeInt(pkt.entityId);
-		buf.writeUtf(pkt.animationKey == null ? "" : pkt.animationKey, 32767);
-		buf.writeBoolean(pkt.loop);
+		buf.writeUtf(pkt.animation.getKey(), 32767);
+		buf.writeBoolean(pkt.animation.getLoop());
+		buf.writeInt(pkt.animation.getBlendTime());
+		buf.writeBoolean(pkt.animation.getInterruptable());
+		buf.writeInt(pkt.animation.getPriority());
 	}
 
 	public static PlayAnimationPacket decode(FriendlyByteBuf buf) {
-		int id = buf.readInt();
-		String key = buf.readUtf(32767);
-		if (key.isEmpty())
-			key = null;
-		boolean loop = buf.readBoolean();
-		return new PlayAnimationPacket(id, key, loop);
+		return new PlayAnimationPacket(buf.readInt(),
+				new Animation(buf.readUtf(), buf.readBoolean(), buf.readInt(), buf.readBoolean(), buf.readInt()));
 	}
 
 	public static void handle(PlayAnimationPacket pkt, CustomPayloadEvent.Context ctx) {
 		ctx.enqueueWork(() -> {
 			// delegate to client adapter
-			org.vicky.forge.client.animation.GeckoLibAdapterManager.playAnimationClient(pkt.entityId, pkt.animationKey,
-					pkt.loop);
+			org.vicky.forge.client.animation.GeckoLibAdapterManager.playAnimationClient(pkt.entityId, pkt.animation);
 		});
 		ctx.setPacketHandled(true);
 	}

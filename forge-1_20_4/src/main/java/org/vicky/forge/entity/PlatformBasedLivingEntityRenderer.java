@@ -1,12 +1,11 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity;
 
-import static org.vicky.forge.forgeplatform.useables.ForgeHacks.fromVicky;
-
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
+import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
 
 /**
  * Client-only renderer for PlatformBasedLivingEntity. Uses the modelId from the
@@ -39,5 +38,6 @@ public class PlatformBasedLivingEntityRenderer extends GeoEntityRenderer<Platfor
 		if (getGeoModel().getBone("shadow").isPresent()) {
 			this.shadowRadius = (float) getGeoModel().getBone("shadow").get().getCubes().get(0).size().x;
 		}
+		this.addRenderLayer(new AutoGlowingGeoLayer<>(this));
 	}
 }

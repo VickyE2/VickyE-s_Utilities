@@ -272,8 +272,8 @@ interface PlatformLivingEntity : PlatformEntity {
     val canBeSeenByAnyone: Boolean
     val canFreeze: Boolean
 
-    fun getProperty(attribute: InbuiltEntityProperties): Double?
-    fun setProperty(value: InbuiltEntityProperties)
+    fun getProperty(property: InbuiltEntityProperties): Double?
+    fun setProperty(property: InbuiltEntityProperties, value: Double)
     
     /**
      * New Attribute manipulation layer

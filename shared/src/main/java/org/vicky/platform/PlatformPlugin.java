@@ -8,6 +8,7 @@ import org.vicky.platform.entity.PlatformEntityFactory;
 import org.vicky.platform.events.PlatformEventDispatcher;
 import org.vicky.platform.events.PlatformEventRegistry;
 import org.vicky.platform.guiscreens.DefaultGuis;
+import org.vicky.platform.items.PlatformCreativeTabRegistry;
 import org.vicky.platform.items.PlatformItemFactory;
 import org.vicky.platform.player.PlatformPlayer;
 import org.vicky.platform.world.PlatformBlockStateFactory;
@@ -88,6 +89,10 @@ public interface PlatformPlugin {
 
 	static PlatformItemFactory itemFactory() {
 		return get().getPlatformItemFactory();
+	}
+
+	static PlatformCreativeTabRegistry creativeTabs() {
+		return get().getPlatformCreativeTabRegistry();
 	}
 
 	static PlatformEventDispatcher eventDispatch() {
@@ -173,6 +178,7 @@ public interface PlatformPlugin {
 
 	PlatformBlockStateFactory getPlatformBlockStateFactory();
 	PlatformItemFactory getPlatformItemFactory();
+	PlatformCreativeTabRegistry getPlatformCreativeTabRegistry();
 	PlatformEntityFactory getPlatformEntityFactory();
 
 	PlatformEventDispatcher getEventDispatch();

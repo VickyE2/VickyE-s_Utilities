@@ -8,7 +8,9 @@ import org.vicky.platform.entity.PlatformLivingEntity
 import org.vicky.platform.entity.minecraft
 import org.vicky.platform.entity.rli
 import org.vicky.platform.item.InteractionHand
+import org.vicky.platform.item.ItemData
 import org.vicky.platform.item.PlatformItemStack
+import org.vicky.platform.item.data.SerializedItemStack
 import org.vicky.platform.player.PlatformPlayer
 import org.vicky.platform.utils.ResourceLocation
 import org.vicky.platform.world.PlatformBlock
@@ -207,6 +209,39 @@ annotation class RegisterItem(
     val path: String,
 )
 
+sealed class CreativeTabMenu {
+
+    /**
+     * A vanilla/platform-provided creative tab.
+     *
+     * Example:
+     * CreativeTabMenu.Inbuilt.BUILDING_BLOCKS
+     */
+    sealed class Inbuilt : CreativeTabMenu() {
+
+        data object BuildingBlocks : Inbuilt()
+        data object ColoredBlocks : Inbuilt()
+        data object NaturalBlocks : Inbuilt()
+        data object FunctionalBlocks : Inbuilt()
+        data object RedstoneBlocks : Inbuilt()
+        data object Tools : Inbuilt()
+        data object Combat : Inbuilt()
+        data object FoodAndDrinks : Inbuilt()
+        data object Ingredients : Inbuilt()
+        data object SpawnEggs : Inbuilt()
+        data object Operator : Inbuilt()
+    }
+
+    /**
+     * A custom creative tab registered by a mod/platform.
+     *
+     * The ResourceLocation identifies the actual creative tab.
+     */
+    data class Custom(
+        val id: ResourceLocation
+    ) : CreativeTabMenu()
+}
+
 object DefaultItemEventsHandler : ItemEventsHandler {
     override fun onInteractLiving(self: PlatformItemStack, hand: InteractionHand, user: PlatformPlayer, usedOn: PlatformLivingEntity) : InteractionResult
         = InteractionResult.PASS
@@ -312,6 +347,12 @@ class ItemDescriptorBuilder(private val displayName: Component) {
     private var physicalProps: ItemPhysicalProperties = ItemPhysicalProperties()
     private var foodProps: FoodProperties? = null
 
+    private var tab: CreativeTabMenu? = null
+
+    fun tab(tab: CreativeTabMenu) {
+        this.tab = tab
+    }
+
     fun lore(component: Component) {
         lore += component
     }
@@ -355,6 +396,8 @@ object Items {
     val testItem = item(
         "A test Item".colorComponent(NamedTextColor.GOLD)
     ) {
+        tab(CreativeTabMenu.Custom("core" rli "test_tab"))
+
         lore(Component.text("This is simply a text item. nothing more or less... or is it...")
             .color(NamedTextColor.DARK_BLUE))
 
@@ -386,23 +429,68 @@ abstract class PlatformItemFactory : InternalPlatformItemFactory {
     @Throws(ItemProductionError::class)
     override fun registerItem(id: ResourceLocation, descriptor: ItemDescriptor) {
         val prev = descriptors.putIfAbsent(id, descriptor)
-        if (prev != null) error("Duplicate item ${id}")
+        if (prev != null) error("Duplicate item $id")
     }
     override fun getDescriptor(id: ResourceLocation): ItemDescriptor? = descriptors[id]
-    fun create(id: ResourceLocation): PlatformItemStack? {
-        return create(id, mapOf())
-    }
-    override fun create(id: ResourceLocation, overrides: Map<String, Any>): PlatformItemStack? {
-        val desc = descriptors[id] ?: return null
-        return try {
-            val stack = buildStackFromDescriptor(desc, overrides)
-            applyOverrides(stack, overrides)
-            stack
-        } catch (t: Throwable) {
-            logger.severe("Error while trying to create item ${id}: ${t.message}")
-            null
+
+
+    /**
+     * Platform implementation must resolve the item
+     * from Minecraft/Forge/NeoForge's native registry.
+     *
+     * Examples:
+     *
+     * minecraft:bone
+     * minecraft:diamond
+     * minecraft:stick
+     * someothermod:yams
+     */
+    protected abstract fun createNativeItem(
+        id: ResourceLocation
+    ): PlatformItemStack?
+
+    /**
+     * Applies a dynamic set of configuration overrides to the current item stack.
+     *
+     * This method safely parses a map of unstructured data and routes the properties
+     * to their respective `PlatformItemEditor` modifier methods. Any parsing errors
+     * or invalid types are caught and logged safely.
+     *
+     * ### Supported Override Keys:
+     * - `count` (Number): Sets the item stack size.
+     * - `displayName` (String | Component): Sets the tooltip display name.
+     * - `lore` (List<String | Component>): Appends lore lines to the item.
+     * - `damage` (Number): Sets the current damage/durability loss of the item.
+     * - `unbreakable` (Boolean | String): Sets the unbreakable data component.
+     * - `customModelData` (Number): Assigns a custom model data integer.
+     * - `enchantment` (Map | List<Map>): Applies one or multiple enchantments. Requires an `id` (String) and optional `level` (Number).
+     * - `nbt` (Map): Injects custom data components/raw NBT into the item's custom data payload.
+     *
+     * @param overrides A map containing the key-value pairs of item properties to override.
+     */
+    final override fun create(item: ResourceLocation, count: Int, data: ItemData?, overrides: Map<String, Any>): PlatformItemStack {
+        val stack =
+            if (descriptors.containsKey(item)) {
+                buildStackFromDescriptor(
+                    descriptors[item]!!,
+                    overrides
+                )
+            } else {
+                createNativeItem(item)
+                    ?: throw InternalPlatformItemFactory.InvalidItemException(item)
+            }
+
+        stack.count(count)
+
+        if (data != null) {
+            applySerializedData(stack, data)
         }
+
+        applyOverrides(stack, overrides)
+
+        return stack
     }
+    protected abstract fun applySerializedData(stack: PlatformItemStack, data: ItemData)
     protected fun applyOverrides(stack: PlatformItemStack, overrides: Map<String, Any>) {
         try {
             overrides["count"]?.let { count ->
@@ -415,6 +503,59 @@ abstract class PlatformItemFactory : InternalPlatformItemFactory {
                     stack.setTooltipName(name)
                 else if (name as? String != null)
                     stack.setTooltipName(name.textComponent())
+            }
+
+            overrides["lore"]?.let { lore ->
+                if (lore is List<*>)
+                    for (item in lore)
+                        if (item is Component)
+                            stack.edit().addLore(item)
+                        else if (item is String)
+                            stack.edit().addLore(item.textComponent())
+            }
+
+            overrides["damage"]?.let { damage ->
+                val d = (damage as? Number)?.toInt() ?: return@let
+                stack.edit().damage(d)
+            }
+
+            overrides["unbreakable"]?.let { unbreakable ->
+                val u = (unbreakable as? Boolean) ?: (unbreakable.toString().toBooleanStrictOrNull() ?: return@let)
+                stack.edit().unbreakable(u)
+            }
+
+            overrides["customModelData"]?.let { cmd ->
+                val v = (cmd as? Number)?.toInt() ?: return@let
+                stack.edit().customModelData(v)
+            }
+
+            overrides["enchantment"]?.let { ench ->
+                when (ench) {
+                    is Map<*, *> -> {
+                        val id = ench["id"] as? String ?: return@let
+                        val level = (ench["level"] as? Number)?.toInt() ?: 1
+                        stack.edit().enchantment(id, level)
+                    }
+                    is List<*> -> {
+                        for (entry in ench) {
+                            if (entry is Map<*, *>) {
+                                val id = entry["id"] as? String ?: continue
+                                val level = (entry["level"] as? Number)?.toInt() ?: 1
+                                stack.edit().enchantment(id, level)
+                            }
+                            if (entry is Pair<*, *>) {
+                                val id = entry.first as? String ?: continue
+                                val level = (entry.second as? Number)?.toInt() ?: 1
+                                stack.edit().enchantment(id, level)
+                            }
+                            if (entry is org.vicky.utilities.Pair<*, *>) {
+                                val id = entry.first as? String ?: continue
+                                val level = (entry.second as? Number)?.toInt() ?: 1
+                                stack.edit().enchantment(id, level)
+                            }
+                        }
+                    }
+                }
             }
 
             // merge baseNbt overrides if any (adapter can provide a method setNbt(Map) or applyNbt)
@@ -474,7 +615,6 @@ internal interface InternalPlatformItemFactory {
     @Throws(ItemProductionError::class)
     fun registerItem(id: ResourceLocation, descriptor: ItemDescriptor)
     fun getDescriptor(id: ResourceLocation): ItemDescriptor?
-    fun create(id: ResourceLocation, overrides: Map<String, Any> = emptyMap()): PlatformItemStack?
 
     /**
      * Should not call any internal api like create as it will cause a stack overflow
@@ -491,4 +631,46 @@ internal interface InternalPlatformItemFactory {
     fun fromRegisteredDescriptor(descriptor: ResourceLocation): PlatformItemStack
 
     fun materialOf(rl: ResourceLocation): PlatformMaterial?
+
+    @Throws(InvalidItemException::class)
+    fun create(item: ResourceLocation, count: Int, data: ItemData?, overrides: Map<String, Any> = emptyMap()): PlatformItemStack
+
+    @Throws(InvalidItemException::class)
+    fun create(item: ResourceLocation, overrides: Map<String, Any> = emptyMap()): PlatformItemStack
+        = create(item, 1, null, overrides)
+
+    @Throws(InvalidItemException::class)
+    fun create(item: ResourceLocation): PlatformItemStack
+        = create(item, 1, null)
+
+    fun createSafe(item: ResourceLocation): PlatformItemStack? {
+        return try {
+            create(item, 1, null)
+        } catch (e: InvalidItemException) {
+            null
+        }
+    }
+
+    fun serialize(stack: PlatformItemStack?): SerializedItemStack?
+
+    @Throws(ItemDeserializationException::class)
+    fun deserialize(serialized: SerializedItemStack?): PlatformItemStack?
+
+    fun getEmpty(): PlatformItemStack?
+
+    class InvalidItemException : Exception {
+        constructor(itemID: String?) : super("Invalid item: $itemID")
+
+        constructor(itemID: ResourceLocation?) : super("Invalid item: $itemID")
+
+        constructor(supa: Throwable) : super(supa)
+
+        constructor()
+    }
+
+    class ItemDeserializationException : java.lang.Exception {
+        constructor(message: String?) : super(message)
+
+        constructor(message: String?, cause: Throwable?) : super(message, cause)
+    }
 }

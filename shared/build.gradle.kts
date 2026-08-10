@@ -81,7 +81,8 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
     archiveClassifier.set("all")
 
     configurations = listOf(
-        project.configurations.getByName("shadowImplementation")
+        project.configurations.getByName("shadowImplementation"),
+        project.configurations.getByName("downgrade")
     )
 
     // Relocate ANTLR inside Hibernate to avoid conflicts with Forge

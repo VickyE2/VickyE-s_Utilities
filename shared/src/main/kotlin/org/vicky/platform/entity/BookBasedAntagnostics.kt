@@ -1,7 +1,6 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.platform.entity
 
-import kotlinx.serialization.Contextual
 import org.vicky.platform.entity.distpacher.EntityTaskState
 import org.vicky.platform.player.PlatformPlayer
 import org.vicky.platform.utils.ResourceLocation
@@ -1031,10 +1030,8 @@ sealed class CompiledStep {
 
 // --------------------- DTOs for serialization ---------------------
 
-@kotlinx.serialization.Serializable
 enum class StepKind { SELECT, CONDITION, ACTION }
 
-@kotlinx.serialization.Serializable
 data class StepDTO(
     val id: String,
     val kind: StepKind,
@@ -1045,7 +1042,6 @@ data class StepDTO(
     val filterRefs: List<String> = emptyList()
 )
 
-@kotlinx.serialization.Serializable
 data class TaskSpecDTO(
     val id: String,
     val type: TaskType,
@@ -1054,7 +1050,7 @@ data class TaskSpecDTO(
     val chance: Double = 0.5,
     val steps: List<StepDTO> = emptyList(),
     val cooldownTicks: Int = -1,
-    val completionPredicate: (PlatformEntity, @Contextual EntityTaskState) -> Boolean,
+    val completionPredicate: (PlatformEntity, EntityTaskState) -> Boolean,
     val waitSignals: Set<String>,
     val allSignalsRequired: Boolean,
     val stopSignals: Set<String>,

@@ -14,6 +14,17 @@ bbDissolver {
     runEveryBuild = true
 }
 
+configurations {
+    create("shadowImplementation")  {
+        isCanBeResolved = true
+        isCanBeConsumed = true
+    }
+
+    named("implementation") {
+        extendsFrom(getByName("shadowImplementation"))
+    }
+}
+
 dependencies {
     // Compile-time only for Forge/Configurate/etc.
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
@@ -22,14 +33,26 @@ dependencies {
     compileOnly("org.jetbrains:annotations:24.0.1")
     compileOnly("com.google.code.gson:gson:2.13.1")
 
+    implementation(kotlin("stdlib-jdk8"))
+    implementation("org.reflections:reflections:0.10.2")
+
     // Hibernate as internal implementation
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-    implementation("org.hibernate.orm:hibernate-core:6.4.1.Final")
-    implementation("org.hibernate.orm:hibernate-community-dialects:6.3.1.Final")
-    implementation("org.jboss.logging:jboss-logging:3.5.3.Final")
-    implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
-    implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
-    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+    add("shadowImplementation",
+        "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3") { isTransitive = false }
+    add("shadowImplementation",
+        "org.hibernate.orm:hibernate-core:6.4.1.Final") { isTransitive = false }
+    add("shadowImplementation",
+        "org.hibernate.orm:hibernate-community-dialects:6.3.1.Final") { isTransitive = false }
+    add("shadowImplementation",
+        "org.jboss.logging:jboss-logging:3.5.3.Final") { isTransitive = false }
+    add("shadowImplementation",
+        "jakarta.xml.bind:jakarta.xml.bind-api:4.0.2") { isTransitive = false }
+    add("shadowImplementation",
+        "jakarta.ws.rs:jakarta.ws.rs-api:4.0.0") { isTransitive = false }
+    add("shadowImplementation",
+        "com.github.ben-manes.caffeine:caffeine:3.1.8") { isTransitive = false }
+    add("shadowImplementation",
+        "jakarta.persistence:jakarta.persistence-api:3.1.0") { isTransitive = false }
 
     // Other runtime dependencies
     compileOnly("org.xerial:sqlite-jdbc:3.48.0.0")
@@ -57,7 +80,9 @@ tasks.jar {
 tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
     archiveClassifier.set("all")
 
-    configurations = listOf(project.configurations.getByName("runtimeClasspath"))
+    configurations = listOf(
+        project.configurations.getByName("shadowImplementation")
+    )
 
     // Relocate ANTLR inside Hibernate to avoid conflicts with Forge
     relocate("org.antlr.v4", "org.vicky.shaded.antlr.v4")

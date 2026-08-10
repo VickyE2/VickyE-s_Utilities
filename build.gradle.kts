@@ -84,11 +84,6 @@ project(":shared") {
         }
     }
 
-    dependencies {
-        implementation(kotlin("stdlib-jdk8"))
-        api("org.reflections:reflections:0.10.2")
-    }
-
     tasks.jar {
         archiveBaseName.set("VickyUtils")
     }
@@ -274,10 +269,6 @@ project(":shared") {
             sign(the<PublishingExtension>().publications["maven"])
         }
         tasks.named<ShadowJar>("shadowJar") {
-            relocate("org.reflections", "org.vicky.shaded.reflections")
-            relocate("com.google.code.gson", "org.vicky.google.gson")
-            relocate("jakarta.xml.bind", "org.vicky.xml.bind")
-            relocate("jakarta.xml.bind", "org.vicky.ws.rs")
             archiveBaseName.set("VickyE-Utils-${
                 when {
                     project.name.startsWith("paper") -> "Bukkit"
@@ -287,19 +278,6 @@ project(":shared") {
                     else -> "Defaulted"
                 }}")
             version = project.version
-            configurations = listOf(
-                project.configurations.runtimeClasspath.get(),
-            )
-            archiveClassifier.set("")
-            mergeServiceFiles()
-            exclude("META-INF/maven/**")
-            exclude("META-INF/*.kotlin_module")
-            exclude("META-INF/versions/**")
-            exclude("module-info.class")
-            exclude("javax/**")
-            exclude("org/slf4j/**")
-            exclude("org/jetbrains/**")
-            exclude("com/google/**")
         }
     }
 }

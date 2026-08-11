@@ -38,11 +38,17 @@ dependencies {
 
     // Hibernate as internal implementation
     add("shadowImplementation",
+        "org.reflections:reflections:0.10.2") { isTransitive = false }
+    add("shadowImplementation",
+        "net.bytebuddy:byte-buddy:1.14.12") { isTransitive = false }
+    add("shadowImplementation",
         "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3") { isTransitive = false }
     add("shadowImplementation",
         "org.hibernate.orm:hibernate-core:6.4.1.Final") { isTransitive = false }
     add("shadowImplementation",
         "org.hibernate.orm:hibernate-community-dialects:6.3.1.Final") { isTransitive = false }
+    add("shadowImplementation",
+        "org.hibernate.common:hibernate-commons-annotations:6.0.6.Final") { isTransitive = false }
     add("shadowImplementation",
         "org.jboss.logging:jboss-logging:3.5.3.Final") { isTransitive = false }
     add("shadowImplementation",
@@ -53,6 +59,12 @@ dependencies {
         "com.github.ben-manes.caffeine:caffeine:3.1.8") { isTransitive = false }
     add("shadowImplementation",
         "jakarta.persistence:jakarta.persistence-api:3.1.0") { isTransitive = false }
+    add("shadowImplementation",
+        "jakarta.transaction:jakarta.transaction-api:2.0.1") { isTransitive = false }
+    add("shadowImplementation", "com.fasterxml:classmate:1.5.1") { isTransitive = false }
+    add("shadowImplementation", "org.jboss.logging:jboss-logging:3.5.3.Final") { isTransitive = false }
+    add("shadowImplementation", "org.antlr:antlr4-runtime:4.13.1") { isTransitive = false }
+    add("shadowImplementation", "org.javassist:javassist:3.29.2-GA") { isTransitive = false }
 
     // Other runtime dependencies
     compileOnly("org.xerial:sqlite-jdbc:3.48.0.0")
@@ -89,6 +101,7 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
     relocate("org.antlr.v4", "org.vicky.shaded.antlr.v4")
     relocate("jakarta", "org.vicky.shaded.jakarta")
     relocate("javassist", "org.vicky.shaded.javassist")
+    relocate("net.bytebuddy", "org.vicky.shaded.bytebuddy")
     relocate("org.jboss.logging", "org.vicky.shaded.jboss.logging") {
         exclude("META-INF/services/**")
     }

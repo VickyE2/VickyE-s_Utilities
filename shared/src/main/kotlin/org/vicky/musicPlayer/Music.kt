@@ -14,10 +14,10 @@ import org.vicky.music.utils.MusicPiece
 import org.vicky.music.utils.MusicTrack
 import org.vicky.platform.IColor
 import org.vicky.platform.PlatformBossBar
-import org.vicky.platform.player.PlatformPlayer
 import org.vicky.platform.PlatformPlugin
 import org.vicky.platform.defaults.BossBarOverlay
 import org.vicky.platform.defaults.VanillaColor
+import org.vicky.platform.player.PlatformPlayer
 import org.vicky.platform.utils.BossBarDescriptor
 import org.vicky.platform.utils.SoundCategory
 import org.vicky.utilities.DatabaseManager.dao_s.MusicPieceDAO
@@ -109,7 +109,7 @@ object MusicPlayer {
         }
         val dbMusic = MusicPlayerDAO.INSTANCE.findById(player.uniqueId()).orElse(null)
         if (dbMusic == null) {
-            player.sendMessage(Component.text("Failed to play message because a sever server error occurred: NO_MUSIC_DATABASE")
+            player.sendMessage(Component.text("Failed to play message because a sever error occurred: NO_PLAYER_MUSIC_DATABASE")
                 .style(Style.style(NamedTextColor.DARK_RED, TextDecoration.BOLD)))
             return
         }
@@ -131,7 +131,7 @@ object MusicPlayer {
         }
         val dbMusic = MusicPlayerDAO.INSTANCE.findById(player.uniqueId()).orElse(null)
         if (dbMusic == null) {
-            player.sendMessage(Component.text("Failed to play message because a sever server error occurred: NO_MUSIC_DATABASE",
+            player.sendMessage(Component.text("Failed to play message because a sever error occurred: NO_PLAYER_MUSIC_DATABASE",
                 NamedTextColor.DARK_RED, TextDecoration.BOLD))
             return
         }
@@ -202,7 +202,7 @@ object MusicPlayer {
         val dbMusic = MusicPlayerDAO.INSTANCE.findById(player.uniqueId()).orElse(null)
         if (dbMusic == null) {
             player.sendMessage(
-                Component.text("Failed to play message because a sever server error occurred: NO_MUSIC_DATABASE",
+                Component.text("Failed to play message because a sever error occurred: NO_PLAYER_MUSIC_DATABASE",
                     NamedTextColor.DARK_RED, TextDecoration.BOLD))
             return
         }

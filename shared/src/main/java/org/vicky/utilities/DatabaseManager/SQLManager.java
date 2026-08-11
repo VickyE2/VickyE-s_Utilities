@@ -32,6 +32,7 @@ public class SQLManager {
   private final ContextLogger logger =
       new ContextLogger(ContextLogger.ContextType.HIBERNATE, "MANAGER");
   private final String databaseFolder;
+  private final String absoluteDatabaseFolder;
   private String jdbcUrl;
   private DatabaseCreator database;
   private SessionFactory sessionFactory;
@@ -44,11 +45,13 @@ public class SQLManager {
       boolean formatSql,
       String ddlAuto,
       List<Class<?>> mappingClasses,
-      String databaseFolder) {
+      String databaseFolder,
+      String absoluteDatabaseFolder) {
     Properties dbCredentials = loadCredentials();
     this.username = dbCredentials.getOrDefault("username", username).toString();
     this.password = dbCredentials.getOrDefault("password", password).toString();
     this.databaseFolder = databaseFolder;
+    this.absoluteDatabaseFolder = absoluteDatabaseFolder;
     dbCredentials.setProperty("username", this.username);
     dbCredentials.setProperty("password", this.password);
     try {
@@ -168,9 +171,11 @@ public class SQLManager {
   }
 
   public void createDatabase() throws Exception {
-    File parentFolder = new File(PlatformPlugin.dataFolder(), "databases/" + databaseFolder + "/");
+    File parentFolder = (absoluteDatabaseFolder != null && !absoluteDatabaseFolder.isEmpty()) ?
+                    new File(absoluteDatabaseFolder) : PlatformPlugin.dataFolder().toPath().resolve("databases/" + databaseFolder + "/").toFile();
     parentFolder.mkdirs();
-    String sqlitePath = new File(parentFolder, "global.db").getAbsolutePath();
+    String sqlitePath = (absoluteDatabaseFolder != null && absoluteDatabaseFolder.endsWith(".db")) ?
+            parentFolder.getAbsolutePath() : new File(parentFolder, "global.db").getAbsolutePath();
     database = new DatabaseCreator.DatabaseBuilder().name(sqlitePath).build();
     database.createDatabase();
     this.jdbcUrl = database.getJdbcUrl();

@@ -17,6 +17,7 @@ public class SQLManagerBuilder {
   private boolean showSql;
   private boolean formatSql;
   private String databaseFolder = "defaulted";
+  private String absoluteDatabaseFolder = null;
   private Hbm2DdlAutoType ddlAuto;
 
   public SQLManagerBuilder setUsername(String username) {
@@ -31,6 +32,11 @@ public class SQLManagerBuilder {
 
   public SQLManagerBuilder setDatabaseFolder(String databaseFolder) {
     this.databaseFolder = databaseFolder;
+    return this;
+  }
+
+  public SQLManagerBuilder setAbsoluteDatabaseFolder(String databaseFolder) {
+    this.absoluteDatabaseFolder = databaseFolder;
     return this;
   }
 
@@ -72,6 +78,6 @@ public class SQLManagerBuilder {
 
     // Return the instance of SQLManager
     return new SQLManager(
-            username, password, dialect, showSql, formatSql, ddlAuto.toString(), mappingClasses, databaseFolder);
+            username, password, dialect, showSql, formatSql, ddlAuto.toString(), mappingClasses, databaseFolder, absoluteDatabaseFolder);
   }
 }

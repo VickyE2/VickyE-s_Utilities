@@ -295,7 +295,7 @@ object MusicPlayer {
         }
 
         for ((tickOffset, events) in arrangedEvents) {
-            PlatformPlugin.scheduler().runScheduled({
+            PlatformPlugin.server().getScheduler().runScheduled({
                 for (event in events) {
                     val key = NoteKey(player.uniqueId(), event.sound?.name ?: "unknown", event.pitch, event.volume)
                     if (event.part != null) {

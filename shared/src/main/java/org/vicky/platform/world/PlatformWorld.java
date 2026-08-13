@@ -39,6 +39,10 @@ public interface PlatformWorld<T, N> {
 
 	List<PlatformPlayer> getPlayers();
 
+	PlatformBiome getBiomeAt(double x, double y, double z);
+	default PlatformBiome getBiomeAt(int x, int y, int z) {
+		return getBiomeAt(x * 1.0, y * 1.0, z * 1.0);
+	};
 	PlatformBlock<T> getBlockAt(double x, double y, double z);
 	default PlatformBlock<T> getBlockAt(int x, int y, int z) {
 		return getBlockAt(x * 1.0, y * 1.0, z * 1.0);

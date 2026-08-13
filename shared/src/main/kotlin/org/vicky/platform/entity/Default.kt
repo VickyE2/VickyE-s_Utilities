@@ -21,6 +21,8 @@ infix fun <T, U> T.pair(value: U): Pair<T, U> =
 
 fun String.minecraft(): ResourceLocation =
     ResourceLocation.from("minecraft", this)
+fun String.minecraftString(): String =
+    ResourceLocation.from("minecraft", this).toString()
 fun String.core(): ResourceLocation =
     ResourceLocation.from("core", this)
 

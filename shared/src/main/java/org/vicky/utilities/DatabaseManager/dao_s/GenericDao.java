@@ -16,7 +16,7 @@ public abstract class GenericDao<T extends DatabaseTemplate, K> {
 	public abstract List<T> getAll();
 
 	public void save(T theme) {
-		save(HibernateUtil.getEntityManager(),  theme);
+		save(HibernateUtil.getEntityManager(), theme);
 	}
 	public void save(EntityManager em, T theme) {
 		EntityTransaction transaction = em.getTransaction();
@@ -35,7 +35,7 @@ public abstract class GenericDao<T extends DatabaseTemplate, K> {
 	}
 
 	public T update(T theme) {
-		return update(HibernateUtil.getEntityManager(),  theme);
+		return update(HibernateUtil.getEntityManager(), theme);
 	}
 	public T update(EntityManager em, T theme) {
 		EntityTransaction transaction = em.getTransaction();

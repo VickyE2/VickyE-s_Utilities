@@ -19,6 +19,8 @@ abstract class BlockbenchExtension @Inject constructor(objects: ObjectFactory) {
     val modid: Property<String> = objects.property(String::class.java)
     val outDir: Property<String> = objects.property(String::class.java)
     val bbdirectory: Property<String> = objects.property(String::class.java)
+    val entitiesDirectory: Property<String> = objects.property(String::class.java)
+    val itemsDirectory: Property<String> = objects.property(String::class.java)
     val runEveryBuild: Property<Boolean> = objects.property(Boolean::class.java)
 }
 
@@ -32,6 +34,10 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
             .orElse("assets/default_modid")
         val bbDirectoryProvider = extension.bbdirectory
             .orElse("blockbench")
+        val entitiesDirectoryProvider = extension.entitiesDirectory
+            .orElse("entities")
+        val itemsDirectoryProvider = extension.itemsDirectory
+            .orElse("items")
         val runEveryBuildProvider = extension.runEveryBuild
             .orElse(false)
 
@@ -46,6 +52,9 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                     return@doLast
                 }
 
+                val entityDir = resourcesDir.resolve(entitiesDirectoryProvider.get())
+                val itemDir = resourcesDir.resolve(itemsDirectoryProvider.get())
+
                 val outputBase = File(project.buildDir, outDirProvider.get())
                 outputBase.mkdirs()
                 val json = Json {
@@ -53,7 +62,11 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                     encodeDefaults = false
                     explicitNulls = false
                 }
-                Utils.log("Output directory will be: ${outputBase.path.toString().replace(Regex("^([A-Z]:)\\\\.*?(?=\\\\build)"), "$1\\***")}")
+                Utils.log(
+                    "Output directory will be: ${
+                        outputBase.path.toString().replace(Regex("^([A-Z]:)\\\\.*?(?=\\\\build)"), "$1\\***")
+                    }"
+                )
 
 
                 val cacheDir = File(project.buildDir, "bb-dissolver")
@@ -71,64 +84,135 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                 }
 
                 // Iterate over all .bbmodel files
-                resourcesDir.walkTopDown().filter { it.isFile && it.extension == "bbmodel" }.forEach { bbFile ->
-                    val fileKey = bbFile.relativeTo(resourcesDir).path
-                    val currentHash = Utils.sha256(bbFile)
-                    val previousHash = cache.hashes[fileKey]
+                if (entityDir.exists())
+                    entityDir.walkTopDown().filter { it.isFile && it.extension == "bbmodel" }.forEach { bbFile ->
+                        val fileKey = bbFile.relativeTo(resourcesDir).path
+                        val currentHash = Utils.sha256(bbFile)
+                        val previousHash = cache.hashes[fileKey]
 
-                    if (previousHash == currentHash && !runEveryBuildProvider.get()) {
-                        Utils.log("Skipping ${bbFile.name} (unchanged)")
-                        return@forEach
-                    }
-
-                    cache.hashes[fileKey] = currentHash
-                    Utils.log("Processing ${bbFile.name}")
-
-                    val bbModel = BBConverter.loadBBModel(bbFile)
-                        ?: run {
-                            Utils.log("Failed to load ${bbFile.name}", true)
+                        if (previousHash == currentHash && !runEveryBuildProvider.get()) {
+                            Utils.log("Skipping ${bbFile.name} (unchanged)")
                             return@forEach
                         }
 
-                    try {
-                        /* ---------- STAGE EVERYTHING ---------- */
+                        cache.hashes[fileKey] = currentHash
+                        Utils.log("Processing entity ${bbFile.name}")
 
-                        val resolvedTextures = bbModel.resolveTextures()
-                        val geo = bbModel.geoGeom()
-                        val anim = bbModel.geoAnim()
-                        outputBase.delete()
-
-                        /* ---------- COMMIT TO DISK ---------- */
-
-                        // Textures
-                        val texFolder = File(outputBase, "textures/entity").apply { mkdirs() }
-                        resolvedTextures.forEachIndexed { index, resolved ->
-                            val name = bbModel.textures.getOrNull(index)?.name ?: "texture$index.png"
-                            val texFile = File(texFolder, name)
-                            javax.imageio.ImageIO.write(resolved.image, "png", texFile)
-
-                            resolved.mcmeta?.let {
-                                File(texFolder, "$name.mcmeta")
-                                    .writeText(json.encodeToString(McMeta.serializer(), it))
+                        val bbModel = BBConverter.loadBBModel(bbFile)
+                            ?: run {
+                                Utils.log("Failed to load ${bbFile.name}", true)
+                                return@forEach
                             }
+
+                        try {
+                            /* ---------- STAGE EVERYTHING ---------- */
+
+                            val resolvedTextures = bbModel.resolveTextures()
+                            val geo = bbModel.geoGeom()
+                            val anim = bbModel.geoAnim()
+                            outputBase.delete()
+
+                            /* ---------- COMMIT TO DISK ---------- */
+
+                            // Textures
+                            val texFolder = File(outputBase, "textures/entity").apply { mkdirs() }
+                            resolvedTextures.forEachIndexed { index, resolved ->
+                                val name = bbModel.textures.getOrNull(index)?.name ?: "texture$index.png"
+                                val texFile = File(texFolder, name)
+                                javax.imageio.ImageIO.write(resolved.image, "png", texFile)
+
+                                resolved.mcmeta?.let {
+                                    File(texFolder, "$name.mcmeta")
+                                        .writeText(json.encodeToString(McMeta.serializer(), it))
+                                }
+                            }
+
+                            // Geometry
+                            val geoFolder = File(outputBase, "geo/models").apply { mkdirs() }
+                            File(geoFolder, "${bbModel.modelIdentifier}.geo.json")
+                                .writeText(json.encodeToString(GeoModel.serializer(), geo))
+
+                            // Animations
+                            val animFolder = File(outputBase, "animations").apply { mkdirs() }
+                            File(animFolder, "${bbModel.modelIdentifier}.animation.json")
+                                .writeText(json.encodeToString(GeoAnimation.serializer(), anim))
+
+                        } catch (e: Exception) {
+                            Utils.log("An error occurred while processing entity ${bbModel.modelIdentifier}", true)
+                            e.printStackTrace()
+                        }
+                    }
+
+                if (itemDir.exists())
+                    itemDir.walkTopDown().filter { it.isFile && it.extension == "bbmodel" }.forEach { bbFile ->
+                        val fileKey = bbFile.relativeTo(resourcesDir).path
+                        val currentHash = Utils.sha256(bbFile)
+                        val previousHash = cache.hashes[fileKey]
+
+                        if (previousHash == currentHash && !runEveryBuildProvider.get()) {
+                            Utils.log("Skipping ${bbFile.name} (unchanged)")
+                            return@forEach
                         }
 
-                        // Geometry
-                        val geoFolder = File(outputBase, "geo/models").apply { mkdirs() }
-                        File(geoFolder, "${bbModel.modelIdentifier}.geo.json")
-                            .writeText(json.encodeToString(GeoModel.serializer(), geo))
+                        cache.hashes[fileKey] = currentHash
+                        Utils.log("Processing item ${bbFile.name}")
 
-                        // Animations
-                        val animFolder = File(outputBase, "animations").apply { mkdirs() }
-                        File(animFolder, "${bbModel.modelIdentifier}.animation.json")
-                            .writeText(json.encodeToString(GeoAnimation.serializer(), anim))
+                        val bbModel = BBConverter.loadBBModel(bbFile)
+                            ?: run {
+                                Utils.log("Failed to load ${bbFile.name}", true)
+                                return@forEach
+                            }
 
+                        try {
+                            /* ---------- STAGE EVERYTHING ---------- */
+
+                            val resolvedTextures = bbModel.resolveTextures()
+                            val geo = bbModel.geoGeom()
+                            val anim = bbModel.geoAnim()
+                            outputBase.delete()
+
+                            /* ---------- COMMIT TO DISK ---------- */
+
+                            // Textures
+                            val texFolder = File(outputBase, "textures/item").apply { mkdirs() }
+                            resolvedTextures.forEachIndexed { index, resolved ->
+                                val name = bbModel.textures.getOrNull(index)?.name ?: "texture$index.png"
+                                val texFile = File(texFolder, name)
+                                javax.imageio.ImageIO.write(resolved.image, "png", texFile)
+
+                                resolved.mcmeta?.let {
+                                    File(texFolder, "$name.mcmeta")
+                                        .writeText(json.encodeToString(McMeta.serializer(), it))
+                                }
+                            }
+
+                            // Geometry
+                            val geoFolder = File(outputBase, "geo/item").apply { mkdirs() }
+                            File(geoFolder, "${bbModel.modelIdentifier}.geo.json")
+                                .writeText(json.encodeToString(GeoModel.serializer(), geo))
+
+                            // Animations
+                            val animFolder = File(outputBase, "animations").apply { mkdirs() }
+                            File(animFolder, "${bbModel.modelIdentifier}.animation.json")
+                                .writeText(json.encodeToString(GeoAnimation.serializer(), anim))
+
+
+                            // Item Model JSON (Added step for inventory/hand rendering)
+                            val itemModelFolder = File(outputBase, "models/item").apply { mkdirs() }
+                            val itemModelJson = """
+                            {
+                              "parent": "builtin/entity",
+                              "loader": "geckolib"
+                            }
+                        """.trimIndent()
+                            File(itemModelFolder, "${bbModel.modelIdentifier}.json").writeText(itemModelJson)
+
+
+                        } catch (e: Exception) {
+                            Utils.log("An error occurred while processing entity ${bbModel.modelIdentifier}", true)
+                            e.printStackTrace()
+                        }
                     }
-                    catch (e: Exception) {
-                        Utils.log("An error occurred while processing ${bbModel.modelIdentifier}", true)
-                        e.printStackTrace()
-                    }
-                }
 
                 cacheFile.writeText(
                     json.encodeToString(BbCache.serializer(), cache)
@@ -153,7 +237,41 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
     }
 }
 
-object Utils{
+object Utils {
+    enum class GeckoAssetType {
+        ENTITY,
+        ITEM,
+        BLOCK
+    }
+
+    data class GeckoOutputTarget(
+        val type: GeckoAssetType,
+        val textureDirectory: String,
+        val geometryDirectory: String,
+        val animationDirectory: String
+    )
+
+    data class GeckoModelOutput(
+        val root: String,
+        val texturePath: String,
+        val geometryPath: String,
+        val animationPath: String
+    )
+
+    val ENTITY_TARGET = GeckoOutputTarget(
+        type = GeckoAssetType.ENTITY,
+        textureDirectory = "textures/entity",
+        geometryDirectory = "geo/models",
+        animationDirectory = "animations"
+    )
+
+    val ITEM_TARGET = GeckoOutputTarget(
+        type = GeckoAssetType.ITEM,
+        textureDirectory = "textures/item",
+        geometryDirectory = "geo/items",
+        animationDirectory = "animations/items"
+    )
+
     fun sha256(file: File): String {
         val digest = java.security.MessageDigest.getInstance("SHA-256")
         file.inputStream().use { input ->

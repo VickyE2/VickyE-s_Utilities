@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2024. */
+/* Licensed under Apache-2.0 2024-2026. */
 package org.vicky.utilities.DatabaseManager;
 
 import org.hibernate.SessionFactory;
@@ -21,183 +21,175 @@ import java.io.IOException;
 import java.util.*;
 
 public class SQLManager {
-  public static RandomStringGenerator generator = RandomStringGenerator.getInstance();
-  private final String username;
-  private final String password;
-  private final String dialect;
-  private final boolean showSql;
-  private final boolean formatSql;
-  private final String ddlAuto;
-  private final List<Class<?>> mappingClasses;
-  private final ContextLogger logger =
-      new ContextLogger(ContextLogger.ContextType.HIBERNATE, "MANAGER");
-  private final String databaseFolder;
-  private final String absoluteDatabaseFolder;
-  private String jdbcUrl;
-  private DatabaseCreator database;
-  private SessionFactory sessionFactory;
+	public static RandomStringGenerator generator = RandomStringGenerator.getInstance();
+	private final String username;
+	private final String password;
+	private final String dialect;
+	private final boolean showSql;
+	private final boolean formatSql;
+	private final String ddlAuto;
+	private final List<Class<?>> mappingClasses;
+	private final ContextLogger logger = new ContextLogger(ContextLogger.ContextType.HIBERNATE, "MANAGER");
+	private final String databaseFolder;
+	private final String absoluteDatabaseFolder;
+	private String jdbcUrl;
+	private DatabaseCreator database;
+	private SessionFactory sessionFactory;
 
-  public SQLManager(
-      String username,
-      String password,
-      String dialect,
-      boolean showSql,
-      boolean formatSql,
-      String ddlAuto,
-      List<Class<?>> mappingClasses,
-      String databaseFolder,
-      String absoluteDatabaseFolder) {
-    Properties dbCredentials = loadCredentials();
-    this.username = dbCredentials.getOrDefault("username", username).toString();
-    this.password = dbCredentials.getOrDefault("password", password).toString();
-    this.databaseFolder = databaseFolder;
-    this.absoluteDatabaseFolder = absoluteDatabaseFolder;
-    dbCredentials.setProperty("username", this.username);
-    dbCredentials.setProperty("password", this.password);
-    try {
-      File credentials = new File(PlatformPlugin.dataFolder(), "configs/db_credentials.properties");
-      credentials.getParentFile().mkdirs();
-      if (!credentials.exists()) {
-        credentials.createNewFile();
-      }
-      FileWriter writer = new FileWriter(credentials);
-      dbCredentials.store(writer, "");
-    } catch (IOException e) {
-      logger.print("Failed to save credentials: " + e.getMessage(), true);
-    }
-    this.saveCredentials(this.username, this.password);
-    this.dialect = dialect;
-    this.showSql = showSql;
-    this.formatSql = formatSql;
-    this.ddlAuto = ddlAuto;
-    this.mappingClasses =
-        mappingClasses != null ? new ArrayList<>(mappingClasses) : new ArrayList<>();
-  }
+	public SQLManager(String username, String password, String dialect, boolean showSql, boolean formatSql,
+			String ddlAuto, List<Class<?>> mappingClasses, String databaseFolder, String absoluteDatabaseFolder) {
+		Properties dbCredentials = loadCredentials();
+		this.username = dbCredentials.getOrDefault("username", username).toString();
+		this.password = dbCredentials.getOrDefault("password", password).toString();
+		this.databaseFolder = databaseFolder;
+		this.absoluteDatabaseFolder = absoluteDatabaseFolder;
+		dbCredentials.setProperty("username", this.username);
+		dbCredentials.setProperty("password", this.password);
+		try {
+			File credentials = new File(PlatformPlugin.dataFolder(), "configs/db_credentials.properties");
+			credentials.getParentFile().mkdirs();
+			if (!credentials.exists()) {
+				credentials.createNewFile();
+			}
+			FileWriter writer = new FileWriter(credentials);
+			dbCredentials.store(writer, "");
+		} catch (IOException e) {
+			logger.print("Failed to save credentials: " + e.getMessage(), true);
+		}
+		this.saveCredentials(this.username, this.password);
+		this.dialect = dialect;
+		this.showSql = showSql;
+		this.formatSql = formatSql;
+		this.ddlAuto = ddlAuto;
+		this.mappingClasses = mappingClasses != null ? new ArrayList<>(mappingClasses) : new ArrayList<>();
+	}
 
-  public void addMappingClass(Class<?> clazz) {
-    ClassLoader originalCL = Thread.currentThread().getContextClassLoader();
+	public void addMappingClass(Class<?> clazz) {
+		ClassLoader originalCL = Thread.currentThread().getContextClassLoader();
 
-    ClassLoader mappingCL = clazz.getClassLoader();
-    Thread.currentThread().setContextClassLoader(mappingCL);
+		ClassLoader mappingCL = clazz.getClassLoader();
+		Thread.currentThread().setContextClassLoader(mappingCL);
 
-    mappingClasses.add(clazz);
+		mappingClasses.add(clazz);
 
-    Thread.currentThread().setContextClassLoader(originalCL);
-  }
+		Thread.currentThread().setContextClassLoader(originalCL);
+	}
 
-  public void addMappingClasses(List<Class<?>> clazz) {
-    ClassLoader originalCL = Thread.currentThread().getContextClassLoader();
+	public void addMappingClasses(List<Class<?>> clazz) {
+		ClassLoader originalCL = Thread.currentThread().getContextClassLoader();
 
-    for (Class<?> mappingClass : clazz) {
-      // Set the context class loader to the one that loaded the mapping class
-      ClassLoader mappingCL = mappingClass.getClassLoader();
-      Thread.currentThread().setContextClassLoader(mappingCL);
+		for (Class<?> mappingClass : clazz) {
+			// Set the context class loader to the one that loaded the mapping class
+			ClassLoader mappingCL = mappingClass.getClassLoader();
+			Thread.currentThread().setContextClassLoader(mappingCL);
 
-      // Now add the annotated class. Hibernate will use the current thread's context class loader.
-      mappingClasses.add(mappingClass);
-    }
+			// Now add the annotated class. Hibernate will use the current thread's context
+			// class loader.
+			mappingClasses.add(mappingClass);
+		}
 
-    // Reset the original class loader afterward.
-    Thread.currentThread().setContextClassLoader(originalCL);
-  }
+		// Reset the original class loader afterward.
+		Thread.currentThread().setContextClassLoader(originalCL);
+	}
 
-  public Properties loadCredentials() {
-    Properties properties = new Properties();
+	public Properties loadCredentials() {
+		Properties properties = new Properties();
 
-    try (FileReader reader =
-                 new FileReader(new File(PlatformPlugin.dataFolder(), "configs/db_credentials.properties"))) {
-      properties.load(reader);
-    } catch (IOException var7) {
-      logger.print("Default credentials are absent...recreating", true);
-    }
+		try (FileReader reader = new FileReader(
+				new File(PlatformPlugin.dataFolder(), "configs/db_credentials.properties"))) {
+			properties.load(reader);
+		} catch (IOException var7) {
+			logger.print("Default credentials are absent...recreating", true);
+		}
 
-    return properties;
-  }
+		return properties;
+	}
 
-  public void configureSessionFactory() {
-    try {
-      Configuration configuration = new Configuration();
-      JarClassScanner scanner = new JarClassScanner();
+	public void configureSessionFactory() {
+		try {
+			Configuration configuration = new Configuration();
+			JarClassScanner scanner = new JarClassScanner();
 
-      createDatabase();
-      configuration.setProperty(
-          "hibernate.connection.driver_class", "org.sqlite.JDBC"); // Adjust driver as needed
-      configuration.setProperty("hibernate.connection.url", jdbcUrl);
-      configuration.setProperty("hibernate.connection.username", username);
-      configuration.setProperty("hibernate.connection.password", password);
-      configuration.setProperty("hibernate.dialect", dialect);
-      configuration.setProperty("hibernate.show_sql", Boolean.toString(showSql));
-      configuration.setProperty("hibernate.format_sql", Boolean.toString(formatSql));
-      configuration.setProperty("hibernate.hbm2ddl.auto", ddlAuto);
-      configuration.setProperty("org.hibernate.SQL", Boolean.toString(false));
-      configuration.setProperty("org.hibernate.type.descriptor.sql.BasicBinder", Boolean.toString(false));
-      configuration.setProperty("hibernate.jdbc.fetch_size", Integer.toString(50));
+			createDatabase();
+			configuration.setProperty("hibernate.connection.driver_class", "org.sqlite.JDBC"); // Adjust driver as
+																								// needed
+			configuration.setProperty("hibernate.connection.url", jdbcUrl);
+			configuration.setProperty("hibernate.connection.username", username);
+			configuration.setProperty("hibernate.connection.password", password);
+			configuration.setProperty("hibernate.dialect", dialect);
+			configuration.setProperty("hibernate.show_sql", Boolean.toString(showSql));
+			configuration.setProperty("hibernate.format_sql", Boolean.toString(formatSql));
+			configuration.setProperty("hibernate.hbm2ddl.auto", ddlAuto);
+			configuration.setProperty("org.hibernate.SQL", Boolean.toString(false));
+			configuration.setProperty("org.hibernate.type.descriptor.sql.BasicBinder", Boolean.toString(false));
+			configuration.setProperty("hibernate.jdbc.fetch_size", Integer.toString(50));
 
-      for (Map.Entry<String, String> pack : PlatformPlugin.getPendingDBTemplatesUtils().entrySet()) {
-        scanner.getClassesFromJar(pack.getValue(), pack.getKey(), Object.class);
-      }
+			for (Map.Entry<String, String> pack : PlatformPlugin.getPendingDBTemplatesUtils().entrySet()) {
+				scanner.getClassesFromJar(pack.getValue(), pack.getKey(), Object.class);
+			}
 
-      for (Map.Entry<String, String> pack : PlatformPlugin.getPendingDBTemplates().entrySet()) {
-        mappingClasses.addAll(
-            scanner.getClassesFromJar(pack.getValue(), pack.getKey(), DatabaseTemplate.class));
-      }
+			for (Map.Entry<String, String> pack : PlatformPlugin.getPendingDBTemplates().entrySet()) {
+				mappingClasses
+						.addAll(scanner.getClassesFromJar(pack.getValue(), pack.getKey(), DatabaseTemplate.class));
+			}
 
-      List<Class<?>> reversed = new ArrayList<>(mappingClasses);
-      Collections.reverse(reversed);
-      for (Class<?> clazz : reversed) {
-        logger.print(String.valueOf(clazz), ContextLogger.LogType.AMBIENCE);
-        configuration.addAnnotatedClass(clazz);
-      }
+			List<Class<?>> reversed = new ArrayList<>(mappingClasses);
+			Collections.reverse(reversed);
+			for (Class<?> clazz : reversed) {
+				logger.print(String.valueOf(clazz), ContextLogger.LogType.AMBIENCE);
+				configuration.addAnnotatedClass(clazz);
+			}
 
-      Map<String, Object> settings = new HashMap<>();
-      settings.put(AvailableSettings.CLASSLOADERS, List.of(PlatformPlugin.classLoader()));
+			Map<String, Object> settings = new HashMap<>();
+			settings.put(AvailableSettings.CLASSLOADERS, List.of(PlatformPlugin.classLoader()));
 
-      StandardServiceRegistry serviceRegistry =
-          new StandardServiceRegistryBuilder()
-              .applySettings(configuration.getProperties())
-              .addService(ClassLoaderService.class, new AggregatedClassLoaderService(PlatformPlugin.classLoader()))
-              .applySettings(settings)
-              .build();
+			StandardServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
+					.applySettings(configuration.getProperties())
+					.addService(ClassLoaderService.class,
+							new AggregatedClassLoaderService(PlatformPlugin.classLoader()))
+					.applySettings(settings).build();
 
-      sessionFactory = configuration.buildSessionFactory(serviceRegistry);
-    } catch (Exception e) {
-      logger.print("Failed to configure Hibernate SessionFactory: " + e.getMessage(), true);
-      e.printStackTrace();
-    }
-  }
+			sessionFactory = configuration.buildSessionFactory(serviceRegistry);
+		} catch (Exception e) {
+			logger.print("Failed to configure Hibernate SessionFactory: " + e.getMessage(), true);
+			e.printStackTrace();
+		}
+	}
 
-  public SessionFactory getSessionFactory() {
-    return sessionFactory;
-  }
+	public SessionFactory getSessionFactory() {
+		return sessionFactory;
+	}
 
-  public void createDatabase() throws Exception {
-    File parentFolder = (absoluteDatabaseFolder != null && !absoluteDatabaseFolder.isEmpty()) ?
-                    new File(absoluteDatabaseFolder) : PlatformPlugin.dataFolder().toPath().resolve("databases/" + databaseFolder + "/").toFile();
-    parentFolder.mkdirs();
-    String sqlitePath = (absoluteDatabaseFolder != null && absoluteDatabaseFolder.endsWith(".db")) ?
-            parentFolder.getAbsolutePath() : new File(parentFolder, "global.db").getAbsolutePath();
-    database = new DatabaseCreator.DatabaseBuilder().name(sqlitePath).build();
-    database.createDatabase();
-    this.jdbcUrl = database.getJdbcUrl();
-  }
+	public void createDatabase() throws Exception {
+		File parentFolder = (absoluteDatabaseFolder != null && !absoluteDatabaseFolder.isEmpty())
+				? new File(absoluteDatabaseFolder)
+				: PlatformPlugin.dataFolder().toPath().resolve("databases/" + databaseFolder + "/").toFile();
+		parentFolder.mkdirs();
+		String sqlitePath = (absoluteDatabaseFolder != null && absoluteDatabaseFolder.endsWith(".db"))
+				? parentFolder.getAbsolutePath()
+				: new File(parentFolder, "global.db").getAbsolutePath();
+		database = new DatabaseCreator.DatabaseBuilder().name(sqlitePath).build();
+		database.createDatabase();
+		this.jdbcUrl = database.getJdbcUrl();
+	}
 
-  public void startDatabase() {
-    try {
-      HibernateUtil.initialise(this);
-    } catch (Exception e) {
-      logger.print(e.getMessage() + ": " + e.getCause(), true);
-    }
-  }
+	public void startDatabase() {
+		try {
+			HibernateUtil.initialise(this);
+		} catch (Exception e) {
+			logger.print(e.getMessage() + ": " + e.getCause(), true);
+		}
+	}
 
-  public void saveCredentials(String userName, String password) {
-    try (FileWriter writer =
-                 new FileWriter(new File(PlatformPlugin.dataFolder(), "configs/db_credentials.properties"))) {
-      Properties properties = new Properties();
-      properties.setProperty("userName", userName);
-      properties.setProperty("password", password);
-      properties.store(writer, "Database Credentials");
-    } catch (IOException var8) {
-      var8.printStackTrace();
-    }
-  }
+	public void saveCredentials(String userName, String password) {
+		try (FileWriter writer = new FileWriter(
+				new File(PlatformPlugin.dataFolder(), "configs/db_credentials.properties"))) {
+			Properties properties = new Properties();
+			properties.setProperty("userName", userName);
+			properties.setProperty("password", password);
+			properties.store(writer, "Database Credentials");
+		} catch (IOException var8) {
+			var8.printStackTrace();
+		}
+	}
 }

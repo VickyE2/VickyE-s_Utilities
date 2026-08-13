@@ -11,6 +11,7 @@ import org.vicky.platform.guiscreens.DefaultGuis;
 import org.vicky.platform.items.PlatformCreativeTabRegistry;
 import org.vicky.platform.items.PlatformItemFactory;
 import org.vicky.platform.player.PlatformPlayer;
+import org.vicky.platform.server.PlatformServer;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 
 import java.io.File;
@@ -51,8 +52,8 @@ public interface PlatformPlugin {
 		return get().getPlatformLogger();
 	}
 
-	static PlatformScheduler scheduler() {
-		return get().getPlatformScheduler();
+	static PlatformServer server() {
+		return get().getPlatformServer();
 	}
 
 	static PlatformRankService rankService() {
@@ -169,7 +170,7 @@ public interface PlatformPlugin {
 	}
 
 	PlatformLogger getPlatformLogger();
-	PlatformScheduler getPlatformScheduler();
+	PlatformServer getPlatformServer();
 	PlatformRankService getRankService();
 	PlatformParticleProvider getParticleProvider();
 	PlatformChatFormatter getChatFormatter();

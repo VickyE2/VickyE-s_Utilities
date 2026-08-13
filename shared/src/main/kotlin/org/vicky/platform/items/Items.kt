@@ -6,6 +6,8 @@ import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
 import org.vicky.platform.entity.PlatformLivingEntity
 import org.vicky.platform.entity.minecraft
+import org.vicky.platform.entity.minecraftString
+import org.vicky.platform.entity.pair
 import org.vicky.platform.entity.rli
 import org.vicky.platform.item.InteractionHand
 import org.vicky.platform.item.ItemData
@@ -18,28 +20,85 @@ import org.vicky.platform.world.PlatformMaterial
 import org.vicky.utilities.ContextLogger.ContextLogger
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.mapOf
+import kotlin.to
 
 class ItemProductionError : RuntimeException {
     constructor(message: String?) : super(message)
     constructor(message: String?, cause: Throwable?) : super(message, cause)
-    constructor(cause: Throwable?): super(cause)
+    constructor(cause: Throwable?) : super(cause)
 }
 
 class DescriptorNotRegisteredException : RuntimeException {
     constructor(message: String?) : super(message)
     constructor(message: String?, cause: Throwable?) : super(message, cause)
-    constructor(cause: Throwable?): super(cause)
+    constructor(cause: Throwable?) : super(cause)
+}
+
+interface PlatformItemInspection {
+    fun start()
+    fun stop()
+    fun isActive(): Boolean
 }
 
 data class ItemDescriptor(
     val displayName: Component,
+
+    val model: ItemModel? = null,
+    val animations: ItemAnimationController? = null,
+
     val tab: CreativeTabMenu? = null,
     val lore: List<Component> = emptyList(),
     val baseNbt: Map<String, Any> = emptyMap(),
+
     val handler: ItemEventsHandler = DefaultItemEventsHandler,
+
     val physicalProps: ItemPhysicalProperties = ItemPhysicalProperties(),
     val foodProps: FoodProperties? = null
 )
+
+data class ItemAnimationController(
+    val layers: List<ItemAnimationLayer>
+)
+
+data class ItemAnimationLayer(
+    val name: String,
+    val priority: Int,
+    val resolver: (AnimationContext) -> Animation?
+)
+
+data class AnimationContext(
+    val stack: PlatformItemStack,
+    val entity: PlatformLivingEntity?,
+    val perspective: ItemRenderPerspective,
+    val isUsing: Boolean,
+    val isMoving: Boolean,
+    val isAttacking: Boolean,
+    val isInspecting: Boolean
+)
+
+data class Animation(
+    val key: String,
+    val loop: Boolean = false,
+    /**
+     * In milliseconds
+     */
+    val blendTime: Int = 0,
+    val interruptable: Boolean = true,
+    val priority: Int = 0
+)
+enum class ItemRenderPerspective {
+    NONE,
+    THIRD_PERSON_LEFT_HAND,
+    THIRD_PERSON_RIGHT_HAND,
+    FIRST_PERSON_LEFT_HAND,
+    FIRST_PERSON_RIGHT_HAND,
+    HEAD,
+    GUI,
+    GROUND,
+    FIXED,
+}
+
 data class FoodProperties(
     val nutrition: Int = 0,
     val saturationModifier: Float = 0f,
@@ -48,6 +107,7 @@ data class FoodProperties(
     val fastFood: Boolean = false,
     val effects: List<FoodEffect> = emptyList()
 )
+
 data class ItemPhysicalProperties(
     val glint: Boolean = false,
     /** This is mostly used on non modded platforms */
@@ -60,17 +120,118 @@ data class ItemPhysicalProperties(
     val durability: Int? = null,
     val rarity: Rarity = Rarity.COMMON
 )
+
+interface ItemEventsHandler {
+    fun onInteractLiving(
+        self: PlatformItemStack,
+        hand: InteractionHand,
+        user: PlatformPlayer,
+        usedOn: PlatformLivingEntity
+    ): InteractionResult
+
+    fun onUseOn(
+        self: PlatformItemStack,
+        hand: InteractionHand,
+        user: PlatformLivingEntity,
+        block: PlatformBlock<*>
+    ): InteractionResult
+
+    fun onUse(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity): InteractionResult
+    fun whileInHand(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity)
+    fun whenInInventory(self: PlatformItemStack, user: PlatformLivingEntity)
+    fun whenInHotBar(self: PlatformItemStack, user: PlatformPlayer)
+    fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity): EventResult
+    fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity): EventResult
+    fun onPickedUpByPlayer(self: PlatformItemStack, user: PlatformPlayer): EventResult = onPickedUp(self, user)
+}
+
+sealed interface ItemModel {
+
+    /**
+     * Normal Minecraft model.
+     *
+     * Example:
+     * assets/core/models/item/test_item.json
+     */
+    data class ItemModelDefinition(
+        val parent: String,
+        val textures: Map<String, ResourceLocation> = emptyMap()
+    ) : ItemModel
+
+    /**
+     * A generated/basic Minecraft model.
+     *
+     * Useful when the platform can generate the model JSON.
+     */
+    data class MinecraftItemModel(
+        val modelId: String
+    ) : ItemModel
+
+    /**
+     * A custom renderer-backed model.
+     *
+     * The actual rendering implementation belongs to the platform.
+     */
+    data class CustomItemModel(
+        val modelId: ResourceLocation,
+        val handGroups: org.vicky.utilities.Pair<String, String>? = null
+    ) : ItemModel
+}
+
 data class FoodEffect(
     val effect: ResourceLocation,
     val duration: Int,
     val amplifier: Int = 0,
     val probability: Float = 1f
 )
+
 enum class Rarity {
     COMMON,
     UNCOMMON,
     RARE,
     EPIC
+}
+
+object ItemModels {
+
+    fun generated(
+        texture: ResourceLocation
+    ): ItemModel =
+        ItemModel.ItemModelDefinition(
+            parent = "item/generated".minecraftString(),
+            textures = mapOf(
+                "layer0" to texture
+            )
+        )
+
+    fun handheld(
+        texture: ResourceLocation
+    ): ItemModel =
+        ItemModel.ItemModelDefinition(
+            parent = "item/handheld".minecraftString(),
+            textures = mapOf(
+                "layer0" to texture
+            )
+        )
+
+    fun geckolib(): ItemModel =
+        ItemModel.ItemModelDefinition(
+            parent = "builtin/entity"
+        )
+
+    fun parent(
+        parent: String,
+        textures: Map<String, ResourceLocation> = emptyMap()
+    ): ItemModel =
+        ItemModel.ItemModelDefinition(
+            parent = parent,
+            textures = textures
+        )
+
+    fun existing(
+        model: String
+    ): ItemModel =
+        ItemModel.MinecraftItemModel(model)
 }
 
 class ItemPhysicalPropertiesBuilder {
@@ -118,11 +279,15 @@ class ItemPhysicalPropertiesBuilder {
             return
         }
     }
+
     fun material(namespace: String, path: String) {
         baseMaterial = try {
             ResourceLocation.from(namespace, path)
-        } catch (e: Exception) { return }
+        } catch (e: Exception) {
+            return
+        }
     }
+
     fun material(rl: ResourceLocation) {
         baseMaterial = rl
     }
@@ -132,6 +297,7 @@ class ItemPhysicalPropertiesBuilder {
         fireResistant, stackable, maxStackSize, durability, rarity
     )
 }
+
 class FoodPropertiesBuilder {
     private var nutrition: Int = 0
     private var saturationModifier: Float = 0f
@@ -175,18 +341,6 @@ class FoodPropertiesBuilder {
     fun build(): FoodProperties = FoodProperties(
         nutrition, saturationModifier, isMeat, canAlwaysEat, fastFood, effects
     )
-}
-
-interface ItemEventsHandler {
-    fun onInteractLiving(self: PlatformItemStack, hand: InteractionHand, user: PlatformPlayer, usedOn: PlatformLivingEntity) : InteractionResult
-    fun onUseOn(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity, block: PlatformBlock<*>) : InteractionResult
-    fun onUse(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity) : InteractionResult
-    fun whileInHand(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity)
-    fun whenInInventory(self: PlatformItemStack, user: PlatformLivingEntity)
-    fun whenInHotBar(self: PlatformItemStack, user: PlatformPlayer)
-    fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity) : EventResult
-    fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity) : EventResult
-    fun onPickedUpByPlayer(self: PlatformItemStack, user: PlatformPlayer)  : EventResult = onPickedUp(self, user)
 }
 
 enum class InteractionResult {
@@ -244,8 +398,12 @@ sealed class CreativeTabMenu {
 }
 
 object DefaultItemEventsHandler : ItemEventsHandler {
-    override fun onInteractLiving(self: PlatformItemStack, hand: InteractionHand, user: PlatformPlayer, usedOn: PlatformLivingEntity) : InteractionResult
-        = InteractionResult.PASS
+    override fun onInteractLiving(
+        self: PlatformItemStack,
+        hand: InteractionHand,
+        user: PlatformPlayer,
+        usedOn: PlatformLivingEntity
+    ): InteractionResult = InteractionResult.PASS
 
     override fun onUseOn(
         self: PlatformItemStack,
@@ -263,11 +421,10 @@ object DefaultItemEventsHandler : ItemEventsHandler {
     override fun whileInHand(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity) {}
     override fun whenInInventory(self: PlatformItemStack, user: PlatformLivingEntity) {}
     override fun whenInHotBar(self: PlatformItemStack, user: PlatformPlayer) {}
-    override fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity) : EventResult
-        = EventResult.DEFAULT
-    override fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity) : EventResult
-       = EventResult.DEFAULT
+    override fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity): EventResult = EventResult.DEFAULT
+    override fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity): EventResult = EventResult.DEFAULT
 }
+
 class BuilderBasedItemEventsHandler(
     private val onInteractLiving: (PlatformItemStack, InteractionHand, PlatformPlayer, PlatformLivingEntity) -> InteractionResult = { _, _, _, _ -> InteractionResult.PASS },
     private val onUseOn: (PlatformItemStack, InteractionHand, PlatformLivingEntity, PlatformBlock<*>) -> InteractionResult = { _, _, _, _ -> InteractionResult.PASS },
@@ -302,23 +459,32 @@ class BuilderBasedItemEventsHandler(
     override fun whileInHand(self: PlatformItemStack, hand: InteractionHand, user: PlatformLivingEntity) {
         whileInHand.invoke(self, hand, user)
     }
+
     override fun whenInInventory(self: PlatformItemStack, user: PlatformLivingEntity) {
         whenInInventory.invoke(self, user)
     }
+
     override fun whenInHotBar(self: PlatformItemStack, user: PlatformPlayer) {
         whenInHotBar.invoke(self, user)
     }
-    override fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity) : EventResult
-        = onDropped.invoke(self, dropper)
-    override fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity) : EventResult
-        = onPickedUp.invoke(self, user)
-    override fun onPickedUpByPlayer(self: PlatformItemStack, user: PlatformPlayer) : EventResult
-        = onPickedUpByPlayer.invoke(self, user)
+
+    override fun onDropped(self: PlatformItemStack, dropper: PlatformLivingEntity): EventResult =
+        onDropped.invoke(self, dropper)
+
+    override fun onPickedUp(self: PlatformItemStack, user: PlatformLivingEntity): EventResult =
+        onPickedUp.invoke(self, user)
+
+    override fun onPickedUpByPlayer(self: PlatformItemStack, user: PlatformPlayer): EventResult =
+        onPickedUpByPlayer.invoke(self, user)
 }
+
 class BuilderBasedItemEventsHandlerBuilder {
-    var onInteractLiving: (PlatformItemStack, InteractionHand, PlatformPlayer, PlatformLivingEntity) -> InteractionResult = { _, _, _, _ -> InteractionResult.PASS }
-    var onUseOn: (PlatformItemStack, InteractionHand, PlatformLivingEntity, PlatformBlock<*>) -> InteractionResult = { _, _, _, _ -> InteractionResult.PASS }
-    var onUse: (PlatformItemStack, InteractionHand, PlatformLivingEntity) -> InteractionResult = { _, _, _ -> InteractionResult.PASS }
+    var onInteractLiving: (PlatformItemStack, InteractionHand, PlatformPlayer, PlatformLivingEntity) -> InteractionResult =
+        { _, _, _, _ -> InteractionResult.PASS }
+    var onUseOn: (PlatformItemStack, InteractionHand, PlatformLivingEntity, PlatformBlock<*>) -> InteractionResult =
+        { _, _, _, _ -> InteractionResult.PASS }
+    var onUse: (PlatformItemStack, InteractionHand, PlatformLivingEntity) -> InteractionResult =
+        { _, _, _ -> InteractionResult.PASS }
     var whileInHand: (PlatformItemStack, InteractionHand, PlatformLivingEntity) -> Unit = { _, _, _ -> }
     var whenInInventory: (PlatformItemStack, PlatformLivingEntity) -> Unit = { _, _ -> }
     var whenInHotBar: (PlatformItemStack, PlatformLivingEntity) -> Unit = { _, _ -> }
@@ -341,14 +507,25 @@ class BuilderBasedItemEventsHandlerBuilder {
         )
     }
 }
+
 class ItemDescriptorBuilder(private val displayName: Component) {
     private val lore: MutableList<Component> = mutableListOf()
     private val baseNbt: MutableMap<String, Any> = mutableMapOf()
     private var handler: ItemEventsHandler = DefaultItemEventsHandler
     private var physicalProps: ItemPhysicalProperties = ItemPhysicalProperties()
     private var foodProps: FoodProperties? = null
+    private var model: ItemModel? = null
+    private var controller: ItemAnimationController? = null
 
     private var tab: CreativeTabMenu? = null
+
+    fun model(model: ItemModel) {
+        this.model = model
+    }
+
+    fun controller(controller: ItemAnimationController) {
+        this.controller = controller
+    }
 
     fun tab(tab: CreativeTabMenu) {
         this.tab = tab
@@ -357,6 +534,7 @@ class ItemDescriptorBuilder(private val displayName: Component) {
     fun lore(component: Component) {
         lore += component
     }
+
     fun lore(string: String) {
         lore += string.textComponent()
     }
@@ -378,13 +556,14 @@ class ItemDescriptorBuilder(private val displayName: Component) {
     }
 
     fun build(): ItemDescriptor = ItemDescriptor(
-        displayName, tab,
+        displayName, model, controller, tab,
         lore, baseNbt, handler, physicalProps, foodProps
     )
 }
 
 fun item(displayName: Component, descriptor: ItemDescriptorBuilder.() -> Unit): ItemDescriptor =
     ItemDescriptorBuilder(displayName).apply(descriptor).build()
+
 fun item(displayName: String, descriptor: ItemDescriptorBuilder.() -> Unit): ItemDescriptor =
     item(displayName.textComponent(), descriptor)
 
@@ -397,10 +576,36 @@ object Items {
     val testItem = item(
         "A test Item".colorComponent(NamedTextColor.GOLD)
     ) {
+        model(ItemModel.CustomItemModel(
+            "core" rli "test_item", "LeftArm".pair("RightArm")))
+        controller(
+            ItemAnimationController(
+                layers = listOf(
+                    ItemAnimationLayer(
+                        name = "base",
+                        priority = 0
+                    ) { ctx ->
+                        if (ctx.isFirstPerson() && ctx.isInspecting)
+                            return@ItemAnimationLayer Animation("animation.inspect", blendTime = 6, interruptable = true, priority = 10)
+
+                        if (ctx.isFirstPerson())
+                            return@ItemAnimationLayer Animation("animation.idle", true)
+
+                        if (ctx.isThirdPerson())
+                            Animation("animation.idle_third_person", true)
+
+                        return@ItemAnimationLayer null
+                    }
+                )
+            )
+        )
+
         tab(CreativeTabMenu.Custom("core" rli "test_tab"))
 
-        lore(Component.text("This is simply a text item. nothing more or less... or is it...")
-            .color(NamedTextColor.DARK_BLUE))
+        lore(
+            Component.text("This is simply a text item. nothing more or less... or is it...")
+                .color(NamedTextColor.DARK_BLUE)
+        )
 
         physicalProps {
             glint()
@@ -424,14 +629,24 @@ object Items {
     }
 }
 
+private fun AnimationContext.isFirstPerson() =
+    this.perspective == ItemRenderPerspective.FIRST_PERSON_LEFT_HAND ||
+            this.perspective == ItemRenderPerspective.FIRST_PERSON_RIGHT_HAND
+
+private fun AnimationContext.isThirdPerson() =
+    this.perspective == ItemRenderPerspective.THIRD_PERSON_LEFT_HAND ||
+            this.perspective == ItemRenderPerspective.THIRD_PERSON_RIGHT_HAND
+
 abstract class PlatformItemFactory : InternalPlatformItemFactory {
     protected val logger = ContextLogger(ContextLogger.ContextType.REGISTRY, "item-factory")
     protected val descriptors = ConcurrentHashMap<ResourceLocation, ItemDescriptor>()
+
     @Throws(ItemProductionError::class)
     override fun registerItem(id: ResourceLocation, descriptor: ItemDescriptor) {
         val prev = descriptors.putIfAbsent(id, descriptor)
         if (prev != null) error("Duplicate item $id")
     }
+
     override fun getDescriptor(id: ResourceLocation): ItemDescriptor? = descriptors[id]
 
 
@@ -469,7 +684,12 @@ abstract class PlatformItemFactory : InternalPlatformItemFactory {
      *
      * @param overrides A map containing the key-value pairs of item properties to override.
      */
-    final override fun create(item: ResourceLocation, count: Int, data: ItemData?, overrides: Map<String, Any>): PlatformItemStack {
+    final override fun create(
+        item: ResourceLocation,
+        count: Int,
+        data: ItemData?,
+        overrides: Map<String, Any>
+    ): PlatformItemStack {
         val stack =
             if (descriptors.containsKey(item)) {
                 buildStackFromDescriptor(
@@ -491,6 +711,7 @@ abstract class PlatformItemFactory : InternalPlatformItemFactory {
 
         return stack
     }
+
     protected abstract fun applySerializedData(stack: PlatformItemStack, data: ItemData)
     protected fun applyOverrides(stack: PlatformItemStack, overrides: Map<String, Any>) {
         try {
@@ -537,6 +758,7 @@ abstract class PlatformItemFactory : InternalPlatformItemFactory {
                         val level = (ench["level"] as? Number)?.toInt() ?: 1
                         stack.edit().enchantment(id, level)
                     }
+
                     is List<*> -> {
                         for (entry in ench) {
                             if (entry is Map<*, *>) {
@@ -576,7 +798,10 @@ abstract class PlatformItemFactory : InternalPlatformItemFactory {
      * Build a platform stack directly from a descriptor instance.
      * Platform implementations must implement this and must NOT call create(id) or fromRegisteredDescriptor.
      */
-    protected abstract fun buildStackFromDescriptor(descriptor: ItemDescriptor, overrides: Map<String, Any> = emptyMap()): PlatformItemStack
+    protected abstract fun buildStackFromDescriptor(
+        descriptor: ItemDescriptor,
+        overrides: Map<String, Any> = emptyMap()
+    ): PlatformItemStack
 
     /**
      * Very small runtime scanner for fields annotated with @RegisterItem.
@@ -621,10 +846,12 @@ internal interface InternalPlatformItemFactory {
      * Should not call any internal api like create as it will cause a stack overflow
      */
     fun fromMaterial(material: PlatformMaterial?): PlatformItemStack?
+
     /**
      * Should not call any internal api like create as it will cause a stack overflow
      */
     fun fromDescriptor(descriptor: ItemDescriptor): PlatformItemStack
+
     /**
      * Should not call any internal api like create as it will cause a stack overflow
      */
@@ -634,15 +861,19 @@ internal interface InternalPlatformItemFactory {
     fun materialOf(rl: ResourceLocation): PlatformMaterial?
 
     @Throws(InvalidItemException::class)
-    fun create(item: ResourceLocation, count: Int, data: ItemData?, overrides: Map<String, Any> = emptyMap()): PlatformItemStack
+    fun create(
+        item: ResourceLocation,
+        count: Int,
+        data: ItemData?,
+        overrides: Map<String, Any> = emptyMap()
+    ): PlatformItemStack
 
     @Throws(InvalidItemException::class)
-    fun create(item: ResourceLocation, overrides: Map<String, Any> = emptyMap()): PlatformItemStack
-        = create(item, 1, null, overrides)
+    fun create(item: ResourceLocation, overrides: Map<String, Any> = emptyMap()): PlatformItemStack =
+        create(item, 1, null, overrides)
 
     @Throws(InvalidItemException::class)
-    fun create(item: ResourceLocation): PlatformItemStack
-        = create(item, 1, null)
+    fun create(item: ResourceLocation): PlatformItemStack = create(item, 1, null)
 
     fun createSafe(item: ResourceLocation): PlatformItemStack? {
         return try {

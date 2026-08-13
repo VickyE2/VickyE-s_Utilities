@@ -2,6 +2,7 @@
 package org.vicky.platform.entity
 
 import org.vicky.platform.entity.distpacher.Trigger
+import org.vicky.platform.items.Animation
 
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FIELD)
@@ -25,8 +26,8 @@ object DefaultEntities {
                 baseArmorToughness = 0.12
             }
             animations(
-                "animation.test_dummy.idle",
-                "animation.test_dummy.walk"
+                Animation("animation.test_dummy.idle", true),
+                Animation("animation.test_dummy.walk", true, blendTime = 6)
             )
         }
 

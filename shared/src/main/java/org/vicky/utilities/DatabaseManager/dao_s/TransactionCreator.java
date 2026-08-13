@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2026. */
 package org.vicky.utilities.DatabaseManager.dao_s;
 
 import jakarta.persistence.EntityManager;
@@ -8,31 +9,31 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class TransactionCreator {
-    public static void transaction(Consumer<EntityManager> work) {
-        transaction(em -> {
-            work.accept(em);
-            return null;
-        });
-    }
+	public static void transaction(Consumer<EntityManager> work) {
+		transaction(em -> {
+			work.accept(em);
+			return null;
+		});
+	}
 
-    public static <R> R transaction(Function<EntityManager, R> work) {
-        EntityManager em = HibernateUtil.getEntityManager();
-        EntityTransaction tx = em.getTransaction();
+	public static <R> R transaction(Function<EntityManager, R> work) {
+		EntityManager em = HibernateUtil.getEntityManager();
+		EntityTransaction tx = em.getTransaction();
 
-        try {
-            tx.begin();
+		try {
+			tx.begin();
 
-            R result = work.apply(em);
+			R result = work.apply(em);
 
-            tx.commit();
-            return result;
-        } catch (Exception e) {
-            if (tx.isActive()) {
-                tx.rollback();
-            }
-            throw e;
-        } finally {
-            em.close();
-        }
-    }
+			tx.commit();
+			return result;
+		} catch (Exception e) {
+			if (tx.isActive()) {
+				tx.rollback();
+			}
+			throw e;
+		} finally {
+			em.close();
+		}
+	}
 }

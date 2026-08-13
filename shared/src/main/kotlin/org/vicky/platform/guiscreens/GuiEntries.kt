@@ -621,7 +621,7 @@ object DefaultGuis {
                     event.defer()
                     val requestId = event.requestId
                     when (event.reason) {
-                        GuiEvent.DataRequested.Reason.SORT_CHANGE -> PlatformPlugin.scheduler().runAsync {
+                        GuiEvent.DataRequested.Reason.SORT_CHANGE -> PlatformPlugin.server().getScheduler().runAsync {
                             val sort = event.sorting ?: gui.state["sorting"] as? String ?: "name_ascending"
                             val page = event.page ?: gui.state["page"] as? Int ?: 0
 
@@ -630,7 +630,7 @@ object DefaultGuis {
                                 sort, event.query, event.filters
                             )
 
-                            PlatformPlugin.scheduler().runMain {
+                            PlatformPlugin.server().getScheduler().runMain {
                                 if (!gui.isCurrentRequest(requestId)) return@runMain
 
                                 gui.state["page"] = page

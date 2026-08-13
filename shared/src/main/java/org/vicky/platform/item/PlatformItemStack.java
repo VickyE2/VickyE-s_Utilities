@@ -3,6 +3,9 @@ package org.vicky.platform.item;
 
 import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.vicky.platform.entity.PlatformAnimationController;
+import org.vicky.platform.items.PlatformItemInspection;
 import org.vicky.platform.tags.SerializedItemData;
 import org.vicky.platform.utils.ResourceLocation;
 
@@ -17,8 +20,10 @@ public interface PlatformItemStack {
 
 	void shrink(int i);
 
+	@NotNull
 	ResourceLocation key();
 
+	@NotNull
 	List<Component> lore();
 
 	/**
@@ -30,7 +35,15 @@ public interface PlatformItemStack {
 	@NotNull
 	ItemData data();
 
+	@NotNull
 	PlatformItemEditor edit();
+
+	@Nullable
+	PlatformAnimationController controller();
+
+	@Nullable
+	PlatformItemInspection inspection();
+	boolean isInspectable();
 
 	/**
 	 * Serializes the complete native item data.

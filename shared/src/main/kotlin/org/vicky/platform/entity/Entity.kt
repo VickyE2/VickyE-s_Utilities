@@ -7,6 +7,7 @@ import net.kyori.adventure.text.Component
 import org.vicky.platform.defaults.AABB
 import org.vicky.platform.entity.distpacher.*
 import org.vicky.platform.item.PlatformItemStack
+import org.vicky.platform.items.Animation
 import org.vicky.platform.player.PlatformPlayer
 import org.vicky.platform.utils.*
 import org.vicky.platform.world.PlatformLocation
@@ -86,20 +87,34 @@ data class MobSounds(
 )
 
 data class AnimationDefinition(
-    val idle: String,
-    val walk: String,
-    val hurt: String? = null,
-    val step: String? = null,
-    val fall: String? = null,
-    val attack: String? = null,
-    val shoot: String? = null,
-    val swim: String? = null,
-    val flap: String? = null,
-    val custom: Map<String, String> = emptyMap()
+    val idle: Animation,
+    val walk: Animation,
+    val hurt: Animation? = null,
+    val step: Animation? = null,
+    val fall: Animation? = null,
+    val attack: Animation? = null,
+    val shoot: Animation? = null,
+    val swim: Animation? = null,
+    val flap: Animation? = null,
+    val custom: Map<String, Animation> = emptyMap()
 )
 
 interface PlatformAnimationController {
-    fun play(animationKey: String?, loop: Boolean)
+    fun play(animation: Animation)
+
+    fun stop(animationKey: String? = null)
+    fun pause()
+    fun resume()
+
+    fun isPlaying(animation: String? = null): Boolean
+    val provider: VariableProvider
+    val currentAnimation: String?
+}
+
+interface VariableProvider {
+    fun register(key: String)
+    fun registerOrSet(key: String, value: Double)
+    fun get(key: String): Double?
 }
 
 data class SoundDefinition(
@@ -797,8 +812,8 @@ class MobDefaultsBuilder(
     }
 
     fun animations(
-        idle: String,
-        walk: String,
+        idle: Animation,
+        walk: Animation,
         block: AnimationBuilder.() -> Unit = {}
     ) {
         animations = AnimationBuilder(idle, walk).apply(block).build()
@@ -886,20 +901,20 @@ class MobSoundsBuilder {
 }
 
 class AnimationBuilder(
-    private val idle: String,
-    private val walk: String
+    private val idle: Animation,
+    private val walk: Animation
 )
 {
-    var hurt: String? = null
-    var attack: String? = null
-    var step: String? = null
-    var fall: String? = null
-    var shoot: String? = null
-    var swim: String? = null
-    var flap: String? = null
-    private val custom = mutableMapOf<String, String>()
+    var hurt: Animation? = null
+    var attack: Animation? = null
+    var step: Animation? = null
+    var fall: Animation? = null
+    var shoot: Animation? = null
+    var swim: Animation? = null
+    var flap: Animation? = null
+    private val custom = mutableMapOf<String, Animation>()
 
-    fun custom(name: String, anim: String) {
+    fun custom(name: String, anim: Animation) {
         custom[name] = anim
     }
 

@@ -3,8 +3,9 @@ package org.vicky.forge.entity.bridge;
 
 import com.mojang.logging.LogUtils;
 import io.github.classgraph.AnnotationParameterValue;
-import net.minecraftforge.fml.loading.FMLLoader;
 import org.slf4j.Logger;
+import org.vicky.forge.annotationssystem.AnnotationRegisterEvent;
+import org.vicky.forge.annotationssystem.PostAnnotationScanEvent;
 import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.items.ItemDescriptor;
 import org.vicky.platform.items.RegisterItem;
@@ -16,12 +17,11 @@ import java.util.Optional;
 public final class ItemsFactoryBootstrap {
 	private static final Logger LOGGER = LogUtils.getLogger();
 
-	public static void discoverAndRegisterAll(PlatformPlugin plugin) {
+	public static void discoverAndRegisterAll(PlatformPlugin plugin, PostAnnotationScanEvent event) {
 		LOGGER.info("Scanning Item Descriptors... ");
 
 		List<AnnotationScanner.ScanResult> found =
-				AnnotationScanner.scanFor(FMLLoader.backgroundScanHandler,
-						RegisterItem.class);
+				event.getResultsFor(RegisterItem.class);
 
 		for (AnnotationScanner.ScanResult r : found) {
 			LOGGER.info("Found annotation: {}", r);
@@ -48,4 +48,8 @@ public final class ItemsFactoryBootstrap {
 			}
 		}
 	}
+
+    public static void registerTo(AnnotationRegisterEvent event) {
+        event.addAnnotation(RegisterItem.class);
+    }
 }

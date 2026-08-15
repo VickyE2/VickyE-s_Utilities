@@ -12,11 +12,12 @@ import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
+import org.vicky.forge.forgeplatform.item.animation.ExtendedItemAnimationController;
 import org.vicky.forge.forgeplatform.item.renderer.ExtendedDescriptorItemRenderer;
 import org.vicky.forge.forgeplatform.useables.ForgeHacks;
 import org.vicky.platform.entity.PlatformLivingEntity;
 import org.vicky.platform.item.PlatformItemStack;
-import org.vicky.platform.items.AnimationContext;
+import org.vicky.platform.items.ItemAnimationContext;
 import org.vicky.platform.items.ItemDescriptor;
 import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.constant.DataTickets;
@@ -27,7 +28,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.function.Consumer;
 
-import static org.vicky.forge.forgeplatform.item.InspectManager.isInspecting;
+import static org.vicky.forge.client.ClientInspectManager.isInspecting;
 
 public class ExtendedDescriptorItem extends DescriptorItem implements GeoItem {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
@@ -58,7 +59,7 @@ public class ExtendedDescriptorItem extends DescriptorItem implements GeoItem {
                                 5,
                                 state -> {
 
-                                    AnimationContext context =
+                                    ItemAnimationContext context =
                                             createContext(state.getDelegate());
 
                                     return state.setAndContinue(
@@ -70,7 +71,7 @@ public class ExtendedDescriptorItem extends DescriptorItem implements GeoItem {
                 ));
     }
 
-    public AnimationContext createContext(
+    public ItemAnimationContext createContext(
             AnimationState<?> state
     ) {
 
@@ -84,7 +85,7 @@ public class ExtendedDescriptorItem extends DescriptorItem implements GeoItem {
         PlatformItemStack stack =
                 new ForgeItemStack(state.getData(DataTickets.ITEMSTACK));
 
-        return new AnimationContext(
+        return new ItemAnimationContext(
                 stack,
                 livingEntity,
                 ForgeHacks.toVicky(state.getData(DataTickets.ITEM_RENDER_PERSPECTIVE)),

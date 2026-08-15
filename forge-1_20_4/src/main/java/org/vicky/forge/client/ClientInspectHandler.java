@@ -6,12 +6,13 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.vicky.forge.VickyUtilitiesForge;
 import org.vicky.forge.forgeplatform.item.ExtendedDescriptorItem;
 import org.vicky.forge.forgeplatform.item.InspectManager;
 import org.vicky.forge.network.PacketHandler;
 import org.vicky.forge.network.registeredpackets.InspectStatePacket;
 
-@Mod.EventBusSubscriber(modid = "yourmod", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = VickyUtilitiesForge.MODID, value = Dist.CLIENT)
 public class ClientInspectHandler {
     
     private static boolean wasDown = false;
@@ -32,7 +33,7 @@ public class ClientInspectHandler {
             ItemStack mainHand = mc.player.getMainHandItem();
             
             // Check if the item is inspectable (e.g., checks a custom tag, item class, or component)
-            boolean isInspectable = isItemInspectable(mainHand); 
+            boolean isInspectable = isItemInspectable(mainHand);
 
             if (isInspectable || !isDown) { // Always allow telling the server we *stopped* inspecting
                 // TODO: Send packet to server

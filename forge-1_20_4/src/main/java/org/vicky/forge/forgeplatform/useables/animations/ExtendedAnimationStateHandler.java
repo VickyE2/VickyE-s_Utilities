@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.useables.animations;
 
 import org.vicky.forge.entity.PlatformBasedLivingEntity;
 import software.bernie.geckolib.core.object.PlayState;

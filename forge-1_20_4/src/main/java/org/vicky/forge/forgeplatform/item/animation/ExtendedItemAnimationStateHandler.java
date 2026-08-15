@@ -1,5 +1,6 @@
-package org.vicky.forge.forgeplatform.item;
+package org.vicky.forge.forgeplatform.item.animation;
 
+import org.vicky.forge.forgeplatform.item.ExtendedDescriptorItem;
 import software.bernie.geckolib.core.object.PlayState;
 
 @FunctionalInterface

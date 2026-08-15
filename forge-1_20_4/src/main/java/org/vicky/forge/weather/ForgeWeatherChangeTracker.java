@@ -11,7 +11,9 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import java.util.WeakHashMap; /**
+import java.util.WeakHashMap;
+
+/**
  * Checks each server level every level tick and fires ForgeWeatherChangeEvent
  * whenever the snapshot changes.
  */

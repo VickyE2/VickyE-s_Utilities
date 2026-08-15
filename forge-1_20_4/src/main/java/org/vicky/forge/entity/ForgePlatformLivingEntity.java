@@ -7,8 +7,10 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.vicky.forge.entity.navigation.ForgeMobControls;
 import org.vicky.forge.entity.navigation.ForgePlatformNavigator;
 import org.vicky.forge.forgeplatform.adventure.AdventureComponentConverter;
 import org.vicky.forge.forgeplatform.item.ForgeItemStack;
@@ -51,6 +53,29 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 					? mob.getAttribute(Attributes.FOLLOW_RANGE).getValue()
 					: 16f;
 		return 16f;
+	}
+
+	@Override
+	public void setRotation(float yaw, float pitch) {
+		if (ordinal instanceof Mob mob) {
+			double yawRad = Math.toRadians(yaw);
+			double pitchRad = Math.toRadians(pitch);
+
+			double x = -Math.sin(yawRad) * Math.cos(pitchRad);
+			double y = -Math.sin(pitchRad);
+			double z = Math.cos(yawRad) * Math.cos(pitchRad);
+
+			Vec3 target = mob.position().add(x, y, z);
+
+			mob.getLookControl().setLookAt(target);
+		}
+		else {
+			ordinal.setYRot(yaw);
+			ordinal.setXRot(pitch);
+
+			// Recommended for LivingEntity: sync the head rotation so it doesn't lag behind or snap
+			ordinal.yHeadRot = yaw;
+		}
 	}
 
 	@Override
@@ -351,4 +376,15 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 			case MAX_ABSORPTION -> {}
         }
 	}
+
+	@Override
+	public @Nullable PlatformMobControls getMobControls() {
+		if (ordinal instanceof Mob mob)
+			return new ForgeMobControls(mob);
+
+		return null;
+	}
+
+	@Override
+	public void setMobControls(@Nullable PlatformMobControls platformMobControls) {}
 }

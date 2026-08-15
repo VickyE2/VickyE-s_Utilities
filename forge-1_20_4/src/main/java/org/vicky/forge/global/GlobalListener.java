@@ -17,7 +17,6 @@ import net.minecraftforge.fml.common.Mod;
 import org.vicky.forge.network.PacketHandler;
 import org.vicky.forge.network.registeredpackets.OpenOwnedRecordsScreen;
 import org.vicky.utilities.DatabaseManager.dao_s.DatabasePlayerDAO;
-import org.vicky.utilities.DatabaseManager.dao_s.MusicPieceDAO;
 import org.vicky.utilities.DatabaseManager.dao_s.MusicPlayerDAO;
 import org.vicky.utilities.DatabaseManager.dao_s.TransactionCreator;
 import org.vicky.utilities.DatabaseManager.templates.DatabasePlayer;
@@ -58,7 +57,8 @@ public class GlobalListener {
 
                 MusicPiece piece =
                         em.getReference(MusicPiece.class, "vicky_utils_symphony1");
-                musicPlayer.addPiece(piece);
+                if (piece != null)
+                    musicPlayer.addPiece(piece);
 
                 musicPlayer.setDatabasePlayer(databasePlayer);
                 mDao.save(em, musicPlayer);
@@ -70,13 +70,18 @@ public class GlobalListener {
                     DatabasePlayer databasePlayer = new DatabasePlayer();
                     databasePlayer.setId(player.getUUID());
                     databasePlayer.setFirstTime(true);
-                    dao.save(databasePlayer);
+                    dao.save(em, databasePlayer);
 
                     MusicPlayer musicPlayer = new MusicPlayer();
                     musicPlayer.setId(player.getStringUUID());
-                    new MusicPieceDAO().findById("vicky_utils_symphony1").ifPresent(musicPlayer::addPiece);
+
+                    MusicPiece piece =
+                            em.getReference(MusicPiece.class, "vicky_utils_symphony1");
+                    if (piece != null)
+                        musicPlayer.addPiece(piece);
+
                     musicPlayer.setDatabasePlayer(databasePlayer);
-                    mDao.save(musicPlayer);
+                    mDao.save(em, musicPlayer);
                 } else {
                     db.get().setFirstTime(false);
                     dao.update(db.get());

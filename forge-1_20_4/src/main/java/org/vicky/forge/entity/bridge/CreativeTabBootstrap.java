@@ -3,8 +3,9 @@ package org.vicky.forge.entity.bridge;
 
 import com.mojang.logging.LogUtils;
 import io.github.classgraph.AnnotationParameterValue;
-import net.minecraftforge.fml.loading.FMLLoader;
 import org.slf4j.Logger;
+import org.vicky.forge.annotationssystem.AnnotationRegisterEvent;
+import org.vicky.forge.annotationssystem.PostAnnotationScanEvent;
 import org.vicky.forge.forgeplatform.ForgePlatformCreativeTabs;
 import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.items.CreativeTabDescriptor;
@@ -17,12 +18,11 @@ import java.util.Optional;
 public final class CreativeTabBootstrap {
 	private static final Logger LOGGER = LogUtils.getLogger();
 
-	public static void discoverAndRegisterAll(PlatformPlugin plugin) {
+	public static void discoverAndRegisterAll(PlatformPlugin plugin, PostAnnotationScanEvent event) {
 		LOGGER.info("Scanning CreativeTabs Descriptors... ");
 
 		List<AnnotationScanner.ScanResult> found =
-				AnnotationScanner.scanFor(FMLLoader.backgroundScanHandler,
-						RegisterCreativeTab.class);
+				event.getResultsFor(RegisterCreativeTab.class);
 
 		for (AnnotationScanner.ScanResult r : found) {
 			LOGGER.info("Found annotation: {}", r);
@@ -49,4 +49,8 @@ public final class CreativeTabBootstrap {
 			}
 		}
 	}
+
+    public static void registerTo(AnnotationRegisterEvent event) {
+        event.addAnnotation(RegisterCreativeTab.class);
+    }
 }

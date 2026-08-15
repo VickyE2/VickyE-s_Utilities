@@ -1,5 +1,6 @@
-package org.vicky.forge.forgeplatform.item;
+package org.vicky.forge.forgeplatform.item.animation;
 
+import org.vicky.forge.forgeplatform.item.ExtendedDescriptorItem;
 import org.vicky.platform.items.Animation;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.core.object.PlayState;
@@ -14,11 +15,11 @@ public class ExtendedItemAnimationState<T extends ExtendedDescriptorItem> {
     }
 
     public void setAnimation(Animation animation) {
-        controller.play(animation);
+        controller.setResolvedAnimation(animation);
     }
 
     public PlayState setAndContinue(Animation animation) {
-        controller.play(animation);
+        controller.setResolvedAnimation(animation);
 
         return PlayState.CONTINUE;
     }

@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge;
 
+import com.eliotlash.mclib.math.Variable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.core.RegistryAccess;
@@ -20,11 +21,15 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLConstructModEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.vicky.forge.annotationssystem.AnnotationRegisterEvent;
+import org.vicky.forge.annotationssystem.PostAnnotationScanEvent;
+import org.vicky.forge.annotationssystem.SimpleEventBus;
 import org.vicky.forge.client.audio.MidiSynthManager;
 import org.vicky.forge.entity.ForgePlatformEntityFactory;
 import org.vicky.forge.entity.PlatformBasedLivingEntityRenderer;
@@ -58,11 +63,13 @@ import org.vicky.platform.server.PlatformServer;
 import org.vicky.platform.world.PlatformBlockStateFactory;
 import org.vicky.utilities.ANSIColor;
 import org.vicky.utilities.ContextLogger.ContextLogger;
+import org.vicky.utilities.DatabaseManager.HibernateUtil;
 import org.vicky.utilities.DatabaseManager.SQLManager;
 import org.vicky.utilities.DatabaseManager.SQLManagerBuilder;
 import org.vicky.utilities.DatabaseManager.templates.*;
 import org.vicky.utilities.DatabaseManager.utils.Hbm2DdlAutoType;
 import org.vicky.utilities.DatabaseTemplate;
+import software.bernie.geckolib.core.molang.MolangParser;
 
 import java.io.File;
 import java.io.IOException;
@@ -78,6 +85,7 @@ import static org.vicky.utilities.DatabaseManager.SQLManager.generator;
 public class VickyUtilitiesForge implements PlatformPlugin {
 	public static final String MODID = "v_utls";
 	public static final Logger LOGGER = LoggerFactory.getLogger("vutls-platform");
+	public static final SimpleEventBus ANNOTATION_BUS = new SimpleEventBus();
 	public static ContextLogger CONTEXT_LOGGER;
 	private static final List<Class<?>> mappingClasses = new ArrayList<>();
 	public static MinecraftServer server;
@@ -90,30 +98,82 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 		CONTEXT_LOGGER = new ContextLogger(ContextLogger.ContextType.SYSTEM, "V-UTLS");
 		FACTORY = new ForgePlatformItemFactory();
 		CREATIVE_TABS = new ForgePlatformCreativeTabs();
+		MolangParser.INSTANCE.register(new Variable("core.hand_is_left", 0));
 		if (!FMLLoader.getLaunchHandler().isData()) {
 			new MusicRegistry();
 			IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+
+			modEventBus.addListener(this::onConstruct);
 			modEventBus.addListener(this::commonSetup);
 			modEventBus.addListener(this::clientSetup);
+
 			MinecraftForge.EVENT_BUS.register(this);
 			ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ForgeModConfig.SPEC);
 			PacketHandler.register();
 			org.vicky.musicPlayer.MusicPlayer.INSTANCE.toggleLogging();
 
-			EntityFactoryBootstrap.discoverAndRegisterAll(this);
-			CreativeTabBootstrap.discoverAndRegisterAll(this);
-			ItemsFactoryBootstrap.discoverAndRegisterAll(this);
-			EffectBootstrap.discoverAndRegisterAll();
-
-			ForgePlatformEffectBridge.EFFECTS.forEach((ignored, effect) ->
-					effect.register(FMLJavaModLoadingContext.get().getModEventBus()));
-			ForgePlatformEntityFactory.ENTITIES.forEach((ignored, entity) ->
-					entity.register(FMLJavaModLoadingContext.get().getModEventBus()));
-			ForgePlatformEntityFactory.INSTANCE.attachListeners(FMLJavaModLoadingContext.get().getModEventBus());
-
-			FACTORY.attachToEventBus(FMLJavaModLoadingContext.get().getModEventBus());
-			CREATIVE_TABS.attachToEventBus(FMLJavaModLoadingContext.get().getModEventBus());
+			ANNOTATION_BUS.addListener(AnnotationRegisterEvent.class,
+					this::onRegisterAnnotations);
+			ANNOTATION_BUS.addListener(PostAnnotationScanEvent.class,
+					this::onPostAnnotationScan);
 		}
+	}
+
+	private void onPostAnnotationScan(PostAnnotationScanEvent event) {
+		EntityFactoryBootstrap.discoverAndRegisterAll(this, event);
+		CreativeTabBootstrap.discoverAndRegisterAll(this, event);
+		ItemsFactoryBootstrap.discoverAndRegisterAll(this, event);
+		EffectBootstrap.discoverAndRegisterAll(event);
+
+		ForgePlatformEffectBridge.EFFECTS.forEach((ignored, effect) ->
+				effect.register(FMLJavaModLoadingContext.get().getModEventBus()));
+		ForgePlatformEntityFactory.ENTITIES.forEach((ignored, entity) ->
+				entity.register(FMLJavaModLoadingContext.get().getModEventBus()));
+		ForgePlatformEntityFactory.INSTANCE.attachListeners(FMLJavaModLoadingContext.get().getModEventBus());
+
+		FACTORY.attachToEventBus(FMLJavaModLoadingContext.get().getModEventBus());
+		CREATIVE_TABS.attachToEventBus(FMLJavaModLoadingContext.get().getModEventBus());
+	}
+	private void onRegisterAnnotations(AnnotationRegisterEvent event) {
+		EntityFactoryBootstrap.registerTo(event);
+		CreativeTabBootstrap.registerTo(event);
+		ItemsFactoryBootstrap.registerTo(event);
+		EffectBootstrap.registerTo(event);
+	}
+
+	private void initializeAnnotations() {
+		AnnotationRegisterEvent registerEvent =
+				new AnnotationRegisterEvent();
+
+		ANNOTATION_BUS.post(registerEvent);
+
+		org.vicky.forge.entity.bridge.AnnotationScanner.scanAll(
+				FMLLoader.backgroundScanHandler,
+				registerEvent.getAnnotations()
+		);
+
+		ANNOTATION_BUS.post(
+				new PostAnnotationScanEvent(
+						org.vicky.forge.entity.bridge.AnnotationScanner.getResults()
+				)
+		);
+	}
+
+	private void onConstruct(FMLConstructModEvent event) {
+		event.enqueueWork(this::initializeAnnotations);
+	}
+
+	private void commonSetup(final FMLCommonSetupEvent event) {
+		CONTEXT_LOGGER.print(ANSIColor.colorizeMixed("""
+				gradient-10deg-right-#AA0000-#DDDD00[
+				 _  _  __  ___  __ _  _  _  _ ____    _  _  ____  __  __    __  ____  __  ____  ____
+				/ )( \\(  )/ __)(  / )( \\/ )(// ___)  / )( \\(_  _)(  )(  )  (  )(_  _)(  )(  __)/ ___)
+				\\ \\/ / )(( (__  )  (  )  /   \\___ \\  ) \\/ (  )(   )( / (_/\\ )(   )(   )(  ) _) \\___ \\
+				 \\__/ (__)\\___)(__\\_)(__/    (____/  \\____/ (__) (__)\\____/(__) (__) (__)(____)(____/]
+				                                                                         dark_gray[0.0.1-BETA]"""));
+
+		ForgeWeatherChangeTracker.setWeatherAccess(new SimpleLevelWeatherAccess());
+		ForgeWeatherChangeTracker.register(MinecraftForge.EVENT_BUS);
 	}
 
 	public static void addTemplateClass(Class<? extends DatabaseTemplate> clazz) {
@@ -131,19 +191,6 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 		} else {
 			sqlManager.addMappingClasses(List.of(clazzez));
 		}
-	}
-
-	private void commonSetup(final FMLCommonSetupEvent event) {
-		CONTEXT_LOGGER.print(ANSIColor.colorizeMixed("""
-				gradient-10deg-right-#AA0000-#DDDD00[
-				 _  _  __  ___  __ _  _  _  _ ____    _  _  ____  __  __    __  ____  __  ____  ____
-				/ )( \\(  )/ __)(  / )( \\/ )(// ___)  / )( \\(_  _)(  )(  )  (  )(_  _)(  )(  __)/ ___)
-				\\ \\/ / )(( (__  )  (  )  /   \\___ \\  ) \\/ (  )(   )( / (_/\\ )(   )(   )(  ) _) \\___ \\
-				 \\__/ (__)\\___)(__\\_)(__/    (____/  \\____/ (__) (__)\\____/(__) (__) (__)(____)(____/]
-				                                                                         dark_gray[0.0.1-BETA]"""));
-
-		ForgeWeatherChangeTracker.setWeatherAccess(new SimpleLevelWeatherAccess());
-		ForgeWeatherChangeTracker.register(MinecraftForge.EVENT_BUS);
 	}
 
 	private void clientSetup(final FMLClientSetupEvent event) {
@@ -165,6 +212,12 @@ public class VickyUtilitiesForge implements PlatformPlugin {
 		server = event.getServer();
 		RegistryAccess access = event.getServer().registryAccess();
 		ForgePlatformBlockStateFactory.setLookupProvider(access);
+	}
+
+	@SubscribeEvent
+	public void onWorldGettingDestroyedStarting(LevelEvent.Unload event) {
+		HibernateUtil.close();
+		HibernateUtil.shutdown();
 	}
 
 	@SubscribeEvent

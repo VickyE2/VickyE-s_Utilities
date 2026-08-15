@@ -1,27 +1,25 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.forge.entity.bridge;
 
-import java.util.List;
-import java.util.Optional;
-
-import net.minecraftforge.fml.loading.FMLLoader;
-import org.objectweb.asm.Type;
+import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
+import org.vicky.forge.annotationssystem.AnnotationRegisterEvent;
+import org.vicky.forge.annotationssystem.PostAnnotationScanEvent;
 import org.vicky.forge.entity.effects.ForgePlatformEffectBridge;
 import org.vicky.platform.entity.EffectDescriptor;
 import org.vicky.platform.entity.RegisterEffect;
 
-import com.mojang.logging.LogUtils;
+import java.util.List;
+import java.util.Optional;
 
 public final class EffectBootstrap {
 	private static final Logger LOGGER = LogUtils.getLogger();
 
-	public static void discoverAndRegisterAll() {
+	public static void discoverAndRegisterAll(PostAnnotationScanEvent event) {
 		LOGGER.info("Scanning Effects...");
 
 		List<AnnotationScanner.ScanResult> found =
-				AnnotationScanner.scanFor(FMLLoader.backgroundScanHandler,
-						RegisterEffect.class);
+				event.getResultsFor(RegisterEffect.class);
 
 		for (AnnotationScanner.ScanResult r : found) {
 			LOGGER.info("Found annotation: {}", r);
@@ -39,4 +37,8 @@ public final class EffectBootstrap {
 			}
 		}
 	}
+
+    public static void registerTo(AnnotationRegisterEvent event) {
+        event.addAnnotation(RegisterEffect.class);
+    }
 }

@@ -641,4 +641,8 @@ public class ForgeHacks {
             case FIXED -> ItemRenderPerspective.FIXED;
         };
     }
+
+    public static Vec3 fromVicky(org.vicky.platform.utils.Vec3 vec3) {
+        return new Vec3(vec3.x, vec3.y, vec3.z);
+    }
 }

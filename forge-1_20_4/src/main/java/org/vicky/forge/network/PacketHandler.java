@@ -57,11 +57,19 @@ public class PacketHandler {
 		MAIN_CHNNEL.messageBuilder(ResumeAnimationPacket.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
 				.encoder(ResumeAnimationPacket::encode).decoder(ResumeAnimationPacket::decode)
 				.consumerMainThread(ResumeAnimationPacket::handle).add();
+
 		SYNTH_CHANNEL.messageBuilder(NoteOnPacket.class, synthPacketId++, NetworkDirection.PLAY_TO_CLIENT)
 				.encoder(NoteOnPacket::encode).decoder(NoteOnPacket::decode).consumerMainThread(NoteOnPacket::handle)
 				.add();
 		SYNTH_CHANNEL.messageBuilder(NoteOffPacket.class, synthPacketId++, NetworkDirection.PLAY_TO_CLIENT)
 				.encoder(NoteOffPacket::encode).decoder(NoteOffPacket::decode).consumerMainThread(NoteOffPacket::handle)
+				.add();
+
+		MAIN_CHNNEL.messageBuilder(InspectStatePacket.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
+				.encoder(InspectStatePacket::encode).decoder(InspectStatePacket::decode).consumerMainThread(InspectStatePacket::handle)
+				.add();
+		MAIN_CHNNEL.messageBuilder(UpdateInspectStatePacket.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+				.encoder(UpdateInspectStatePacket::encode).decoder(UpdateInspectStatePacket::decode).consumerMainThread(UpdateInspectStatePacket::handle)
 				.add();
 	}
 

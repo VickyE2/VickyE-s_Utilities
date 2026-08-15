@@ -1,4 +1,4 @@
-package org.vicky.forge.forgeplatform.useables;
+package org.vicky.forge.forgeplatform.useables.animations;
 
 import org.vicky.forge.entity.PlatformBasedLivingEntity;
 import org.vicky.platform.items.Animation;
@@ -15,11 +15,11 @@ public class ExtendedAnimationState<T extends PlatformBasedLivingEntity> {
     }
 
     public void setAnimation(Animation animation) {
-        controller.play(animation);
+        controller.setResolvedAnimation(animation);
     }
 
     public PlayState setAndContinue(Animation animation) {
-        controller.play(animation);
+        controller.setResolvedAnimation(animation);
 
         return PlayState.CONTINUE;
     }

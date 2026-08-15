@@ -64,10 +64,10 @@ data class ItemAnimationController(
 data class ItemAnimationLayer(
     val name: String,
     val priority: Int,
-    val resolver: (AnimationContext) -> Animation?
+    val resolver: (ItemAnimationContext) -> Animation?
 )
 
-data class AnimationContext(
+data class ItemAnimationContext(
     val stack: PlatformItemStack,
     val entity: PlatformLivingEntity?,
     val perspective: ItemRenderPerspective,
@@ -629,11 +629,11 @@ object Items {
     }
 }
 
-private fun AnimationContext.isFirstPerson() =
+private fun ItemAnimationContext.isFirstPerson() =
     this.perspective == ItemRenderPerspective.FIRST_PERSON_LEFT_HAND ||
             this.perspective == ItemRenderPerspective.FIRST_PERSON_RIGHT_HAND
 
-private fun AnimationContext.isThirdPerson() =
+private fun ItemAnimationContext.isThirdPerson() =
     this.perspective == ItemRenderPerspective.THIRD_PERSON_LEFT_HAND ||
             this.perspective == ItemRenderPerspective.THIRD_PERSON_RIGHT_HAND
 

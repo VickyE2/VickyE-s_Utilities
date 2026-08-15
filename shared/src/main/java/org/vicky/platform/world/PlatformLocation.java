@@ -4,6 +4,9 @@ package org.vicky.platform.world;
 import org.vicky.platform.utils.Location3D;
 import org.vicky.platform.utils.Vec3;
 
+/**
+ * An immutable location class
+ */
 public class PlatformLocation extends Location3D implements Cloneable {
 	private final PlatformWorld world;
 
@@ -17,7 +20,6 @@ public class PlatformLocation extends Location3D implements Cloneable {
 	}
 
 	public PlatformLocation add(double dx, double dy, double dz) {
-
 		return new PlatformLocation(world, x + dx, y + dy, z + dz);
 	}
 

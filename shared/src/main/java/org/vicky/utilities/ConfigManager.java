@@ -1,6 +1,14 @@
 /* Licensed under Apache-2.0 2024-2026. */
 package org.vicky.utilities;
 
+import java.io.*;
+import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
 import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.ConfigurationOptions;
@@ -12,14 +20,6 @@ import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.server.PlatformScheduler;
 import org.vicky.utilities.ContextLogger.ContextLogger;
-
-import java.io.*;
-import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 /**
  * A yaml based config manager

@@ -1,11 +1,11 @@
 /* Licensed under Apache-2.0 2024-2026. */
 package org.vicky.utilities.DatabaseManager;
 
-import org.vicky.utilities.ContextLogger.ContextLogger;
-import org.vicky.utilities.DatabaseManager.utils.Hbm2DdlAutoType;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.vicky.utilities.ContextLogger.ContextLogger;
+import org.vicky.utilities.DatabaseManager.utils.Hbm2DdlAutoType;
 
 public class SQLManagerBuilder {
 	private final List<Class<?>> mappingClasses = new ArrayList<>();

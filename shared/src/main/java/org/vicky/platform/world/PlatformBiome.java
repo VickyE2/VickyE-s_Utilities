@@ -1,8 +1,9 @@
 /* Licensed under Apache-2.0 2026. */
 package org.vicky.platform.world;
 
-import net.kyori.adventure.text.Component;
 import org.vicky.platform.utils.ResourceLocation;
+
+import net.kyori.adventure.text.Component;
 
 public interface PlatformBiome {
 	ResourceLocation id();

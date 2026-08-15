@@ -1,7 +1,8 @@
 /* Licensed under Apache-2.0 2026. */
 package org.vicky.platform.item;
 
-import net.kyori.adventure.text.Component;
+import java.util.List;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.vicky.platform.entity.PlatformAnimationController;
@@ -9,7 +10,7 @@ import org.vicky.platform.items.PlatformItemInspection;
 import org.vicky.platform.tags.SerializedItemData;
 import org.vicky.platform.utils.ResourceLocation;
 
-import java.util.List;
+import net.kyori.adventure.text.Component;
 
 public interface PlatformItemStack {
 	int count();

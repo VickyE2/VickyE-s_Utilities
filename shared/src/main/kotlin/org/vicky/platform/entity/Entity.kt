@@ -85,18 +85,31 @@ data class MobSounds(
     val flap: SoundDefinition? = null,
     val custom: Map<String, SoundDefinition> = emptyMap() // roar, cast-spell, etc.
 )
+data class EntityAnimationController(
+    val layers: List<EntityAnimationLayer>,
+    val headTracking: HeadTrackingConfiguration? = null
+)
 
-data class AnimationDefinition(
-    val idle: Animation,
-    val walk: Animation,
-    val hurt: Animation? = null,
-    val step: Animation? = null,
-    val fall: Animation? = null,
-    val attack: Animation? = null,
-    val shoot: Animation? = null,
-    val swim: Animation? = null,
-    val flap: Animation? = null,
-    val custom: Map<String, Animation> = emptyMap()
+data class EntityAnimationLayer(
+    val name: String,
+    val priority: Int,
+    val resolver: (EntityAnimationContext) -> Animation?
+)
+
+data class EntityAnimationContext(
+    val entity: PlatformEntity?,
+    val isMoving: Boolean,
+    val isAttacking: Boolean
+)
+
+data class HeadTrackingConfiguration(
+    val bone: String = "head",
+
+    val maxYaw: Float = 45f,
+    val maxPitch: Float = 30f,
+
+    val yawMultiplier: Float = 1f,
+    val pitchMultiplier: Float = 1f
 )
 
 interface PlatformAnimationController {
@@ -365,7 +378,7 @@ class MobDefaults(
     val spawnOverrides: SpawnOverrides? = null,
 
     // --- State Machine / Animations ---
-    val animations: AnimationDefinition,
+    val animations: EntityAnimationController,
 
     // --- Misc flags ---
     val persistent: Boolean = true,
@@ -585,10 +598,10 @@ interface PathNavigator {
     fun createPath(positions: Set<IntVec3>, distance: Int): AbstractPath?
 
     // Starts following the given path
-    fun moveTo(path: AbstractPath, speed: Double)
+    fun moveTo(path: AbstractPath, speedModifier: Double)
 
     // Starts following the given path
-    fun moveTo(path: PlatformEntity?, speed: Double)
+    fun moveTo(path: PlatformEntity?, speedModifier: Double)
 
     // Clears the current path
     fun stop()
@@ -757,17 +770,17 @@ class MobAttributeBuilder {
     var baseArmor: Double = 0.0
     var baseArmorToughness: Double = 0.0
     var knockbackResistance: Double = 0.0
-    var movementSpeed: Double = 1.0
-    var swimSpeed: Double = 0.8
-    var flySpeed: Double = 0.8
-    var jumpStrength: Double = 0.8
+    var movementSpeed: Double = 0.1
+    var swimSpeed: Double = 0.07
+    var flySpeed: Double = 0.2
+    var jumpStrength: Double = 0.42
     var attackDamage: Double = 2.0
     var attackSpeed: Double = 0.7
     var attackKnockback: Double = 1.0
     var followRange: Double = 16.0
     var luck: Double = 0.0
     var entityGravity: Double = 0.08
-    var entityReach: Double  = 0.0
+    var entityReach: Double  = 4.5
     var stepHeightAddition: Double  = 0.0
 }
 
@@ -793,7 +806,7 @@ class MobDefaultsBuilder(
     var immuneToFreeze: Boolean = false
 
     private var sounds: MobSounds = MobSounds()
-    private var animations: AnimationDefinition? = null
+    private var animations: EntityAnimationController? = null
     private var spawnGroups: List<ResourceLocation> = listOf()
     private var spawnOverrides: SpawnOverrides? = null
     private val drops = mutableListOf<DropEntry>()
@@ -812,11 +825,10 @@ class MobDefaultsBuilder(
     }
 
     fun animations(
-        idle: Animation,
-        walk: Animation,
+        defaultLayer: EntityAnimationLayer,
         block: AnimationBuilder.() -> Unit = {}
     ) {
-        animations = AnimationBuilder(idle, walk).apply(block).build()
+        animations = AnimationBuilder(defaultLayer).apply(block).build()
     }
 
     fun spawnOverride(block: SpawnOverridesBuilder.() -> Unit) {
@@ -901,35 +913,28 @@ class MobSoundsBuilder {
 }
 
 class AnimationBuilder(
-    private val idle: Animation,
-    private val walk: Animation
+    defaultLayer: EntityAnimationLayer
 )
 {
-    var hurt: Animation? = null
-    var attack: Animation? = null
-    var step: Animation? = null
-    var fall: Animation? = null
-    var shoot: Animation? = null
-    var swim: Animation? = null
-    var flap: Animation? = null
-    private val custom = mutableMapOf<String, Animation>()
+    private var layers: MutableList<EntityAnimationLayer> = mutableListOf()
+    private var headTracking: HeadTrackingConfiguration? = null
 
-    fun custom(name: String, anim: Animation) {
-        custom[name] = anim
+    init {
+        layers.add(defaultLayer)
     }
 
-    fun build(): AnimationDefinition =
-        AnimationDefinition(
-            idle = idle,
-            walk = walk,
-            hurt = hurt,
-            attack = attack,
-            step = step,
-            fall = fall,
-            shoot = shoot,
-            swim = swim,
-            flap = flap,
-            custom = custom,
+    fun addLayer(layer: EntityAnimationLayer) {
+        this.layers.add(layer)
+    }
+
+    fun headTracking(head: HeadTrackingConfiguration) {
+        headTracking = head
+    }
+
+    fun build(): EntityAnimationController =
+        EntityAnimationController(
+            layers = layers.toList(),
+            headTracking = headTracking,
         )
 }
 

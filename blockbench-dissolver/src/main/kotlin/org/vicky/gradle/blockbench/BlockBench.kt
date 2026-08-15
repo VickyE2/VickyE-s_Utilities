@@ -9,6 +9,8 @@ import org.vicky.gradle.Utils
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
@@ -16,6 +18,7 @@ import javax.imageio.ImageIO
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.round
 
 object GeoAnimatedDataSerializer : KSerializer<GeoAnimatedData> {
 
@@ -67,19 +70,37 @@ object GeoAnimatedDataSerializer : KSerializer<GeoAnimatedData> {
         val output = encoder as? JsonEncoder
             ?: error("GeoAnimatedData can only be serialized to JSON")
 
-        val obj = buildJsonObject {
-            put("lerp_mode", JsonPrimitive(value.lerpMode))
-            value.pre?.let {
-                put("pre", output.json.encodeToJsonElement(it))
-            }
-            value.post?.let {
-                put("post", output.json.encodeToJsonElement(it))
-            }
+        if (value.baked) {
+            output.encodeJsonElement(output.json.encodeToJsonElement(value.pre!!.vector))
         }
+        else {
+            val obj = buildJsonObject {
+                if (value.lerpMode == "linear" || value.lerpMode == "bezier" || value.lerpMode == "") {
+                    put("vector", output.json.encodeToJsonElement(value.pre!!.vector))
+                } else {
+                    put("lerp_mode", JsonPrimitive(value.lerpMode))
+                    if (value.pre != null && value.post == null || (value.pre == value.post)) {
+                        put("post", output.json.encodeToJsonElement(value.pre))
+                    } else {
+                        value.pre?.let {
+                            put("pre", output.json.encodeToJsonElement(it))
+                        }
+                        value.post?.let {
+                            put("post", output.json.encodeToJsonElement(it))
+                        }
+                    }
+                }
 
-        output.encodeJsonElement(obj)
+                value.easing?.let {
+                    put("easing", output.json.encodeToJsonElement(it))
+                }
+            }
+
+            output.encodeJsonElement(obj)
+        }
     }
 }
+
 object OutlinerNodeSerialiser : KSerializer<OutlinerNode> {
     @OptIn(ExperimentalSerializationApi::class, InternalSerializationApi::class)
     override val descriptor: SerialDescriptor =
@@ -153,6 +174,7 @@ object OutlinerNodeSerialiser : KSerializer<OutlinerNode> {
         output.encodeJsonElement(json)
     }
 }
+
 object Vec3Serializer : KSerializer<Vec3> {
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("Vec3") {
         element<Double>("x")
@@ -196,33 +218,40 @@ object Vec3Serializer : KSerializer<Vec3> {
                     elem[2].toDoubleLenient()
                 )
             }
+
             is JsonObject -> {
                 val xEl = elem["x"] ?: error("Vec3 object missing 'x'")
                 val yEl = elem["y"] ?: error("Vec3 object missing 'y'")
                 val zEl = elem["z"] ?: error("Vec3 object missing 'z'")
                 Vec3(xEl.toDoubleLenient(), yEl.toDoubleLenient(), zEl.toDoubleLenient())
             }
+
             is JsonPrimitive -> {
                 // Defensive: if someone encoded "1,2,3" as a single string (unlikely), try parse
                 val parts = elem.content.split(",").map { it.trim() }
                 if (parts.size == 3) {
-                    Vec3(parts[0].toDoubleOrNull() ?: error("Invalid number ${parts[0]}"),
+                    Vec3(
+                        parts[0].toDoubleOrNull() ?: error("Invalid number ${parts[0]}"),
                         parts[1].toDoubleOrNull() ?: error("Invalid number ${parts[1]}"),
-                        parts[2].toDoubleOrNull() ?: error("Invalid number ${parts[2]}"))
+                        parts[2].toDoubleOrNull() ?: error("Invalid number ${parts[2]}")
+                    )
                 } else {
                     error("Invalid Vec3 JSON primitive: $elem")
                 }
             }
+
             else -> error("Invalid Vec3 JSON: $elem")
         }
     }
 }
+
 object InlineVec2Serializer : KSerializer<List<Double>> {
     override val descriptor =
         PrimitiveSerialDescriptor("InlineVec2", PrimitiveKind.STRING)
 
     private fun Double.formatTrimZero(): Number =
         if (this % 1.0 == 0.0) this.toInt() else this
+
     override fun serialize(encoder: Encoder, value: List<Double>) {
         val jsonEncoder = encoder as? JsonEncoder
             ?: error("Vec3 serializer only works with JSON")
@@ -248,6 +277,7 @@ object InlineVec2Serializer : KSerializer<List<Double>> {
         return s
     }
 }
+
 object StringVec3Serializer : KSerializer<StringVec3> {
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("Vec3") {
         element<String>("x")
@@ -260,20 +290,149 @@ object StringVec3Serializer : KSerializer<StringVec3> {
         val factor = 10.0.pow(decimals)
         return kotlin.math.round(this * factor) / factor
     }
+    private fun String.isDefinitelyZeroExpression(): Boolean {
+        val s = clean()
+
+        // Simple zero
+        if (s == "0" || s == "-0" || s == "+0") return true
+
+        // 0 * anything
+        if (Regex("""^[+-]?\(?\s*0(?:\.0+)?\s*\*""").containsMatchIn(s)) {
+            return true
+        }
+
+        return false
+    }
     private fun Double.ifZeroAbs(): Double {
         return if (abs(this) == 0.0) 0.0 else this
     }
     private fun Double.ifZeroAbsElse(action: (Double) -> Double): Double {
         return if (abs(this) == 0.0) 0.0 else action.invoke(this)
     }
-    private fun String.toPossibleDoubleJsonPrimitive(): JsonPrimitive =
-        if (this.clean().isBlank()) {
-            JsonPrimitive(0)
-        } else {
-            this.toDoubleOrNull()
-                ?.let { JsonPrimitive(it.ifZeroAbsElse { it.round(4) }) }
-                ?: JsonPrimitive(this.clean())
+    val epsilon = 1e-9 // Tolerance for precision errors
+    fun Double.isEquivalentToInteger(): Boolean {
+        val rounded = round(this)
+        return abs(this - rounded) < epsilon
+    }
+
+    /**
+     * Evaluates basic mathematical expressions (supports +, -, *, /, unary minus, and parentheses).
+     * Returns null if the string is not a valid expression or number.
+     */
+    private fun String.evalDoubleOrNull(): Double? {
+        try {
+            val cleaned = this.replace("\\s+".toRegex(), "")
+            if (cleaned.isEmpty()) return null
+
+            class Parser(val s: String) {
+                var pos = 0
+                val peek: Char? get() = if (pos < s.length) s[pos] else null
+                fun next(): Char? = if (pos < s.length) s[pos++] else null
+
+                fun parse(): Double {
+                    val res = parseExpression()
+                    if (pos < s.length) throw RuntimeException("Unexpected character")
+                    return res
+                }
+
+                // expression = term (( "+" | "-" ) term)*
+                fun parseExpression(): Double {
+                    var x = parseTerm()
+                    while (true) {
+                        when (peek) {
+                            '+' -> {
+                                next(); x += parseTerm()
+                            }
+
+                            '-' -> {
+                                next(); x -= parseTerm()
+                            }
+
+                            else -> return x
+                        }
+                    }
+                }
+
+                // term = factor (( "*" | "/" ) factor)*
+                fun parseTerm(): Double {
+                    var x = parseFactor()
+                    while (true) {
+                        when (peek) {
+                            '*' -> {
+                                next(); x *= parseFactor()
+                            }
+
+                            '/' -> {
+                                next()
+                                val divisor = parseFactor()
+                                if (divisor == 0.0) throw ArithmeticException("Division by zero")
+                                x /= divisor
+                            }
+
+                            else -> return x
+                        }
+                    }
+                }
+
+                // factor = "+" factor | "-" factor | number | "(" expression ")"
+                fun parseFactor(): Double {
+                    if (peek == '+') {
+                        next()
+                        return parseFactor()
+                    }
+                    if (peek == '-') {
+                        next()
+                        return -parseFactor()
+                    }
+
+                    if (peek == '(') {
+                        next()
+                        val x = parseExpression()
+                        if (next() != ')') throw RuntimeException("Missing closing parenthesis")
+                        return x
+                    }
+
+                    val start = pos
+                    while (peek != null && (peek!!.isDigit() || peek == '.')) {
+                        next()
+                    }
+                    if (start == pos) throw RuntimeException("Expected number")
+                    return s.substring(start, pos).toDoubleOrNull() ?: throw RuntimeException("Invalid number")
+                }
+            }
+
+            return Parser(cleaned).parse()
+        } catch (e: Exception) {
+            return null
         }
+    }
+
+    private fun String.toPossibleDoubleJsonPrimitive(): JsonPrimitive {
+        val cleanedStr = this.clean()
+        if (cleanedStr.isBlank()) {
+            return JsonPrimitive(0)
+        }
+
+        if (isTernaryExpression(cleanedStr)) {
+            return JsonPrimitive(cleanedStr)
+        }
+
+        if (cleanedStr.isDefinitelyZeroExpression()) {
+            return JsonPrimitive(0)
+        }
+
+        // Try evaluating as an expression or number first
+        val evaluated = cleanedStr.evalDoubleOrNull()
+        return if (evaluated != null && !evaluated.isNaN() && !evaluated.isInfinite()) {
+            if (evaluated.isEquivalentToInteger()) {
+                JsonPrimitive(evaluated.toInt())
+            }
+            else
+                JsonPrimitive(evaluated.ifZeroAbsElse { num -> num.round(4) })
+        } else {
+            JsonPrimitive(cleanedStr)
+        }
+    }
 
     private fun JsonElement.toStringLenient(): String =
         this.jsonPrimitive.let { prim ->
@@ -304,12 +463,14 @@ object StringVec3Serializer : KSerializer<StringVec3> {
                     elem[2].toStringLenient()
                 )
             }
+
             is JsonObject -> {
                 val xEl = elem["x"]?.toStringLenient() ?: ""
                 val yEl = elem["y"]?.toStringLenient() ?: ""
                 val zEl = elem["z"]?.toStringLenient() ?: ""
                 StringVec3(xEl, yEl, zEl)
             }
+
             is JsonPrimitive -> {
                 // Defensive: if someone encoded "1,2,3" as a single string (unlikely), try parse
                 val parts = elem.content.split(",").map { it.trim() }
@@ -323,6 +484,7 @@ object StringVec3Serializer : KSerializer<StringVec3> {
                     error("Invalid StringVec3 JSON primitive: $elem")
                 }
             }
+
             else -> error("Invalid Vec3 JSON: $elem")
         }
     }
@@ -333,47 +495,57 @@ data class GeoAnimation(
     @SerialName("format_version") val formatVersion: String,
     val animations: Map<String, GeoAnimationData>
 )
+
 @Serializable
 data class GeoAnimationData(
     val loop: Boolean,
     @SerialName("animation_length") val animationLength: Double,
     val bones: Map<String, GeoAnimated>
 )
+
 @Serializable
 data class GeoAnimated(
     val position: Map<String, GeoAnimatedData> = emptyMap(),
     val rotation: Map<String, GeoAnimatedData> = emptyMap(),
     val scale: Map<String, GeoAnimatedData> = emptyMap(),
 )
+
 @Serializable(with = GeoAnimatedDataSerializer::class)
 data class GeoAnimatedData(
     @SerialName("lerp_mode") val lerpMode: String,
     val pre: GeoTransformVector? = null,
-    val post: GeoTransformVector? = null
+    val post: GeoTransformVector? = null,
+    val easing: String? = null,
+    val baked: Boolean = false
 )
+
 @Serializable
 data class GeoTransformVector(
     val vector: StringVec3
 )
+
 @Serializable
 data class GeoGeometry(
     val description: GeoGeometryDescription,
     val bones: List<GeoBone>
 )
+
 @Serializable
 data class GeoModel(
     @SerialName("minecraft:geometry") val geometries: List<GeoGeometry>,
     @SerialName("format_version") val formatVersion: String
 )
+
 @Serializable
 data class GeoGeometryDescription(
     val identifier: String,
     @SerialName("texture_width") val textureWidth: Int,
     @SerialName("texture_height") val textureHeight: Int,
-    @SerialName("visible_bounds_width") val  visibleBoundsWidth: Double,
+    @SerialName("visible_bounds_width") val visibleBoundsWidth: Double,
     @SerialName("visible_bounds_height") val visibleBoundsHeight: Double,
     @SerialName("visible_bounds_offset") val visibleBoundsOffset: List<Double>
 )
+
 @Serializable
 data class GeoBone @OptIn(ExperimentalSerializationApi::class) constructor(
     val name: String,
@@ -383,18 +555,21 @@ data class GeoBone @OptIn(ExperimentalSerializationApi::class) constructor(
     @EncodeDefault(EncodeDefault.Mode.NEVER) val cubes: List<GeoCube> = emptyList(),
     @EncodeDefault(EncodeDefault.Mode.NEVER) val locators: Map<String, Vec3> = emptyMap()
 )
+
 @Serializable
 data class GeoCube @OptIn(ExperimentalSerializationApi::class) constructor(
     val origin: Vec3,
     val size: Vec3,
     @EncodeDefault(EncodeDefault.Mode.NEVER) val rotation: Vec3? = null,
-    @EncodeDefault(EncodeDefault.Mode.NEVER) val pivot: Vec3 = Vec3.ZERO,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val pivot: Vec3? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER) val uv: Map<String, GeoUvData> = emptyMap()
 )
+
 @Serializable
 data class GeoLocator @OptIn(ExperimentalSerializationApi::class) constructor(
     val position: Vec3
 )
+
 @Serializable
 data class GeoUvData(
     @Serializable(with = InlineVec2Serializer::class)
@@ -424,24 +599,49 @@ data class BlockBenchModel(
     val outliner: List<OutlinerNode> = listOf(),
     val textures: List<Texture> = listOf(),
     val animations: List<Animations> = listOf(),
+    val display: BlockbenchDisplay? = null,
     @SerialName("animation_variable_placeholders") val animationVariablePlaceholders: String = "",
 )
+
+@Serializable
+data class BlockbenchDisplay(
+    val thirdperson_righthand: BlockbenchDisplayTransform? = null,
+    val thirdperson_lefthand: BlockbenchDisplayTransform? = null,
+    val firstperson_righthand: BlockbenchDisplayTransform? = null,
+    val firstperson_lefthand: BlockbenchDisplayTransform? = null,
+    val ground: BlockbenchDisplayTransform? = null,
+    val gui: BlockbenchDisplayTransform? = null,
+    val head: BlockbenchDisplayTransform? = null,
+    val fixed: BlockbenchDisplayTransform? = null,
+    val on_shelf: BlockbenchDisplayTransform? = null
+)
+
+@Serializable
+data class BlockbenchDisplayTransform(
+    val rotation: Vec3? = null,
+    val translation: Vec3? = null,
+    val scale: Vec3? = null
+)
+
 @Serializable
 data class Meta(
     @SerialName("format_version") val formatVersion: String,
     @SerialName("model_format") val modelFormat: String,
     @SerialName("box_uv") val boxUv: Boolean
 )
+
 @Serializable
 data class Resoulution(
     val width: Int,
     val height: Int
 )
+
 @Serializable(with = Vec3Serializer::class)
 class Vec3 {
     val x: Double
     val y: Double
     val z: Double
+
     companion object {
         val ZERO: Vec3 = Vec3(0.0, 0.0, 0.0)
     }
@@ -451,49 +651,60 @@ class Vec3 {
         this.y = y
         this.z = z
     }
+
     constructor(from: List<Double>) : this(
         Math.round(from[0] * 100.0) / 100.0, Math.round(from[1] * 100.0) / 100.0, Math.round(from[2] * 100.0) / 100.0
-    ) { }
+    ) {
+    }
+
     fun toList(): List<Double> = listOf(x, y, z)
     override fun toString(): String = "[$x, $y, $z]"
     override fun equals(other: Any?): Boolean {
         if (other !is Vec3) return false
         return other.x == this.x && other.y == this.y && other.z == this.z
     }
+
     override fun hashCode(): Int {
         return javaClass.hashCode()
     }
 }
+
 operator fun Vec3.plus(other: Vec3): Vec3 = Vec3(
     x + other.x,
     y + other.y,
     z + other.z
 )
+
 operator fun Vec3.div(magnitude: Double): Vec3 = Vec3(
     x / magnitude,
     y / magnitude,
     z / magnitude
 )
+
 operator fun Vec3.div(magnitude: Int): Vec3 = Vec3(
     x / magnitude,
     y / magnitude,
     z / magnitude
 )
+
 operator fun Vec3.minus(other: Vec3) = Vec3(
     x - other.x,
     y - other.y,
     z - other.z
 )
+
 operator fun Vec3.times(scale: Double) = Vec3(
     x * scale,
     y * scale,
     z * scale
 )
+
 operator fun Vec3.times(scale: Vec3) = Vec3(
     x * scale.x,
     y * scale.y,
     z * scale.z
 )
+
 fun Vec3.round(decimals: Int): Vec3 {
     val factor = 10.0.pow(decimals)
     return Vec3(
@@ -502,30 +713,38 @@ fun Vec3.round(decimals: Int): Vec3 {
         kotlin.math.round(z * factor) / factor
     )
 }
+
 fun Vec3.isZero(): Boolean {
     val rounded = this.round(1)
     return rounded.x == 0.0 && rounded.y == 0.0 && rounded.z == 0.0
 }
+
 fun Vec3.ifIsZero(toUse: () -> Vec3): Vec3 {
     return if (this.isZero()) toUse.invoke() else this
 }
+
 fun Vec3.ifIsZeroDoing(toUse: () -> Vec3, whenNotZero: (Vec3) -> Vec3): Vec3 {
     return if (this.isZero()) toUse.invoke() else whenNotZero.invoke(this)
 }
+
 fun Vec3.ifIsZeroNullable(toUse: () -> Vec3?): Vec3? {
     return if (this.isZero()) toUse.invoke() else this
 }
+
 fun Vec3.ifIsZeroNullableDoing(toUse: () -> Vec3?, whenNotZero: (Vec3) -> Vec3): Vec3? {
     return if (this.isZero()) toUse.invoke() else whenNotZero.invoke(this)
 }
+
 @Serializable(with = StringVec3Serializer::class)
 data class StringVec3(val x: String, val y: String, val z: String) {
     companion object {
         val ZERO: Vec3 = Vec3(0.0, 0.0, 0.0)
     }
+
     constructor(from: List<String>) : this(
         from[0], from[1], from[2]
     )
+
     fun toList(): List<String> = listOf(x, y, z)
     override fun toString(): String = "[$x, $y, $z]"
     fun invert(): StringVec3 = StringVec3(
@@ -533,26 +752,31 @@ data class StringVec3(val x: String, val y: String, val z: String) {
         y.isDoubleDoElse({ "-($it)" }) { -it },
         z.isDoubleDoElse({ "-($it)" }) { -it }
     )
+
     fun invertYZ(): StringVec3 = StringVec3(
         x,
         y.isDoubleDoElse({ "-($it)" }) { -it },
         z.isDoubleDoElse({ "-($it)" }) { -it }
     )
+
     fun invertXY(): StringVec3 = StringVec3(
         x.isDoubleDoElse({ "-($it)" }) { -it },
         y.isDoubleDoElse({ "-($it)" }) { -it },
         z
     )
+
     fun invertXZ(): StringVec3 = StringVec3(
         x.isDoubleDoElse({ "-($it)" }) { -it },
         y,
         z.isDoubleDoElse({ "-($it)" }) { -it }
     )
 }
-fun String.isDoubleDoElse(stringAction: (String) -> String, action: (Double) -> Double) : String {
-    if (this.toDoubleOrNull() == null) return this
+
+fun String.isDoubleDoElse(stringAction: (String) -> String, action: (Double) -> Double): String {
+    if (this.toDoubleOrNull() == null) return stringAction.invoke(this)
     return action.invoke(this.toDouble()).toString()
 }
+
 @Serializable
 data class Element(
     val name: String,
@@ -574,11 +798,13 @@ data class Element(
     @SerialName("uv_offset") val uvOffset: List<Int> = listOf(),
     @SerialName("light_emission") val lightEmission: Int? = null,
 )
+
 @Serializable
 data class UvData(
     val uv: List<Double>,
     val texture: Int
 )
+
 @Serializable
 data class Group(
     val uuid: String,
@@ -598,20 +824,24 @@ data class Group(
     val name: String,
     val children: List<String>
 )
+
 @Serializable(with = OutlinerNodeSerialiser::class)
 sealed interface OutlinerNode
+
 @Serializable
 data class OutlinerGroup(
     val uuid: String,
     val isOpen: Boolean?,
     val children: List<OutlinerNode>?
 ) : OutlinerNode
+
 @Serializable
 data class OutlinerLeaf(
     val uuid: String
 ) : OutlinerNode {
     override fun toString(): String = uuid
 }
+
 @Serializable
 data class Texture(
     val name: String,
@@ -641,6 +871,7 @@ data class Texture(
     val uuid: String,
     val source: String
 )
+
 @Serializable
 data class Animations(
     val uuid: String,
@@ -648,7 +879,7 @@ data class Animations(
     val loop: String,
     val override: Boolean,
     val length: Double,
-    val snapping: Int,
+    val snapping: Double,
     val selected: Boolean,
     val saved: Boolean,
     val path: String,
@@ -658,6 +889,7 @@ data class Animations(
     @SerialName("loop_delay") val loopDelay: String,
     val animators: Map<String, Animated>
 )
+
 @Serializable
 data class Animated(
     val name: String,
@@ -666,6 +898,7 @@ data class Animated(
     @SerialName("quaternion_interpolation") val quaternionInterpolation: Boolean = false,
     val keyframes: List<Keyframe>? = listOf()
 )
+
 @Serializable
 data class Keyframe(
     val channel: String,
@@ -673,17 +906,25 @@ data class Keyframe(
     val time: Double,
     val color: Int,
     val interpolation: String,
-    @SerialName("data_points") val dataPoints: List<Map<String, String>>
+    val easing: String? = null,
+    @SerialName("data_points") val dataPoints: List<Map<String, String>>,
+    @SerialName("bezier_linked") val bezierLinked: Boolean = false,
+    @SerialName("bezier_left_time") val bezierLeftTime: List<Double> = listOf(),
+    @SerialName("bezier_left_value") val bezierLeftValue: List<Double> = listOf(),
+    @SerialName("bezier_right_time") val bezierRightTime: List<Double> = listOf(),
+    @SerialName("bezier_right_value") val bezierRightValue: List<Double> = listOf(),
 )
 
 data class ResolvedTexture(
     val image: BufferedImage,
     val mcmeta: McMeta? = null
 )
+
 @Serializable
 data class McMeta(
     val animation: AnimationMeta
 )
+
 @Serializable
 data class AnimationMeta(
     val frametime: Int,
@@ -694,13 +935,24 @@ data class AnimationMeta(
 fun GeoCube.validate() {
     val faces = uv.keys
 
-    val required = setOf("north","south","east","west","up","down")
+    val required = setOf("north", "south", "east", "west", "up", "down")
     require(faces.containsAll(required)) {
         "Missing faces: ${required - faces}"
     }
 }
 
-fun BlockBenchModel.geoGeom() : GeoModel {
+fun bbPosition(pos: Vec3) =
+    Vec3(-pos.x, pos.y, pos.z)
+
+fun bbRotation(rot: Vec3) =
+    Vec3(-rot.x, -rot.y, rot.z)
+
+fun bbOrigin(from: Vec3, to: Vec3): Vec3 {
+    val size = to - from
+    return Vec3(-from.x - size.x, from.y, from.z)
+}
+
+fun BlockBenchModel.geoGeom(): GeoModel {
     val groupsByUuid = this.groups.associateBy { it.uuid }
 
     val elementParent = mutableMapOf<String, String?>()
@@ -710,6 +962,7 @@ fun BlockBenchModel.geoGeom() : GeoModel {
             is OutlinerLeaf -> {
                 elementParent[node.uuid] = parentGroupUuid
             }
+
             is OutlinerGroup -> {
                 groupParent[node.uuid] = parentGroupUuid
                 node.children?.forEach { child ->
@@ -734,6 +987,7 @@ fun BlockBenchModel.geoGeom() : GeoModel {
                     }
                 }
             }
+
             is Map<*, *> -> {
                 // defensive: top-level outliner may contain maps rather than typed Outliner
                 val uuid = node["uuid"] as? String
@@ -752,14 +1006,6 @@ fun BlockBenchModel.geoGeom() : GeoModel {
         processOutlinerNode(top, null)
     }
 
-    fun Vec3.size(to: Vec3): Vec3 {
-        return Vec3(
-            abs(to.x - this.x),
-            abs(to.y - this.y),
-            abs(to.z - this.z)
-        )
-    }
-
     fun faceUvFromRaw(face: UvData, side: String): GeoUvData {
         val (u1, v1, u2, v2) = face.uv
 
@@ -774,6 +1020,7 @@ fun BlockBenchModel.geoGeom() : GeoModel {
                 uv = listOf(u, v + h),
                 uvSize = listOf(w, -h)
             )
+
             else -> GeoUvData(
                 uv = listOf(u, v),
                 uvSize = listOf(w, h)
@@ -781,36 +1028,33 @@ fun BlockBenchModel.geoGeom() : GeoModel {
         }
     }
 
-    fun bbToGeo(v: Vec3) = Vec3(-v.x, v.y, v.z)
-
     val elementsByParent = this.elements.groupBy { elementParent[it.uuid] }
 
     val bones = this.groups.map { group ->
-        val pivot = bbToGeo(group.origin)
-
         val childrenElements = elementsByParent[group.uuid] ?: emptyList()
 
         val cubes: List<GeoCube> = childrenElements.mapNotNull cynrax@{ elem ->
             if (elem.type != "cube") return@cynrax null
-            val from = elem.from
-            val to = elem.to
-            val size = from.size(to)
-
             val uvMap = elem.faces.mapValues { (side, uvData) -> faceUvFromRaw(side = side, face = uvData) }
-            val geoOrigin = bbToGeo(to).minOf(bbToGeo(from))
 
             val cube = GeoCube(
-                origin = geoOrigin,
-                size = size,
-                rotation = elem.rotation.ifIsZeroNullableDoing({ null }) { bbToGeo(it) },
+                origin = bbOrigin(elem.from, elem.to), // [FIXED] Removed the subtraction of group.origin
+                size = elem.to - elem.from,
+                // inflate = elem.inflate ?: 0.0, // [ADDED] Required for Blockbench inflation
+
+                rotation = elem.rotation
+                    .ifIsZeroNullableDoing({ null }) { bbRotation(it) },
+
                 uv = uvMap.ifEmpty { emptyMap() },
-                pivot = elem.origin.ifIsZeroDoing({ Vec3.ZERO }) { bbToGeo(it) }
+
+                pivot = elem.rotation.ifIsZeroNullableDoing(
+                    { null }
+                ) { bbPosition(elem.origin) }
             )
             try {
                 cube.validate()
                 return@cynrax cube
-            }
-            catch (e: Exception) {
+            } catch (e: Exception) {
                 Utils.log("Encountered error while on cube: ${elem.uuid}, it will be skipped", true)
                 e.printStackTrace()
                 return@cynrax null
@@ -819,7 +1063,7 @@ fun BlockBenchModel.geoGeom() : GeoModel {
 
         val locators: Map<String, Vec3> = childrenElements.transformMapNotNull cynrax@{ elem ->
             if (elem.type != "locator") return@cynrax null
-            elem.name to elem.position
+            elem.name to bbPosition(elem.position)
         }
 
         val parentGroupUuid = groupParent[group.uuid]
@@ -828,117 +1072,176 @@ fun BlockBenchModel.geoGeom() : GeoModel {
         GeoBone(
             name = group.name,
             parent = parentName ?: "",
-            pivot = pivot,
-            rotation = group.rotation.ifIsZeroNullable { null },
+            pivot = bbPosition(group.origin),
+
+            rotation = group.rotation
+                .ifIsZeroNullableDoing({ null }) { bbRotation(it) },
+
             cubes = cubes.ifEmpty { emptyList() },
+
             locators = locators.ifEmpty { emptyMap() }
         )
     }
 
-    return GeoModel(listOf(GeoGeometry(
-        GeoGeometryDescription(
-            "geometry.${this.modelIdentifier}",
-            this.resolution.width,
-            this.resolution.height,
-            this.visibleBox[0],
-            this.visibleBox[1],
-            listOf(0.0, this.visibleBox[2], 0.0),
-        ),
-        bones
-    )), "1.12.0")
+    return GeoModel(
+        listOf(
+            GeoGeometry(
+                GeoGeometryDescription(
+                    "geometry.${this.modelIdentifier}",
+                    this.resolution.width,
+                    this.resolution.height,
+                    this.visibleBox[0],
+                    this.visibleBox[1],
+                    listOf(0.0, this.visibleBox[2], 0.0),
+                ),
+                bones
+            )
+        ), "1.12.0"
+    )
 }
 
-fun Vec3.minOf(from: Vec3): Vec3 = Vec3(
-    min(this.x, from.x),
-    min(this.y, from.y),
-    min(this.z, from.z)
-)
+fun isTernaryExpression(value: String): Boolean {
+    var depth = 0
+    var hasQuestion = false
 
-fun BlockBenchModel.geoAnim() : GeoAnimation {
-    val anim = GeoAnimation(
-        "1.8.0",
-        this.animations.transformMap { animations1 ->
-            val bones = mutableMapOf<String, GeoAnimated>()
-            for ((_, animated) in animations1.animators) {
-                if (animated.type != "bone") continue
-                if (animated.keyframes.isNullOrEmpty()) continue
-                val position = mutableMapOf<String, GeoAnimatedData>()
-                val rotation = mutableMapOf<String, GeoAnimatedData>()
-                val scale = mutableMapOf<String, GeoAnimatedData>()
-                for (keyframe in animated.keyframes) {
-                    when (keyframe.channel.lowercase()) {
-                        "position" -> {
-                            position[keyframe.time.toString()] =
-                                GeoAnimatedData(
-                                    keyframe.interpolation,
-                                    null,
-                                    GeoTransformVector(
-                                        StringVec3(
-                                            keyframe.dataPoints.getOrNull(0)?.get("x") ?: "0",
-                                            keyframe.dataPoints.getOrNull(0)?.get("y") ?: "0",
-                                            keyframe.dataPoints.getOrNull(0)?.get("z") ?: "0"
-                                        )
-                                    )
-                                )
-                        }
-                        "rotation" -> {
-                            rotation[keyframe.time.toString()] =
-                                GeoAnimatedData(
-                                    keyframe.interpolation,
-                                    null,
-                                    GeoTransformVector(
-                                        StringVec3(
-                                            keyframe.dataPoints.getOrNull(0)?.get("x") ?: "0",
-                                            keyframe.dataPoints.getOrNull(0)?.get("y") ?: "0",
-                                            keyframe.dataPoints.getOrNull(0)?.get("z") ?: "0"
-                                        )
-                                    )
-                                )
-                        }
-                        "scale" -> {
-                            scale[keyframe.time.toString()] =
-                                GeoAnimatedData(
-                                    keyframe.interpolation,
-                                    null,
-                                    GeoTransformVector(
-                                        StringVec3(
-                                            keyframe.dataPoints.getOrNull(0)?.get("x") ?: "0",
-                                            keyframe.dataPoints.getOrNull(0)?.get("y") ?: "0",
-                                            keyframe.dataPoints.getOrNull(0)?.get("z") ?: "0"
-                                        )
-                                    )
-                                )
-                        }
-                    }
+    for (char in value) {
+        when (char) {
+            '(' -> depth++
+            ')' -> depth--
+
+            '?' -> {
+                if (depth == 0) {
+                    hasQuestion = true
                 }
+            }
+
+            ':' -> {
+                if (depth == 0 && hasQuestion) {
+                    return true
+                }
+            }
+        }
+    }
+
+    return false
+}
+
+fun invertExpression(value: String?): String {
+    if (value == null) return "0"
+
+    val v = value.trim()
+
+    if (v == "0" || v.isEmpty())
+        return "0"
+
+    if (isTernaryExpression(v))
+        return v
+
+    if (v.startsWith("(")) {
+        return "-1 * $v"
+    }
+
+    return if (v.startsWith("-")) {
+        v.removePrefix("-")
+    } else {
+        "-$v"
+    }
+}
+
+fun BlockBenchModel.geoAnim(): GeoAnimation {
+
+    fun bbPosition(x: String?, y: String?, z: String?): StringVec3 {
+        return StringVec3(
+            invertExpression(x ?: "0"),
+            y ?: "0",
+            z ?: "0"
+        )
+    }
+
+    fun bbRotation(x: String?, y: String?, z: String?): StringVec3 {
+        return StringVec3(
+            invertExpression(x ?: "0"),
+            invertExpression(y ?: "0"),
+            z ?: "0"
+        )
+    }
+
+    fun bbScale(x: String?, y: String?, z: String?): StringVec3 {
+        return StringVec3(
+            x ?: "0",
+            y ?: "0",
+            z ?: "0"
+        )
+    }
+
+    return GeoAnimation(
+        "1.8.0",
+        this.animations.transformMap { animation ->
+
+            val bones = mutableMapOf<String, GeoAnimated>()
+
+            for ((_, animated) in animation.animators) {
+
+                if (animated.type != "bone")
+                    continue
+
+                if (animated.keyframes.isNullOrEmpty())
+                    continue
+
+                val position = convertChannel(
+                    animated.keyframes,
+                    animation.snapping,
+                    "position"
+                )
+
+                val rotation = convertChannel(
+                    animated.keyframes,
+                    animation.snapping,
+                    "rotation"
+                )
+
+                val scale = convertChannel(
+                    animated.keyframes,
+                    animation.snapping,
+                    "scale"
+                )
+
                 bones[animated.name] = GeoAnimated(
                     position,
                     rotation,
                     scale
                 )
             }
-            animations1.name to GeoAnimationData(
-                animations1.loop == "loop",
-                animations1.length,
+
+            animation.name to GeoAnimationData(
+                animation.loop == "loop",
+                animation.length,
                 bones
             )
         }
     )
-    return anim
 }
-fun BlockBenchModel.resolveTextures() : List<ResolvedTexture> {
+fun Double.formatTime(): String {
+    return BigDecimal(this)
+        .setScale(4, RoundingMode.HALF_UP)
+        .stripTrailingZeros()
+        .toPlainString()
+}
+
+fun BlockBenchModel.resolveTextures(): List<ResolvedTexture> {
     val resolvedTextures = mutableListOf<ResolvedTexture>()
     fun decodeBase64Image(source: String): ByteArray {
         val clean = source.substringAfter("base64,", source)
         return Base64.getDecoder().decode(clean)
     }
+
     fun textureToBufferedImage(texture: Texture): BufferedImage {
         val bytes = decodeBase64Image(texture.source)
         return ImageIO.read(ByteArrayInputStream(bytes))
             ?: error("Invalid image data for texture ${texture.id}")
     }
     for (texture in this.textures) {
-        val isAnimated = texture.height/texture.uvHeight > texture.width/texture.uvWidth
+        val isAnimated = texture.height / texture.uvHeight > texture.width / texture.uvWidth
         var mcMeta: McMeta? = null
         if (isAnimated) {
             val frames =
@@ -956,13 +1259,357 @@ fun BlockBenchModel.resolveTextures() : List<ResolvedTexture> {
         }
         resolvedTextures.add(
             ResolvedTexture(
-            textureToBufferedImage(texture),
-            mcMeta
-        )
+                textureToBufferedImage(texture),
+                mcMeta
+            )
         )
     }
     return resolvedTextures
 }
+
+private data class BezierPoint(
+    val time: Double,
+    val value: Double
+)
+private fun cubicBezier(
+    p0: BezierPoint,
+    p1: BezierPoint,
+    p2: BezierPoint,
+    p3: BezierPoint,
+    t: Double
+): BezierPoint {
+    val u = 1.0 - t
+
+    val uu = u * u
+    val tt = t * t
+
+    val uuu = uu * u
+    val ttt = tt * t
+
+    return BezierPoint(
+        time =
+            uuu * p0.time +
+                    3.0 * uu * t * p1.time +
+                    3.0 * u * tt * p2.time +
+                    ttt * p3.time,
+
+        value =
+            uuu * p0.value +
+                    3.0 * uu * t * p1.value +
+                    3.0 * u * tt * p2.value +
+                    ttt * p3.value
+    )
+}
+private fun sampleBezier(
+    beforeTime: Double,
+    beforeValue: Double,
+    beforeRightTime: Double,
+    beforeRightValue: Double,
+    afterTime: Double,
+    afterValue: Double,
+    afterLeftTime: Double,
+    afterLeftValue: Double,
+    alpha: Double
+): Double {
+
+    val timeGap = afterTime - beforeTime
+
+    val rightTime =
+        beforeRightTime
+            .coerceIn(0.0, timeGap)
+
+    val leftTime =
+        afterLeftTime
+            .coerceIn(-timeGap, 0.0)
+
+    val p0 = BezierPoint(
+        beforeTime,
+        beforeValue
+    )
+
+    val p1 = BezierPoint(
+        beforeTime + rightTime,
+        beforeValue + beforeRightValue
+    )
+
+    val p2 = BezierPoint(
+        afterTime + leftTime,
+        afterValue + afterLeftValue
+    )
+
+    val p3 = BezierPoint(
+        afterTime,
+        afterValue
+    )
+
+    val targetTime =
+        beforeTime +
+                (afterTime - beforeTime) * alpha
+
+    /*
+     * Blockbench samples the cubic curve at 200 points.
+     */
+    val samples = 200
+
+    var closest: BezierPoint? = null
+    var closestDiff = Double.POSITIVE_INFINITY
+
+    var secondClosest: BezierPoint? = null
+    var secondClosestDiff = Double.POSITIVE_INFINITY
+
+    for (i in 0..samples) {
+
+        val t = i.toDouble() / samples
+
+        val point = cubicBezier(
+            p0,
+            p1,
+            p2,
+            p3,
+            t
+        )
+
+        val diff = abs(point.time - targetTime)
+
+        if (diff < closestDiff) {
+            secondClosest = closest
+            secondClosestDiff = closestDiff
+
+            closest = point
+            closestDiff = diff
+        }
+        else if (diff < secondClosestDiff) {
+            secondClosest = point
+            secondClosestDiff = diff
+        }
+    }
+
+    val a = closest ?: return beforeValue
+    val b = secondClosest ?: return a.value
+
+    val interpolation =
+        if (abs(b.time - a.time) < 1e-12) {
+            0.0
+        }
+        else {
+            ((targetTime - a.time) / (b.time - a.time))
+                .coerceIn(0.0, 1.0)
+        }
+
+    return a.value +
+            (b.value - a.value) * interpolation
+}
+private fun bakeBezierPair(
+    before: Keyframe,
+    after: Keyframe,
+    snapping: Double,
+    channel: String,
+    transform: (Double, Double, Double) -> GeoTransformVector
+): List<Pair<Double, GeoTransformVector>> {
+
+    val interval = 1.0 / snapping
+
+    val result =
+        mutableListOf<Pair<Double, GeoTransformVector>>()
+
+    var time = before.time + interval
+
+    while (time < after.time + interval / 2.0) {
+
+        val alpha =
+            (time - before.time) /
+                    (after.time - before.time)
+
+        val x = sampleBezier(
+            before.time,
+            before.dataPoints[0]["x"]!!.toDouble(),
+            before.bezierRightTime[0],
+            before.bezierRightValue[0],
+            after.time,
+            after.dataPoints[0]["x"]!!.toDouble(),
+            after.bezierLeftTime[0],
+            after.bezierLeftValue[0],
+            alpha
+        )
+
+        val y = sampleBezier(
+            before.time,
+            before.dataPoints[0]["y"]!!.toDouble(),
+            before.bezierRightTime[1],
+            before.bezierRightValue[1],
+            after.time,
+            after.dataPoints[0]["y"]!!.toDouble(),
+            after.bezierLeftTime[1],
+            after.bezierLeftValue[1],
+            alpha
+        )
+
+        val z = sampleBezier(
+            before.time,
+            before.dataPoints[0]["z"]!!.toDoubleOrNull() ?: 0.0,
+            before.bezierRightTime[2],
+            before.bezierRightValue[2],
+            after.time,
+            after.dataPoints[0]["z"]!!.toDoubleOrNull() ?: 0.0,
+            after.bezierLeftTime[2],
+            after.bezierLeftValue[2],
+            alpha
+        )
+
+        result += time to transform(x, y, z)
+
+        time += interval
+    }
+
+    return result
+}
+private fun convertChannel(
+    keyframes: List<Keyframe>,
+    snapping: Double,
+    channel: String
+): MutableMap<String, GeoAnimatedData> {
+
+    val result = mutableMapOf<String, GeoAnimatedData>()
+
+    val frames = keyframes
+        .filter { it.channel.equals(channel, true) }
+        .sortedBy { it.time }
+
+    for (i in frames.indices) {
+
+        val current = frames[i]
+        val next = frames.getOrNull(i + 1)
+
+        // 1. Always emit the authored keyframe.
+        result[current.time.formatTime()] =
+            convertKeyframe(current, channel)
+
+        // 2. Bake Bezier interval.
+        if (
+            next != null &&
+            (
+                    current.interpolation.equals("bezier", true) ||
+                            next.interpolation.equals("bezier", true)
+                    )
+        ) {
+
+            val baked = bakeBezierPair(
+                current,
+                next,
+                snapping,
+                channel
+            ) { x, y, z ->
+                var x2 = x
+                var y2 = y
+
+                if (channel.equals("position", "rotation"))
+                    x2 = -x2
+                if (channel == "rotation")
+                    y2 = -y2
+
+                GeoTransformVector(StringVec3(x2.toString(), y2.toString(), z.toString()))
+            }
+
+            for ((time, vector) in baked) {
+                result[time.formatTime()] =
+                    GeoAnimatedData(
+                        lerpMode = "linear",
+                        pre = vector,
+                        baked = true
+                    )
+            }
+        }
+    }
+
+    return result
+}
+private fun convertKeyframe(
+    keyframe: Keyframe,
+    channel: String
+): GeoAnimatedData {
+    val point = keyframe.dataPoints
+        .getOrNull(0)
+    val point2 = keyframe.dataPoints
+        .getOrNull(1)
+
+    val x = point?.get("x")
+    val y = point?.get("y")
+    val z = point?.get("z")
+
+    val x2 = point2?.get("x")
+    val y2 = point2?.get("y")
+    val z2 = point2?.get("z")
+
+    return when (channel.lowercase()) {
+        "position" -> {
+            val vector = GeoTransformVector(
+                StringVec3(
+                    invertExpression(x ?: "0"),
+                    y ?: "0",
+                    z ?: "0")
+            )
+            val vector2 = if (point2 != null) GeoTransformVector(
+                StringVec3(
+                    invertExpression(x2 ?: "0"),
+                    y2 ?: "0",
+                    z2 ?: "0"
+                )
+            ) else null
+
+            GeoAnimatedData(
+                    keyframe.interpolation,
+                    vector,
+                    vector2 ?: vector,
+                    keyframe.easing
+                )
+        }
+
+        "rotation" -> {
+            val vector = GeoTransformVector(StringVec3(
+                invertExpression(x ?: "0"),
+                invertExpression(y ?: "0"),
+                z ?: "0")
+            )
+            val vector2 = if (point2 != null) GeoTransformVector(
+                StringVec3(
+                    invertExpression(x2 ?: "0"),
+                    invertExpression(y2 ?: "0"),
+                    z2 ?: "0"
+                )
+            ) else null
+
+            GeoAnimatedData(
+                    keyframe.interpolation,
+                    vector,
+                    vector2 ?: vector,
+                    keyframe.easing
+                )
+        }
+
+        "scale" -> {
+            val vector = GeoTransformVector(StringVec3(x ?: "0", y ?: "0", z ?: "0"))
+            val vector2 = if (point2 != null) GeoTransformVector(StringVec3(x2 ?: "0", y2 ?: "0", z2 ?: "0")) else null
+
+            GeoAnimatedData(
+                    keyframe.interpolation,
+                    vector,
+                    vector2 ?: vector,
+                    keyframe.easing
+                )
+        }
+
+        else -> throw RuntimeException()
+    }
+}
+
+fun String.equals(vararg options : String) : Boolean {
+    for (option in options)
+        if (this == option)
+            return true
+
+    return false
+}
+
 fun BlockBenchModel.saveAt(path: Path) {
     val json = Json {
         prettyPrint = true
@@ -1012,13 +1659,11 @@ object BBConverter {
         try {
             val bbModel = json.decodeFromString<BlockBenchModel>(data)
             return bbModel
-        }
-        catch (e: SerializationException) {
+        } catch (e: SerializationException) {
             println("An error occurred while trying to parse the block bench model...")
             e.printStackTrace()
             return null
-        }
-        catch (e: IllegalArgumentException) {
+        } catch (e: IllegalArgumentException) {
             println("The parsed object is not a BlockBenchModel...")
             e.printStackTrace()
             return null

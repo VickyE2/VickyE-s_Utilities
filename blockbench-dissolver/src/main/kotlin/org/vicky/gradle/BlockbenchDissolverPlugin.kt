@@ -1,6 +1,7 @@
 package org.vicky.gradle
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -169,6 +170,10 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                             val resolvedTextures = bbModel.resolveTextures()
                             val geo = bbModel.geoGeom()
                             val anim = bbModel.geoAnim()
+                            val display = bbModel.display?.let {
+                                json.encodeToString(it)
+                                    .prependIndent("  ")
+                            }
                             outputBase.delete()
 
                             /* ---------- COMMIT TO DISK ---------- */
@@ -200,11 +205,15 @@ class BlockbenchDissolverPlugin : Plugin<Project> {
                             // Item Model JSON (Added step for inventory/hand rendering)
                             val itemModelFolder = File(outputBase, "models/item").apply { mkdirs() }
                             val itemModelJson = """
-                            {
-                              "parent": "builtin/entity",
-                              "loader": "geckolib"
-                            }
-                        """.trimIndent()
+                                {
+                                  "credit": "Made with Vicky Utils Blockbench Converter",
+                                  "parent": "builtin/entity",
+                                  "texture_size": [
+                                    32,
+                                    32
+                                  ]${display?.let { ",\n  \"display\": $it" } ?: ""}
+                                }
+                                """.trimIndent()
                             File(itemModelFolder, "${bbModel.modelIdentifier}.json").writeText(itemModelJson)
 
 

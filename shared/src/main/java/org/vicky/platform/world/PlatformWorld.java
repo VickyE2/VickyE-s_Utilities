@@ -1,14 +1,15 @@
 /* Licensed under Apache-2.0 2026. */
 package org.vicky.platform.world;
 
-import de.pauleff.api.ICompoundTag;
+import java.util.List;
+
 import org.jetbrains.annotations.NotNull;
 import org.vicky.platform.entity.PlatformEntity;
 import org.vicky.platform.entity.PlatformLivingEntity;
 import org.vicky.platform.player.PlatformPlayer;
 import org.vicky.platform.utils.Vec3;
 
-import java.util.List;
+import de.pauleff.api.ICompoundTag;
 
 public interface PlatformWorld<T, N> {
 	String getName();

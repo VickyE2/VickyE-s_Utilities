@@ -1,12 +1,13 @@
 /* Licensed under Apache-2.0 2026. */
 package org.vicky.utilities.DatabaseManager.dao_s;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
-import org.vicky.utilities.DatabaseManager.HibernateUtil;
-
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import org.vicky.utilities.DatabaseManager.HibernateUtil;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
 
 public class TransactionCreator {
 	public static void transaction(Consumer<EntityManager> work) {

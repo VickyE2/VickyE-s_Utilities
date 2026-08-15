@@ -613,28 +613,7 @@ object SetTargetToLookAt : EntityTimedActionSpec<PlatformLivingEntity>(
         if (target != null) {
             if (self !is PlatformLivingEntity) return@lambda false
             else {
-                val from = self.location.add(0.0, self.eyeHeight.toDouble(), 0.0)
-                val to = target.location.add(0.0, target.eyeHeight.toDouble(), 0.0)
-
-                val dx = to.x - from.x
-                val dy = to.y - from.y
-                val dz = to.z - from.z
-
-                val distXZ = kotlin.math.sqrt(dx * dx + dz * dz)
-
-                // atan2(dz, dx) returns the angle in radians from the X axis towards the Z axis.
-                // We convert to degrees and adjust for Minecraft's coordinate system.
-                var yaw = Math.toDegrees(kotlin.math.atan2(dz, dx)).toFloat() - 90f
-
-                // Normalize yaw to stay within -180 to 180 (standard for setRotation)
-                while (yaw < -180) yaw += 360f
-                while (yaw > 180) yaw -= 360f
-
-                // Pitch is the angle between the XZ plane and the target.
-                // Minecraft uses negative values for looking UP and positive for DOWN.
-                val pitch = Math.toDegrees(-kotlin.math.atan2(dy, distXZ)).toFloat()
-
-                self.setRotation(yaw, pitch)
+                lookAtTarget(self, target)
                 return@lambda true
             }
         }
@@ -642,6 +621,42 @@ object SetTargetToLookAt : EntityTimedActionSpec<PlatformLivingEntity>(
     },
     { self, _ -> self.setRotation(0f, 0f) }
 )
+
+object LookAtAttacker : EntityTimedActionSpec<PlatformLivingEntity>(
+    rl("core", "set_look_at_target"),
+    { _, _ -> true },
+    lambda@{ self, _ ->
+        if (self !is PlatformLivingEntity) return@lambda false
+        else {
+            val target = self.getLastAttacker()
+            if (target != null) {
+                lookAtTarget(self, target)
+                return@lambda true
+            }
+            return@lambda false
+        }
+    },
+    { self, _ -> self.setRotation(0f, 0f) }
+)
+
+private fun lookAtTarget(self: PlatformEntity, target: PlatformEntity) {
+    val from = self.location.add(0.0, self.eyeHeight.toDouble(), 0.0)
+    val to = target.location.add(0.0, target.eyeHeight.toDouble(), 0.0)
+
+    val dx = to.x - from.x
+    val dy = to.y - from.y
+    val dz = to.z - from.z
+
+    val distXZ = kotlin.math.sqrt(dx * dx + dz * dz)
+
+    var yaw = Math.toDegrees(kotlin.math.atan2(dz, dx)).toFloat() - 90f
+    while (yaw < -180) yaw += 360f
+    while (yaw > 180) yaw -= 360f
+
+    val pitch = Math.toDegrees(-kotlin.math.atan2(dy, distXZ)).toFloat()
+
+    self.setRotation(yaw, pitch)
+}
 
 class SayToTarget(private val message: String) : EntityActionSpec<PlatformLivingEntity>(
     rl("core", "say_to_target"),
@@ -675,44 +690,6 @@ class SayToAttacker(private val message: String) : EntityActionSpec<PlatformLivi
         }
         false
     }
-)
-
-object LookAtAttacker : EntityTimedActionSpec<PlatformLivingEntity>(
-    rl("core", "set_look_at_target"),
-    { _, _ -> true },
-    lambda@{ self, _ ->
-        if (self !is PlatformLivingEntity) return@lambda false
-        else {
-            val target = self.getLastAttacker()
-            if (target != null) {
-                val from = self.location.add(0.0, self.eyeHeight.toDouble(), 0.0)
-                val to = target.location.add(0.0, target.eyeHeight.toDouble(), 0.0)
-
-                val dx = to.x - from.x
-                val dy = to.y - from.y
-                val dz = to.z - from.z
-
-                val distXZ = kotlin.math.sqrt(dx * dx + dz * dz)
-
-                // atan2(dz, dx) returns the angle in radians from the X axis towards the Z axis.
-                // We convert to degrees and adjust for Minecraft's coordinate system.
-                var yaw = Math.toDegrees(kotlin.math.atan2(dz, dx)).toFloat() - 90f
-
-                // Normalize yaw to stay within -180 to 180 (standard for setRotation)
-                while (yaw < -180) yaw += 360f
-                while (yaw > 180) yaw -= 360f
-
-                // Pitch is the angle between the XZ plane and the target.
-                // Minecraft uses negative values for looking UP and positive for DOWN.
-                val pitch = Math.toDegrees(-kotlin.math.atan2(dy, distXZ)).toFloat()
-
-                self.setRotation(yaw, pitch)
-                return@lambda true
-            }
-            return@lambda false
-        }
-    },
-    { self, _ -> self.setRotation(0f, 0f) }
 )
 
 /** Cone filter: only entities within a cone in front of the source pass. */
@@ -776,7 +753,7 @@ object WalkToBlock : BlockTimedActionSpec(
         if (block == null) return@start false
         self.getNavigator()?.let {
             val path = it.createPath(block.blockPos, self.lookDistance.toInt()) ?: return@start false
-            it.moveTo(path, self.getAttribute(PlatformEntityAttribute.Inbuilt(InbuiltAttributes.MOVEMENT_SPEED)) ?: return@start false)
+            it.moveTo(path, 1.0)
             return@start true
         }
         logger.warn("start - Entity ${self.typeId} is not a path based entity and cannot walk-to-block")

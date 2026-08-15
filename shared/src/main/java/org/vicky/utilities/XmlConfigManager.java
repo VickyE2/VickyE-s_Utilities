@@ -1,6 +1,16 @@
 /* Licensed under Apache-2.0 2024-2026. */
 package org.vicky.utilities;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.configurate.AttributedConfigurationNode;
 import org.spongepowered.configurate.ConfigurationOptions;
@@ -11,16 +21,6 @@ import org.spongepowered.configurate.xml.XmlConfigurationLoader;
 import org.vicky.platform.PlatformPlugin;
 import org.vicky.platform.server.PlatformScheduler;
 import org.vicky.utilities.ContextLogger.ContextLogger;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class XmlConfigManager {
 	public XmlConfigurationLoader loader;

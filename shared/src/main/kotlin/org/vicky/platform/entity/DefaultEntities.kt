@@ -24,11 +24,22 @@ object DefaultEntities {
                 maxHealth = 40.0
                 baseArmor = 0.43
                 baseArmorToughness = 0.12
+                entityGravity = 0.1
             }
             animations(
-                Animation("animation.test_dummy.idle", true),
-                Animation("animation.test_dummy.walk", true, blendTime = 6)
-            )
+                EntityAnimationLayer("default", 0) { ctx ->
+                    if (ctx.isMoving)
+                        return@EntityAnimationLayer Animation("animation.test_dummy.walk", true, blendTime = 6)
+
+                    Animation("animation.test_dummy.idle", true, blendTime = 6)
+                },
+            ) {
+                headTracking(HeadTrackingConfiguration(
+                    bone = "hi_head",
+                    maxYaw = 360f,
+                    maxPitch = 60f
+                ))
+            }
         }
 
         physical {

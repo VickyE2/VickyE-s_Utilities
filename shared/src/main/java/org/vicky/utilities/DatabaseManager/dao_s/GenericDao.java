@@ -1,13 +1,14 @@
 /* Licensed under Apache-2.0 2026. */
 package org.vicky.utilities.DatabaseManager.dao_s;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
+import java.util.List;
+import java.util.Optional;
+
 import org.vicky.utilities.DatabaseManager.HibernateUtil;
 import org.vicky.utilities.DatabaseTemplate;
 
-import java.util.List;
-import java.util.Optional;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
 
 public abstract class GenericDao<T extends DatabaseTemplate, K> {
 

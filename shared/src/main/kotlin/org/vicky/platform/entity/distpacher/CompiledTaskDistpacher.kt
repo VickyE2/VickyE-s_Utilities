@@ -25,13 +25,26 @@ class EntityTaskState {
     val activeEntityTimed = ArrayList<ActiveTimedAction>(4) // small pre-sized list
     val activeBlockTimed = ArrayList<ActiveTimedBlockAction>(4) // small pre-sized list
     val lastSelectorTick = mutableMapOf<ResourceLocation, Long>() // throttle per-selector per-entity
-    val assignedTasks = LinkedHashMap<ResourceLocation, Map<String, Any>>(4) // list of task IDs assigned to this entity
+    val assignedTasks = LinkedHashMap<ResourceLocation, Pair<Int, Map<String, Any>>>(4) // list of task IDs assigned to this entity
     // NEW: tasks currently blocked waiting for signals:
     // map: taskId -> remainingSignalsSet
+
+    val executions = mutableMapOf<ResourceLocation, TaskExecutionState>()
 
     val lastSelectorResult: MutableMap<ResourceLocation, Any?> = HashMap()
     val waitingTasks = LinkedHashMap<ResourceLocation, MutableSet<String>>(4)
 }
+data class TaskExecutionState(
+    val taskId: ResourceLocation,
+    var phase: Int = 0,
+    var waitingForBlocking: Boolean = false,
+    val activeBlockingIds: MutableSet<ResourceLocation> = mutableSetOf()
+)
+class TaskInstance(
+    val compiled: CompiledTask,
+    val priority: Int,
+    val parameters: Map<String, Any> = HashMap()
+)
 
 /** Manager that owns entity states; use WeakHashMap or remove entries when entity dies. */
 object EntityTaskManager {
@@ -63,7 +76,7 @@ object EntityTaskManager {
             if (task != null && task.stopSignals.contains(signal)) {
                 // call onEnd so the timed action can cleanly end
                 try {
-                    a.compiled.onEnd(a.self, a.targetEntity)
+                    a.compiled.onEnd(a.self, a.targetEntity, a.params)
                 } catch (ex: Exception) {
                     LOGGER.debug("Exception while ending timed action ${a.compiled.id} for ${entity.uuid}: $ex")
                 }
@@ -72,7 +85,7 @@ object EntityTaskManager {
                 if (task.lifecycle == TaskLifecycle.ONE_SHOT)
                     st.assignedTasks.remove(a.taskId)
                 else
-                    st.cooldownTicksRemaining[task.id] = task.cooldownTicks
+                    st.cooldownTicksRemaining[task.id] = task.defaultCooldownTicks
             }
         }
 
@@ -83,7 +96,7 @@ object EntityTaskManager {
             val task = CompiledTaskRegistry.get(a.taskId)
             if (task != null && task.stopSignals.contains(signal)) {
                 try {
-                    a.compiled.onEnd(a.self, a.targetBlock)
+                    a.compiled.onEnd(a.self, a.targetBlock, a.params)
                 } catch (ex: Exception) {
                     LOGGER.debug("Exception while ending block timed action ${a.compiled.id} for ${entity.uuid}: $ex")
                 }
@@ -102,10 +115,10 @@ object EntityTaskManager {
             val (taskId, remaining) = it.next()
             if (remaining.remove(signal)) {
                 // merge any extraData into assignedTask params if desired:
-                val prevParams = st.assignedTasks[taskId] ?: emptyMap()
-                val merged = HashMap(prevParams)
+                val prevParams = st.assignedTasks[taskId] ?: (0 to emptyMap())
+                val merged = HashMap(prevParams.value)
                 merged.putAll(extraData)
-                st.assignedTasks[taskId] = merged
+                st.assignedTasks[taskId] = prevParams.key to merged
 
                 if (remaining.isEmpty()) {
                     toActivate += taskId
@@ -127,18 +140,18 @@ object EntityTaskManager {
 
 
     /** Assign a compiled task to an entity (store ID only). */
-    fun assignTask(entity: PlatformLivingEntity, taskId: ResourceLocation, params: Map<String, Any> = emptyMap()) {
+    fun assignTask(entity: PlatformLivingEntity, taskId: ResourceLocation, params: Map<String, Any> = emptyMap(), priority: Int) {
         val compiled = CompiledTaskRegistry.get(taskId) ?: error("No compiled task $taskId")
         val st = stateFor(entity)
 
         // store / merge params like before
         val existing = st.assignedTasks[taskId]
         if (existing == null) {
-            st.assignedTasks[taskId] = params
+            st.assignedTasks[taskId] = priority to params
         } else {
-            val merged = HashMap(existing)
+            val merged = HashMap(existing.value)
             merged.putAll(params)
-            st.assignedTasks[taskId] = merged
+            st.assignedTasks[taskId] = priority to merged
         }
 
         // If this compiled task must wait for signals, mark it and subscribe
@@ -148,7 +161,7 @@ object EntityTaskManager {
             st.waitingTasks[taskId] = remaining
             // subscribe to each signal name (so SignalManager.fire will assign/notify)
             for (sig in compiled.waitForSignals) {
-                SignalManager.subscribe(entity.uuid, sig, taskId, params)
+                SignalManager.subscribe(entity.uuid, sig, taskId, params, priority)
             }
             LOGGER.debug("Task $taskId for ${entity.uuid} will wait for signals=${compiled.waitForSignals}", ContextLogger.LogType.BASIC)
         } else {
@@ -177,22 +190,28 @@ object EntityTaskManager {
         if (st.assignedTasks.isEmpty()) return
 
         val candidates = st.assignedTasks
-            .mapNotNull { CompiledTaskRegistry.get(it.key) }
-            .sortedWith(compareByDescending<CompiledTask> { it.priority }
+            .mapNotNull { val task = CompiledTaskRegistry.get(it.key)
+                if (task != null) task to it.value else null }
+            .sortedWith(compareByDescending<Pair<CompiledTask, Pair<Int, Map<String, Any>>>> { it.value.key }
                 .thenBy { Random.nextFloat() })
 
         val tasksToRemove = mutableListOf<ResourceLocation>()
 
-        for (task in candidates) {
-            when (tryRunTaskOnce(entity, task, st, worldTick)) {
+        for (pair in candidates) {
+            val task = pair.first
+            val possibleCooldown = (pair.second.second["cooldown"] as? Number)?.toInt() ?:
+                (pair.second.second["cooldownTicks"] as? Number)?.toInt() ?: task.defaultCooldownTicks
+            val instance = TaskInstance(pair.key, pair.value.key, pair.value.value)
+
+            when (tryRunTaskOnce(entity, instance, st, worldTick)) {
                 TaskRunOutcome.NOT_RUN -> continue
                 TaskRunOutcome.RAN_INSTANT -> {
-                    st.cooldownTicksRemaining[task.id] = task.cooldownTicks.coerceAtLeast(0)
+                    st.cooldownTicksRemaining[task.id] = possibleCooldown.coerceAtLeast(0)
                     if (task.lifecycle == TaskLifecycle.ONE_SHOT) tasksToRemove += task.id
                     break
                 }
                 TaskRunOutcome.RAN_SCHEDULED -> {
-                    st.cooldownTicksRemaining[task.id] = task.cooldownTicks.coerceAtLeast(0)
+                    st.cooldownTicksRemaining[task.id] = possibleCooldown.coerceAtLeast(0)
                     // for scheduled tasks: if ONE_SHOT and no other timers, mark for removal only after timers end
                     if (task.lifecycle == TaskLifecycle.ONE_SHOT && !hasActiveTimersForTask(st, task.id)) {
                         tasksToRemove += task.id
@@ -220,11 +239,12 @@ object EntityTaskManager {
 
     enum class TaskRunOutcome { NOT_RUN, RAN_INSTANT, RAN_SCHEDULED, COMPLETED }
 
-    private fun tryRunTaskOnce(entity: PlatformLivingEntity, task: CompiledTask, st: EntityTaskState, worldTick: Long): TaskRunOutcome {
+    private fun tryRunTaskOnce(entity: PlatformLivingEntity, instance: TaskInstance, st: EntityTaskState, worldTick: Long): TaskRunOutcome {
         // Walk the task steps implementing the same semantics as executeCompiledTask
         var working: AmountableResult<PlatformLivingEntity>? = null
         var workingBlock: AmountableResult<PlatformBlock<*>>? = null
         val ctx = SelectorContext.ofEntity(entity)
+        val task = instance.compiled
 
         if (isTaskOnCooldown(st, task.id)) return TaskRunOutcome.NOT_RUN
         if (st.waitingTasks.containsKey(task.id)) {
@@ -239,7 +259,7 @@ object EntityTaskManager {
                     var result = st.lastSelectorResult[step.selector.id]
 
                     if (worldTick - last >= selectorThrottleTicks || result == null) {
-                        result = step.selector.select(ctx)
+                        result = step.selector.select(ctx, instance.parameters)
 
                         st.lastSelectorTick[step.selector.id] = worldTick
                         st.lastSelectorResult[step.selector.id] = result
@@ -255,12 +275,12 @@ object EntityTaskManager {
                 }
                 is CompiledStep.EntityConditionStep -> {
                     val dto = step.dto
-                    val isForTarget = dto.params["isForTarget"]?.toBoolean() ?: true
+                    val isForTarget = dto.isForTarget ?: true
                     if (!isForTarget) {
                         val necessary = step.compiled.filter { it.mustBeTrue }
                         val optional = step.compiled.filter { !it.mustBeTrue }
-                        val necessaryOk = necessary.all { it.test(entity) }
-                        val optionalOk = optional.isEmpty() || optional.any { it.test(entity) }
+                        val necessaryOk = necessary.all { it.test(entity, instance.parameters) }
+                        val optionalOk = optional.isEmpty() || optional.any { it.test(entity, instance.parameters) }
                         if (!necessaryOk || !optionalOk) return TaskRunOutcome.NOT_RUN // gate failed
                     } else {
                         // filter working set
@@ -268,11 +288,11 @@ object EntityTaskManager {
                         working = when (working.resultType) {
                             ResultType.SINGLE, ResultType.RANDOM_SINGLE -> {
                                 val t = working.getSingleResult()
-                                if (t == null || !step.compiled.all { it.test(t) }) null
+                                if (t == null || !step.compiled.all { it.test(t, instance.parameters) }) null
                                 else working
                             }
                             else -> {
-                                val filtered = working.getResults().filter { ent -> step.compiled.all { it.test(ent) } }
+                                val filtered = working.getResults().filter { ent -> step.compiled.all { it.test(ent, instance.parameters) } }
                                 if (filtered.isEmpty()) null else AmountableResult(ResultType.MULTIPLE, filtered)
                             }
                         }
@@ -281,21 +301,21 @@ object EntityTaskManager {
                 }
                 is CompiledStep.EntityActionStep -> {
                     val dto = step.dto
-                    val isOnTarget = dto.params["isOnTarget"]?.toBoolean() ?: true
+                    val isOnTarget = dto.isOnTarget ?: true
 
                     // Instant actions
                     if (isOnTarget) {
                         if (working == null) return TaskRunOutcome.NOT_RUN
                         when (working.resultType) {
                             ResultType.SINGLE, ResultType.RANDOM_SINGLE -> working.getSingleResult()?.let { t ->
-                                step.compiledAction.forEach { it.run(entity, t) }
+                                step.compiledAction.forEach { it.run(entity, t, instance.parameters) }
                             }
                             else -> working.getResults().forEach { t ->
-                                step.compiledAction.forEach { it.run(entity, t) }
+                                step.compiledAction.forEach { it.run(entity, t, instance.parameters) }
                             }
                         }
                     } else {
-                        step.compiledAction.forEach { it.run(entity, null) }
+                        step.compiledAction.forEach { it.run(entity, null, instance.parameters) }
                     }
 
                     // Timed actions scheduling
@@ -310,15 +330,15 @@ object EntityTaskManager {
                         when (working.resultType) {
                             ResultType.SINGLE, ResultType.RANDOM_SINGLE -> {
                                 working.getSingleResult()?.let { t ->
-                                    scheduleTimedList(st, entity, listOf(t), task, step)
+                                    scheduleTimedList(st, entity, listOf(t), instance, step)
                                 }
                             }
                             else -> {
-                                scheduleTimedList(st, entity, working.getResults(), task, step)
+                                scheduleTimedList(st, entity, working.getResults(), instance, step)
                             }
                         }
                     } else {
-                        scheduleTimedList(st, entity, listOf(null), task, step)
+                        scheduleTimedList(st, entity, listOf(null), instance, step)
                     }
                 }
                 is CompiledStep.BlockSelectorStep -> {
@@ -326,7 +346,7 @@ object EntityTaskManager {
                     var result = st.lastSelectorResult[step.selector.id]
 
                     if (worldTick - last >= selectorThrottleTicks || result == null) {
-                        result = step.selector.select(ctx)
+                        result = step.selector.select(ctx, instance.parameters)
 
                         st.lastSelectorTick[step.selector.id] = worldTick
                         st.lastSelectorResult[step.selector.id] = result
@@ -342,7 +362,7 @@ object EntityTaskManager {
                 }
                 is CompiledStep.BlockConditionStep -> {
                     val dto = step.dto
-                    val isForTarget = dto.params["isForTarget"]?.toBoolean() ?: true
+                    val isForTarget = dto.isForTarget ?: true
                     if (!isForTarget) {
 
                     } else {
@@ -351,11 +371,11 @@ object EntityTaskManager {
                         workingBlock = when (workingBlock.resultType) {
                             ResultType.SINGLE, ResultType.RANDOM_SINGLE -> {
                                 val t = workingBlock.getSingleResult()
-                                if (t == null || !step.compiledBlock.all { it.test(t) }) null
+                                if (t == null || !step.compiledBlock.all { it.test(t, instance.parameters) }) null
                                 else workingBlock
                             }
                             else -> {
-                                val filtered = workingBlock.getResults().filter { ent -> step.compiledBlock.all { it.test(ent) } }
+                                val filtered = workingBlock.getResults().filter { ent -> step.compiledBlock.all { it.test(ent, instance.parameters) } }
                                 if (filtered.isEmpty()) null else AmountableResult(ResultType.MULTIPLE, filtered)
                             }
                         }
@@ -364,7 +384,7 @@ object EntityTaskManager {
                 }
                 is CompiledStep.BlockActionStep -> {
                     val dto = step.dto
-                    val isOnTarget = dto.params["isOnTarget"]?.toBoolean() ?: true
+                    val isOnTarget = dto.isOnTarget ?: true
 
                     // Instant actions
                     if (isOnTarget) {
@@ -374,10 +394,10 @@ object EntityTaskManager {
                         }
                         when (workingBlock.resultType) {
                             ResultType.SINGLE, ResultType.RANDOM_SINGLE -> workingBlock.getSingleResult()?.let { t ->
-                                step.compiledBlockAction.forEach { it.run(entity, t) }
+                                step.compiledBlockAction.forEach { it.run(entity, t, instance.parameters) }
                             }
                             else -> workingBlock.getResults().forEach { t ->
-                                step.compiledBlockAction.forEach { it.run(entity, t) }
+                                step.compiledBlockAction.forEach { it.run(entity, t, instance.parameters) }
                             }
                         }
                     }
@@ -398,16 +418,16 @@ object EntityTaskManager {
                             ResultType.SINGLE, ResultType.RANDOM_SINGLE -> {
                                 workingBlock.getSingleResult()?.let { t ->
                                     LOGGER.debug("Scheduled task single for $t")
-                                    scheduleTimedList(st, entity, listOf(t), task, step)
+                                    scheduleTimedList(st, entity, listOf(t), instance, step)
                                 }
                             }
                             else -> {
-                                scheduleTimedList(st, entity, workingBlock.getResults(), task, step)
+                                scheduleTimedList(st, entity, workingBlock.getResults(), instance, step)
                             }
                         }
                     }
                     else {
-                        scheduleTimedList(st, entity, listOf(null), task, step)
+                        scheduleTimedList(st, entity, listOf(null), instance, step)
                     }
                 }
             }
@@ -428,11 +448,12 @@ object EntityTaskManager {
         st: EntityTaskState,
         owner: PlatformLivingEntity,
         targets: List<PlatformLivingEntity?>,
-        task: CompiledTask,
+        instance: TaskInstance,
         step: CompiledStep.EntityActionStep
     ) {
         // step.dto.timedRefs aligns to compiledTimedAction list by index (we kept them matched on compile)
         val dtoTimedRefs = step.dto.entityTimedRefs
+        val task = instance.compiled
 
         // for each target schedule each timedRef
         targets.forEach { target ->
@@ -440,18 +461,23 @@ object EntityTaskManager {
                 val ref = dtoTimedRefs.getOrNull(idx) ?: TimedRef(compiledTimed.id) // fallback
                 // slot & runBlocking handling
                 val slot = ref.slot
-                if (slot != null && st.activeEntityTimed.any { it.slot == slot }) {
-                    LOGGER.debug("Skipping timed ref $ref for task ${task.id} because slot $slot is busy for entity ${owner.uuid}")
+                if (!tryAcquireSlot(st, slot, task)) {
+                    LOGGER.debug(
+                        "Skipping timed ref $ref for task ${task.id}: " +
+                                "slot $slot is owned by an equal/higher priority task"
+                    )
                     return@forEachIndexed
                 }
 
                 // compute resolved duration and interval
-                val ticksLeft = ref.duration ?: compiledTimed.defaultDuration
-                val interval = ref.interval ?: compiledTimed.defaultInterval
+                val ticksLeft = (instance.parameters[compiledTimed.id.toString() + ":duration"] as? Number)?.toInt() ?:
+                    ref.defaultDuration ?: compiledTimed.defaultDuration
+                val interval = (instance.parameters[compiledTimed.id.toString() + ":interval"] as? Number)?.toInt() ?:
+                    ref.interval ?: compiledTimed.defaultInterval
 
-                if (compiledTimed.onStart(owner, target)) {
+                if (compiledTimed.onStart(owner, target, instance.parameters)) {
                     // create active timed
-                    val active = ActiveTimedAction(compiledTimed, owner, target,
+                    val active = ActiveTimedAction(compiledTimed, owner, target, instance.parameters,
                         ticksLeft, interval, 0, slot, task.id, compiledTimed.id)
                     st.activeEntityTimed.add(active)
                 }
@@ -464,13 +490,14 @@ object EntityTaskManager {
         st: EntityTaskState,
         owner: PlatformLivingEntity,
         targets: List<PlatformBlock<*>?>,
-        task: CompiledTask,
+        instance: TaskInstance,
         step: CompiledStep.BlockActionStep
     ) {
-        LOGGER.debug("Scheduling timed list for task ${task.id} with owner ${owner.typeId} on ${targets.size} targets.")
+        LOGGER.debug("Scheduling timed list for task ${instance.compiled.id} with owner ${owner.typeId} on ${targets.size} targets.")
 
         // step.dto.timedRefs aligns to compiledTimedAction list by index
         val dtoTimedRefs = step.dto.blockTimedActionRefs
+        val task = instance.compiled
 
         targets.forEach { target ->
             if (target == null) {
@@ -480,21 +507,27 @@ object EntityTaskManager {
 
             step.compiledTimedAction.forEachIndexed { idx, compiledTimed ->
                 val ref = dtoTimedRefs.getOrNull(idx) ?: TimedRef(compiledTimed.id) // fallback
-                val slot = ref.slot
 
-                if (slot != null && st.activeEntityTimed.any { it.slot == slot }) {
-                    LOGGER.debug("Slot $slot already active, skipping timed action ${compiledTimed.id} for target ${target.location}.")
+                val slot = ref.slot
+                if (!tryAcquireSlot(st, slot, task)) {
+                    LOGGER.debug(
+                        "Skipping timed ref $ref for task ${task.id}: " +
+                                "slot $slot is owned by an equal/higher priority task"
+                    )
                     return@forEachIndexed
                 }
 
-                val ticksLeft = ref.duration ?: compiledTimed.defaultDuration
-                val interval = ref.interval ?: compiledTimed.defaultInterval
+
+                val ticksLeft = (instance.parameters[compiledTimed.id.toString() + ":duration"] as? Number)?.toInt() ?:
+                    ref.defaultDuration ?: compiledTimed.defaultDuration
+                val interval = (instance.parameters[compiledTimed.id.toString() + ":interval"] as? Number)?.toInt() ?:
+                    ref.interval ?: compiledTimed.defaultInterval
 
                 LOGGER.debug("Scheduling timed action ${compiledTimed.id} for target ${target.location} with duration $ticksLeft and interval $interval.")
 
-                if (compiledTimed.onStart(owner, target)) {
+                if (compiledTimed.onStart(owner, target, instance.parameters)) {
                     val active = ActiveTimedBlockAction(
-                        compiledTimed, owner, target,
+                        compiledTimed, owner, target, instance.parameters,
                         ticksLeft, interval, 0, slot, task.id, compiledTimed.id
                     )
                     st.activeBlockTimed.add(active)
@@ -504,6 +537,58 @@ object EntityTaskManager {
                 }
             }
         }
+    }
+
+    private fun tryAcquireSlot(
+        st: EntityTaskState,
+        slot: String?,
+        newTask: CompiledTask
+    ): Boolean {
+        if (slot == null)
+            return true
+
+        val newPriority = st.assignedTasks[newTask.id]?.first ?: Int.MIN_VALUE
+
+        val occupying = st.activeEntityTimed
+            .filter { it.slot == slot }
+
+        if (occupying.isEmpty())
+            return true
+
+        var acquired = false
+
+        occupying.forEach { active ->
+            val activePriority =
+                st.assignedTasks[active.taskId]?.first ?: Int.MIN_VALUE
+
+            if (newPriority > activePriority) {
+                LOGGER.debug(
+                    "Task ${newTask.id} (priority=$newPriority) is seizing slot $slot " +
+                            "from task ${active.taskId} (priority=$activePriority) " +
+                            "for entity ${active.self.uuid}"
+                )
+
+                // Cleanly terminate the old action.
+                try {
+                    active.end()
+                } catch (ex: Exception) {
+                    LOGGER.debug(
+                        "Exception while preempting timed action ${active.compiled.id}: $ex"
+                    )
+                }
+
+                st.activeEntityTimed.remove(active)
+                acquired = true
+            } else {
+                LOGGER.debug(
+                    "Task ${newTask.id} (priority=$newPriority) cannot acquire slot $slot; " +
+                            "occupied by ${active.taskId} (priority=$activePriority)"
+                )
+            }
+        }
+
+        // If every occupant had higher/equal priority, we failed.
+        return acquired || st.activeEntityTimed.none { it.slot == slot }
     }
 
     fun removeTask(entity: PlatformLivingEntity, taskId: ResourceLocation) {
@@ -569,9 +654,6 @@ object EntityTaskManager {
     }
 }
 
-
-
-
 /* TRIGGER BASED TASKS */
 
 sealed class Trigger(val key: ResourceLocation) {
@@ -628,13 +710,13 @@ const val TRIGGER_ALL_KEY = "all"
 
 object TriggerManager {
     // entityUuid -> triggerKey -> list of (taskId, params)
-    private val subscriptions = ConcurrentHashMap<UUID, MutableMap<ResourceLocation, MutableList<Pair<ResourceLocation, Map<String, Any>>>>>()
+    private val subscriptions = ConcurrentHashMap<UUID, MutableMap<ResourceLocation, MutableList<Pair<ResourceLocation, Pair<Int, Map<String, Any>>>>>>()
 
     /** Subscribe task to a trigger for an entity. */
-    fun subscribe(entityUuid: UUID, trigger: Trigger, taskId: ResourceLocation, params: Map<String, Any> = emptyMap()) {
+    fun subscribe(entityUuid: UUID, trigger: Trigger, taskId: ResourceLocation, params: Map<String, Any> = emptyMap(), priority: Int) {
         val map = subscriptions.computeIfAbsent(entityUuid) { mutableMapOf() }
         val list = map.computeIfAbsent(trigger.key) { mutableListOf() }
-        list += taskId to params
+        list += taskId to (priority to params)
     }
 
     /** Unsubscribe a specific task for an entity (used on entity unload). */
@@ -650,9 +732,9 @@ object TriggerManager {
         // iterate snapshot so subscriptions can change from assignTask
         val snapshot = ArrayList(list)
         for ((taskId, params) in snapshot) {
-            val merged = HashMap(params)
+            val merged = HashMap(params.value)
             merged.putAll(extraData)
-            EntityTaskManager.assignTask(entity, taskId, merged)
+            EntityTaskManager.assignTask(entity, taskId, merged, params.key)
         }
     }
 
@@ -669,17 +751,17 @@ object Signals {
 
 object SignalManager {
     // entityUuid -> signalName -> list of (taskId, params)
-    private val subscriptions = ConcurrentHashMap<UUID, MutableMap<String, MutableList<Pair<ResourceLocation, Map<String, Any>>>>>()
+    private val subscriptions = ConcurrentHashMap<UUID, MutableMap<String, MutableList<Pair<ResourceLocation, Pair<Int, Map<String, Any>>>>>>()
 
     private fun ensureMap(entityUuid: UUID) =
         subscriptions.computeIfAbsent(entityUuid) { ConcurrentHashMap() }
 
     /** subscribe a task to a signal for a particular entity (used when a CompiledTask requires a signal) */
-    fun subscribe(entityUuid: UUID, signal: String, taskId: ResourceLocation, params: Map<String, Any> = emptyMap()) {
+    fun subscribe(entityUuid: UUID, signal: String, taskId: ResourceLocation, params: Map<String, Any> = emptyMap(), priority: Int) {
         val map = ensureMap(entityUuid)
         val list = map.computeIfAbsent(signal) { Collections.synchronizedList(
-            mutableListOf<Pair<ResourceLocation, Map<String, Any>>>()) }
-        list += (taskId to params)
+            mutableListOf<Pair<ResourceLocation, Pair<Int, Map<String, Any>>>>()) }
+        list += (taskId to (priority to params))
     }
 
     /** unsubscribe all subscriptions for an entity (on unload) */
@@ -695,10 +777,13 @@ object SignalManager {
         // 1) assign tasks that were *subscribed* to this signal (these are trigger-like subscriptions)
         val map = subscriptions[entity.uuid] ?: emptyMap()
         val list = map[signal]?.toList() ?: emptyList()
-        for ((taskId, params) in list) {
+        for ((taskId, pair) in list) {
+            val params = pair.second
+            val priority = pair.first
+
             val merged = HashMap(params)
             merged.putAll(extraData)
-            EntityTaskManager.assignTask(entity, taskId, merged)
+            EntityTaskManager.assignTask(entity, taskId, merged, priority)
         }
 
         EntityTaskManager.onSignalReceived(entity, signal, extraData)

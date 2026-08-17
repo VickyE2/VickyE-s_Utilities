@@ -585,14 +585,21 @@ object Items {
                         name = "base",
                         priority = 0
                     ) { ctx ->
-                        if (ctx.isFirstPerson() && ctx.isInspecting)
-                            return@ItemAnimationLayer Animation("animation.inspect", blendTime = 6, interruptable = true, priority = 10)
-
-                        if (ctx.isFirstPerson())
+                        if (ctx.isFirstPerson()) {
+                            if (ctx.isInspecting) {
+                                return@ItemAnimationLayer Animation(
+                                    "animation.inspect",
+                                    blendTime = 6,
+                                    interruptable = true,
+                                    priority = 10
+                                )
+                            }
                             return@ItemAnimationLayer Animation("animation.idle", true)
+                        }
 
-                        if (ctx.isThirdPerson())
-                            Animation("animation.idle_third_person", true)
+                        if (ctx.isThirdPerson()) {
+                            return@ItemAnimationLayer Animation("animation.idle_third_person", true)
+                        }
 
                         return@ItemAnimationLayer null
                     }

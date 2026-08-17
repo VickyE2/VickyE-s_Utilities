@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2024. */
 package org.vicky.platform.entity
 
+import org.vicky.platform.entity.distpacher.TaskInstance
 import org.vicky.platform.entity.distpacher.Trigger
 import org.vicky.platform.items.Animation
 
@@ -25,13 +26,15 @@ object DefaultEntities {
                 baseArmor = 0.43
                 baseArmorToughness = 0.12
                 entityGravity = 0.1
+                movementSpeed = 0.23
             }
             animations(
                 EntityAnimationLayer("default", 0) { ctx ->
-                    if (ctx.isMoving)
+                    if (ctx.isMoving) {
                         return@EntityAnimationLayer Animation("animation.test_dummy.walk", true, blendTime = 6)
+                    }
 
-                    Animation("animation.test_dummy.idle", true, blendTime = 6)
+                    return@EntityAnimationLayer Animation("animation.test_dummy.idle", true, blendTime = 6)
                 },
             ) {
                 headTracking(HeadTrackingConfiguration(
@@ -47,9 +50,14 @@ object DefaultEntities {
         }
 
         ai {
-            goal(DefaultTasks.LookAtNearestPlayer)
-            goal(DefaultTasks.LookAtAttackerTillOutOfCombat, trigger = Trigger.Attacked)
-            goal(DefaultTasks.PassiveWander)
+            goal(TaskInstance(DefaultTasks.LookAtNearestPlayerTask, 4, mapOf("look_at_nearest_player:set_target:duration" to 120)))
+            goal(TaskInstance(DefaultTasks.LookAtAttackerTask, 10), trigger = Trigger.Attacked)
+            goal(TaskInstance(DefaultTasks.PassiveWanderTask, 0))
+            goal(TaskInstance(DefaultTasks.SayToPlayersInRangeTask, 10,
+                mapOf("message" to "[ERR] : Received considerable damage from external source...",
+                    "range" to 30,
+                    "cooldown" to 5)
+            ), trigger = Trigger.Attacked)
         }
     }
 }

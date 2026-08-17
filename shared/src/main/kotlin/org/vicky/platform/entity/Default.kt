@@ -26,128 +26,99 @@ fun String.minecraftString(): String =
 fun String.core(): ResourceLocation =
     ResourceLocation.from("core", this)
 
-fun interface ProducerIntendedTask {
-    /** This functional interface should always base its main id on the [self] entity
-     * ie:
-     * ```
-     * TaskBuilder.random(
-     *     self,
-     *     ResourceLocation.from("core", "look_at_nearest_player_${self.uuid.toString().replace("-", "_")}"),
-     * )
-     * .withRange(...)
-     * ```
-     *
-     * This avoids task collisions when multiple entities execute
-     * the same logical behavior simultaneously.
-     */
-    fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask
-}
-
 object DefaultTasks {
-    object SayToNearestPlayer : ProducerIntendedTask {
-        override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.random(
-            self,
-            ResourceLocation.from("core", "say_to_nearest_player_${self.uuid.toString().replace("-", "_")}"),
-            TaskLifecycle.ONE_SHOT,
-            priority = params["priority"] as? Int ?: 1
+    val SayToNearestPlayerTask : CompiledTask = TaskBuilder.random(
+            ResourceLocation.from("core", "say_to_nearest_player"),
+            TaskLifecycle.ONE_SHOT
         )
-            .withRange(ResourceLocation.from("nearest_player", "find_closest_player_${self.uuid.toString().replace("-", "_")}"),
-                params["range"] as? Double ?: self.lookDistance)
+            .withEntityRange(ResourceLocation.from("nearest_player", "find_closest_player"), 20.0)
                 .filter(PlayersOnly)
                 .withSingleResult()
-            .performOnTarget(ResourceLocation.from("say_to_nearest_player", "set_target_${self.uuid.toString().replace("-", "_")}"))
-                .doing(SayToTarget(params["message"] as? String ?: "What to say.. what.. to... say."))
+            .performOnEntityTarget(ResourceLocation.from("say_to_nearest_player", "set_target"))
+                .doing(SayToTarget)
                 .end()
             .build()
-    }
-    object SayToPlayersInWorld : ProducerIntendedTask {
-        override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.random(
-            self,
-            ResourceLocation.from("core", "say_to_all_players_${self.uuid.toString().replace("-", "_")}"),
-            TaskLifecycle.ONE_SHOT,
-            priority = params["priority"] as? Int ?: 1
+
+    val SayToPlayersInRangeTask : CompiledTask = TaskBuilder.random(
+            ResourceLocation.from("core", "say_to_nearest_player"),
+            TaskLifecycle.ONE_SHOT
         )
-            .performOnSelf(ResourceLocation.from("say_to_all_players", "set_target_${self.uuid.toString().replace("-", "_")}"))
-                .doing(SayToAllPlayersInWorld(params["message"] as? String ?: "What to say.. what.. to... say. so many people"))
+            .withEntityRange(ResourceLocation.from("nearest_player", "find_closest_player"), 20.0)
+                .filter(PlayersOnly)
+                .withMultipleResult()
+            .performOnEntityTarget(ResourceLocation.from("say_to_nearest_player", "set_target"))
+                .doing(SayToTarget)
                 .end()
             .build()
-    }
-    object SayToAttacker : ProducerIntendedTask {
-        override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.random(
-            self,
-            ResourceLocation.from("core", "say_to_all_players_${self.uuid.toString().replace("-", "_")}"),
-            TaskLifecycle.ONE_SHOT,
-            priority = params["priority"] as? Int ?: 1
+
+    val SayToPlayersInWorldTask : CompiledTask  = TaskBuilder.random(
+            ResourceLocation.from("core", "say_to_all_players"),
+            TaskLifecycle.ONE_SHOT
         )
-            .performOnSelf(ResourceLocation.from("say_to_all_players", "set_target_${self.uuid.toString().replace("-", "_")}"))
-                .doing(SayToAttacker(params["message"] as? String ?: "What to say.. what.. to... say. so many people"))
+            .performOnSelf(ResourceLocation.from("say_to_all_players", "set_target"))
+                .doing(SayToAllPlayersInWorld)
                 .end()
             .build()
-    }
-    object LookAtNearestPlayer : ProducerIntendedTask {
-        override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.random(
-            self,
-            ResourceLocation.from("core", "look_at_nearest_player_${self.uuid.toString().replace("-", "_")}"),
-            TaskLifecycle.REPEATING,
-            priority = params["priority"] as? Int ?: 0
+
+    val SayToAttackerTask : CompiledTask = TaskBuilder.random(
+            ResourceLocation.from("core", "say_to_all_players"),
+            TaskLifecycle.ONE_SHOT
         )
-            .cooldownTicks((params["cooldown"] as Int?) ?: 120)
-            .withRange(ResourceLocation.from("look_at_nearest_player", "find_closest_entity_${self.uuid.toString().replace("-", "_")}"),
-                params["range"] as? Double ?: self.lookDistance)
+            .performOnSelf(ResourceLocation.from("say_to_all_players", "set_target"))
+                .doing(SayToAttacker)
+                .end()
+            .build()
+
+    val LookAtAttackerTask : CompiledTask = TaskBuilder.conditioned(
+        ResourceLocation.from("core", "look_at_attacker")
+    )
+        .performOnSelf(ResourceLocation.from("look_at_attacker", "set_target"))
+        .doingTimed(BBLookAtAttacker, 40, runBlocking = false, slot = DefaultSlots.LOOK)
+        .end()
+        .build()
+
+    val LookAtNearestPlayerTask : CompiledTask = TaskBuilder.random(
+            ResourceLocation.from("core", "look_at_nearest_player"),
+            TaskLifecycle.REPEATING
+        )
+            .defaultCooldownTicks(120)
+            .withEntityRange(ResourceLocation.from("look_at_nearest_player", "find_closest_entity"), 20.0)
                 .filter(PlayersOnly)
                 .withSingleResult()
-            .performOnTarget(ResourceLocation.from("look_at_nearest_player", "set_target_${self.uuid.toString().replace("-", "_")}"))
-                .doingTimed(SetTargetToLookAt, 60, runBlocking = false)
+            .performOnEntityTarget(ResourceLocation.from("look_at_nearest_player", "set_target"))
+                .doingTimed(SetTargetToLookAt, 60, runBlocking = false, slot = DefaultSlots.LOOK)
                 .end()
             .build()
-    }
-    object LookAtAttacker : ProducerIntendedTask {
-        override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.conditioned(
-            self,
-            ResourceLocation.from("core", "look_at_attacker_${self.uuid.toString().replace("-", "_")}"),
-            priority = params["priority"] as? Int ?: 2
-        )
-            .performOnSelf(ResourceLocation.from("look_at_attacker", "set_target_${self.uuid.toString().replace("-", "_")}"))
-                .doingTimed(BBLookAtAttacker, 40, runBlocking = false)
-                .end()
-            .build()
-    }
-    object LookAtAttackerTillOutOfCombat : ProducerIntendedTask {
-        override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.conditioned(
-            self,
-            ResourceLocation.from("core", "look_at_attacker_${self.uuid.toString().replace("-", "_")}"),
-            priority = params["priority"] as? Int ?: 2
+
+    val LookAtAttackerTillOutOfCombatTask : CompiledTask = TaskBuilder.conditioned(
+            ResourceLocation.from("core", "look_at_attacker")
         )
             .runUntilReceive(Signals.OUT_OF_COMBAT)
-            .performOnSelf(ResourceLocation.from("look_at_attacker", "set_target_${self.uuid.toString().replace("-", "_")}"))
-                .doingTimed(BBLookAtAttacker, 40, runBlocking = false)
+            .performOnSelf(ResourceLocation.from("look_at_attacker", "set_target"))
+                .doingTimed(BBLookAtAttacker, 40, runBlocking = false, slot = DefaultSlots.LOOK)
                 .end()
             .build()
-    }
+
 
     /**
      * A task to make the entity involved move around randomly
-     * The params specifiable are: [params.cooldown], [params.range] [params.priority]
+     * The params specifiable are: _[params.cooldown]_, _[params.range]_ _[params.priority]_
      */
-    object PassiveWander : ProducerIntendedTask {
-        override fun produce(self: PlatformLivingEntity, params: Map<String, Any>): CompiledTask = TaskBuilder.random(
-            self,
-            ResourceLocation.from("core", "wander_${self.uuid.toString().replace("-", "_")}"),
-            TaskLifecycle.REPEATING,
-            priority = params["priority"] as? Int ?: 2
+    val PassiveWanderTask : CompiledTask = TaskBuilder.random(
+            ResourceLocation.from("core", "wander"),
+            TaskLifecycle.REPEATING
         )
             .blockMode()
-            .cooldownTicks((params["cooldown"] as Int?) ?: 60)
-            .withBlockRange(ResourceLocation.from("core", "find_block_${self.uuid.toString().replace("-", "_")}"),
-                range = (params["range"] as Double?) ?: 12.0)
+            .defaultCooldownTicks(60)
+            .withBlockRange(ResourceLocation.from("core", "find_block"), 12.0)
                 .filter(BlockIsWalkableFilter)
                 .filter(BlockIsHighest)
                 .withRandomSingleResult()
-            .performOnBlockTarget(ResourceLocation.from("core", "walk_to_block_${self.uuid.toString().replace("-", "_")}"))
-                .doingTimedBlock(WalkToBlock, runBlocking = false, durationOverride = -10)
+            .performOnBlockTarget(ResourceLocation.from("core", "walk_to_block"))
+                .doingTimedBlock(WalkToBlock, runBlocking = false, durationOverride = -10, slot = DefaultSlots.MOVE)
                 .end()
             .build()
-    }
+
 }
 
 object DefaultHandlers {

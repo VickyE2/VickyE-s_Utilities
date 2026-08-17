@@ -248,9 +248,71 @@ sealed class PlatformEntityAttribute {
     data class Custom(val id: ResourceLocation) : PlatformEntityAttribute()
 }
 
+
+interface PlatformLookControl {
+    fun setLookAt(x: Double, y: Double, z: Double)
+    fun setLookAt(
+        position: Vec3
+    ) { setLookAt(position.x, position.y, position.z) }
+
+    fun setLookAt(
+        entity: PlatformEntity
+    )
+    fun setLookAt(
+        x: Double,
+        y: Double,
+        z: Double,
+        yawLimit: Float,
+        pitchLimit: Float
+    )
+    fun setLookAt(
+        entity: PlatformEntity,
+        yawLimit: Float,
+        pitchLimit: Float
+    )
+
+    val isLookingAtTarget: Boolean
+
+    val yRotD: Float
+
+    val xRotD: Float
+}
+interface PlatformMoveControl {
+    fun setWantedPosition(
+        x: Double,
+        y: Double,
+        z: Double,
+        speedModifier: Double
+    )
+
+    fun strafe(
+        forwards: Float,
+        right: Float
+    )
+
+    fun hasWanted(): Boolean
+
+    val speedModifier: Double
+
+    val strafeForwards: Float
+
+    val strafeRight: Float
+}
+interface PlatformJumpControl {
+    fun jump()
+    val isJumping: Boolean
+}
+interface PlatformMobControls {
+    val lookControl: PlatformLookControl
+    val moveControl: PlatformMoveControl
+    val jumpControl: PlatformJumpControl
+}
+
 interface PlatformLivingEntity : PlatformEntity {
     var health: Float
     var lookDistance: Double
+
+    var mobControls: PlatformMobControls?
 
     fun hurt(amount: Float, source: AntagonisticDamageSource)
     fun die(source: AntagonisticDamageSource)
@@ -503,12 +565,12 @@ data class MobEntityAIBasedGoals(
     fun applyToEntity(entity: PlatformLivingEntity) {
         for (entry in goals) {
             // produce/resolve compiled task (your ProducerIntendedTask -> CompiledTask pipeline)
-            val compiled = entry.producer.produce(entity, entry.params) // returns CompiledTask
+            val compiled = entry.instance.compiled // returns CompiledTask
             CompiledTaskRegistry.register(compiled) // idempotent
             if (entry.trigger == null) {
-                EntityTaskManager.assignTask(entity, compiled.id, entry.params)
+                EntityTaskManager.assignTask(entity, compiled.id, entry.instance.parameters, entry.instance.priority)
             } else {
-                TriggerManager.subscribe(entity.uuid, entry.trigger, compiled.id, entry.params)
+                TriggerManager.subscribe(entity.uuid, entry.trigger, compiled.id, entry.instance.parameters, entry.instance.priority)
             }
         }
     }
@@ -958,15 +1020,15 @@ class SpawnOverridesBuilder {
         )
 }
 
-data class GoalEntry(val producer: ProducerIntendedTask, val params: Map<String, Any>, val trigger: Trigger? = null)
+data class GoalEntry(val instance: TaskInstance, val trigger: Trigger? = null)
 class AIGoalsBuilder {
     private val goals = mutableListOf<GoalEntry>()
 
-    fun goal(task: ProducerIntendedTask, params: Map<String, Any> = emptyMap()) {
-        goals += GoalEntry(task, params)
+    fun goal(task: TaskInstance) {
+        goals += GoalEntry(task)
     }
-    fun goal(task: ProducerIntendedTask, params: Map<String, Any> = emptyMap(), trigger: Trigger) {
-        goals += GoalEntry(task, params, trigger)
+    fun goal(task: TaskInstance, trigger: Trigger) {
+        goals += GoalEntry(task, trigger)
     }
 
     fun build(): List<GoalEntry> = goals

@@ -1,14 +1,13 @@
 /* Licensed under Apache-2.0 2026. */
 package org.vicky.utilities.DatabaseManager.dao_s;
 
-import java.util.List;
-import java.util.Optional;
-
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
 import org.vicky.utilities.DatabaseManager.HibernateUtil;
 import org.vicky.utilities.DatabaseTemplate;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
+import java.util.List;
+import java.util.Optional;
 
 public abstract class GenericDao<T extends DatabaseTemplate, K> {
 
@@ -16,54 +15,27 @@ public abstract class GenericDao<T extends DatabaseTemplate, K> {
 
 	public abstract List<T> getAll();
 
-	public void save(T theme) {
-		save(HibernateUtil.getEntityManager(), theme);
+	public void save(T entity) {
+		TransactionCreator.transaction(em -> save(em, entity));
 	}
-	public void save(EntityManager em, T theme) {
-		EntityTransaction transaction = em.getTransaction();
-		try {
-			transaction.begin();
-			em.persist(theme);
-			transaction.commit();
-		} catch (Exception e) {
-			if (transaction.isActive()) {
-				transaction.rollback();
-			}
-			throw e;
-		} finally {
-			em.close();
-		}
+	public void save(EntityManager em, T entity) {
+		em.persist(entity);
 	}
 
-	public T update(T theme) {
-		return update(HibernateUtil.getEntityManager(), theme);
+	public void update(T entity) {
+		TransactionCreator.transaction(em -> update(em, entity));
 	}
-	public T update(EntityManager em, T theme) {
-		EntityTransaction transaction = em.getTransaction();
-		try {
-			transaction.begin();
-			T updatedObject = em.merge(theme);
-			transaction.commit();
-			return updatedObject;
-		} catch (Exception e) {
-			if (transaction.isActive()) {
-				transaction.rollback();
-			}
-			throw e;
-		} finally {
-			em.close();
-		}
+	public T update(EntityManager em, T entity) {
+		return em.merge(entity);
 	}
 
 	public void delete(K id) {
-		delete(HibernateUtil.getEntityManager(), id);
-	}
-	public void delete(EntityManager em, K id) {
+		EntityManager em = HibernateUtil.getEntityManager();
 		EntityTransaction transaction = em.getTransaction();
 		try {
 			transaction.begin();
-			Optional<T> theme = findById(id);
-			theme.ifPresent(em::remove);
+			Optional<T> entity = findById(id);
+			entity.ifPresent(em::remove);
 			transaction.commit();
 		} catch (Exception e) {
 			if (transaction.isActive()) {
@@ -73,5 +45,9 @@ public abstract class GenericDao<T extends DatabaseTemplate, K> {
 		} finally {
 			em.close();
 		}
+	}
+	public void delete(EntityManager em, K id) {
+		Optional<T> entity = findById(id);
+		entity.ifPresent(em::remove);
 	}
 }

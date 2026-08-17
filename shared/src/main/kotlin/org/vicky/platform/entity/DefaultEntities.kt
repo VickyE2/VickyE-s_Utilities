@@ -34,7 +34,7 @@ object DefaultEntities {
                         return@EntityAnimationLayer Animation("animation.test_dummy.walk", true, blendTime = 6)
                     }
 
-                    return@EntityAnimationLayer Animation("animation.test_dummy.idle", true, blendTime = 6)
+                    return@EntityAnimationLayer Animation("animation.test_dummy.idle", true, blendTime = 6, priority = 1)
                 },
             ) {
                 headTracking(HeadTrackingConfiguration(

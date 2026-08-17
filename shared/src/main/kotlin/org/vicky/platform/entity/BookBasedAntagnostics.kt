@@ -466,7 +466,7 @@ object SayToTarget : EntityActionSpec<PlatformLivingEntity>(
         if (player == null) return@run false
         if (!player.isPlayer) return@run false
         player as PlatformPlayer
-        val message = params["messgae"]
+        val message = params["message"]
         if (message != null) {
             if (message is String) {
                 player.sendMessage(self, message)
@@ -485,7 +485,7 @@ object SayToAllPlayersInWorld : EntityActionSpec<PlatformLivingEntity>(
     rl("core", "say_to_target"),
     run@{ self, _, params ->
         self.world.players.forEach { player ->
-            val message = params["messgae"]
+            val message = params["message"]
             if (message != null) {
                 if (message is String) {
                     player.sendMessage(self, message)
@@ -506,7 +506,7 @@ object SayToAttacker : EntityActionSpec<PlatformLivingEntity>(
         if (self !is PlatformLivingEntity) return@run false
         val attacker = self.getLastAttacker()
         if (attacker is PlatformPlayer) {
-            val message = params["messgae"]
+            val message = params["message"]
             if (message != null) {
                 if (message is String) {
                     attacker.sendMessage(self, message)

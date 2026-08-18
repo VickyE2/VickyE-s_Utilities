@@ -2,6 +2,7 @@
 package org.vicky.forge.entity;
 
 import net.kyori.adventure.text.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
@@ -32,6 +33,7 @@ public class ForgePlatformLivingEntity extends ForgePlatformEntity implements Pl
 	}
 
 	public static ForgePlatformLivingEntity from(LivingEntity e) {
+		if (e instanceof ServerPlayer player) return new ForgePlatformPlayer(player);
 		return new ForgePlatformLivingEntity(e);
 	}
 

@@ -3,9 +3,11 @@ package org.vicky.forge.entity;
 
 import de.pauleff.core.Tag_Compound;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -43,6 +45,8 @@ public class ForgePlatformEntity implements PlatformEntity {
 	}
 
 	public static ForgePlatformEntity from(Entity e) {
+		if (e instanceof ServerPlayer player) return new ForgePlatformPlayer(player);
+		if (e instanceof LivingEntity entity) return new ForgePlatformLivingEntity(entity);
 		if (e == null) return null;
 		return new ForgePlatformEntity(e);
 	}

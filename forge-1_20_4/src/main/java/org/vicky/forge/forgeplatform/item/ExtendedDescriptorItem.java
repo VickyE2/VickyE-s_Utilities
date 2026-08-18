@@ -1,5 +1,7 @@
 package org.vicky.forge.forgeplatform.item;
 
+import com.mojang.logging.LogUtils;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.world.InteractionHand;
@@ -7,10 +9,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 import org.vicky.forge.entity.ForgePlatformLivingEntity;
 import org.vicky.forge.forgeplatform.item.animation.ExtendedItemAnimationController;
 import org.vicky.forge.forgeplatform.item.renderer.ExtendedDescriptorItemRenderer;
@@ -26,6 +30,9 @@ import software.bernie.geckolib.core.animation.AnimatableManager;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import static org.vicky.forge.client.ClientInspectManager.isInspecting;
@@ -62,21 +69,42 @@ public class ExtendedDescriptorItem extends DescriptorItem implements GeoItem {
                                     ItemAnimationContext context =
                                             createContext(state.getDelegate());
 
-                                    return state.setAndContinue(
-                                            layer.getResolver()
-                                                    .invoke(context)
-                                    );
+                                    var resolved = layer.getResolver().invoke(context);
+                                    var view = state.getDelegate().getData(DataTickets.ITEM_RENDER_PERSPECTIVE);
+
+                                    if (!previous.containsKey(view) || !Objects.equals(previous.get(view), resolved != null ? resolved.getKey() : null)) {
+                                        previous.put(view, resolved != null ? resolved.getKey() : null);
+                                        logger.debug("Context \n{}\n   gave us:  \n{}", context, resolved);
+                                    }
+
+                                    return state.setAndContinue(resolved);
                                 }
                         )
                 ));
     }
 
-    public ItemAnimationContext createContext(
-            AnimationState<?> state
-    ) {
+    static final Logger logger = LogUtils.getLogger();
+    static Map<ItemDisplayContext, String> previous = new HashMap<>();
+
+    public ItemAnimationContext createContext(AnimationState<?> state) {
 
         Entity holder = state.getData(DataTickets.ENTITY);
+        ItemDisplayContext perspective = state.getData(DataTickets.ITEM_RENDER_PERSPECTIVE);
 
+        // FIX: Vanilla BEWLR drops the entity. Fallback to the local player
+        // if the item is in a hand or the inventory GUI.
+        if (holder == null) {
+            if (perspective == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND ||
+                    perspective == ItemDisplayContext.FIRST_PERSON_LEFT_HAND ||
+                    perspective == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND ||
+                    perspective == ItemDisplayContext.THIRD_PERSON_LEFT_HAND ||
+                    perspective == ItemDisplayContext.GUI) {
+
+                holder = Minecraft.getInstance().player;
+            }
+        }
+
+        // Now holder will properly be the player!
         PlatformLivingEntity livingEntity =
                 holder instanceof LivingEntity le
                         ? ForgePlatformLivingEntity.from(le)
@@ -88,7 +116,9 @@ public class ExtendedDescriptorItem extends DescriptorItem implements GeoItem {
         return new ItemAnimationContext(
                 stack,
                 livingEntity,
-                ForgeHacks.toVicky(state.getData(DataTickets.ITEM_RENDER_PERSPECTIVE)),
+                ForgeHacks.toVicky(perspective),
+
+                // These will now correctly evaluate because 'holder' is no longer null
                 holder instanceof LivingEntity e && e.isUsingItem() &&
                         e.getUseItem().is(state.getData(DataTickets.ITEMSTACK).getItem()),
                 state.isMoving(),

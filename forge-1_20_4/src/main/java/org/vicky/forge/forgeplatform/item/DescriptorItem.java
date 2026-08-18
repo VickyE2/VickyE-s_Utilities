@@ -39,8 +39,8 @@ public class DescriptorItem extends Item {
 
     @Override
     public boolean isFoil(@NotNull ItemStack stack) {
-        // if (descriptor.getPhysicalProps().getGlint())
-        //     return true;
+        if (descriptor.getPhysicalProps().getGlint())
+            return true;
 
         return super.isFoil(stack);
     }

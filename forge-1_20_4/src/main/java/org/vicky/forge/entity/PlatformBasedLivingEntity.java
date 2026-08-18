@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -409,11 +410,17 @@ public class PlatformBasedLivingEntity extends PathfinderMob implements GeoEntit
     public EntityAnimationContext createContext(
             AnimationState<?> state
     ) {
-        Entity animateable = state.getData(DataTickets.ENTITY);
+        Entity animatable = state.getData(DataTickets.ENTITY);
+
+        Vec3 velocity = animatable.getDeltaMovement();
+        boolean moving =
+                velocity.x * velocity.x +
+                        velocity.z * velocity.z > 1.0E-6;
+
         return new EntityAnimationContext(
-                ForgePlatformEntity.from(animateable),
-                animateable.getDeltaMovement().lengthSqr() > 1.0E-6, // state.isMoving(),
-                animateable instanceof LivingEntity e && e.isAutoSpinAttack()
+                ForgePlatformEntity.from(animatable),
+                moving, // state.isMoving(),
+                animatable instanceof LivingEntity e && e.isAutoSpinAttack()
         );
     }
 

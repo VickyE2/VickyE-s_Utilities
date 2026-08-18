@@ -151,10 +151,12 @@ public class ExtendedItemAnimationController<T extends ExtendedDescriptorItem> e
             return;
         }
 
-        currentAnimation = animation;
-        applyAnimation(animation);
+        if (currentAnimation == null || animation.getPriority() > currentAnimation.getPriority() || this.animationState == State.STOPPED) {
+            currentAnimation = animation;
+            applyAnimation(animation);
 
-        if (this.animationState == State.STOPPED)
-            this.animationState = State.RUNNING;
+            if (this.animationState == State.STOPPED)
+                this.animationState = State.RUNNING;
+        }
     }
 }
